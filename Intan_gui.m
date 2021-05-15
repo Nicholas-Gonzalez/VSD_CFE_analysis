@@ -294,9 +294,6 @@ for d=1:nch
     axf(d) = axes('Units','pixels','Position',[70   posy(d)   880   gsize/nch]);
     plot(tm,data(idx(d),:));
         txt(d) = text(30,posy(d) + gsize/nch/2, props.showlist{d}  ,'Parent',it,'Horizontal','center');
-%     txt(d) = text(30,posy(d) + gsize/nch/2,...
-%                   {sscanf(props.showlist{d},'%d'),string(regexp(props.showlist{d},'[A-z()]+','match'))},...
-%                    'Parent',it,'Horizontal','center');
     if d~=nch
         axf(d).XTick = [];
     end
@@ -434,8 +431,6 @@ if contains(file,'.rhs')
     
     props.file = fullfile(path,file);
     props.data = [data;stim];
-%     props.ch = [join([string((1:size(data,1))'), repelem(" rec(uV)", size(data,1),1)]);...
-%                 join([string((1:size(data,1))'), repelem(" stim(uA)",size(data,1),1)])];
 
     props.ch = [string({amplifier_channels.native_channel_name})';...
                 join([string((1:size(data,1))'), repelem(" stim(uA)",size(data,1),1)])];
