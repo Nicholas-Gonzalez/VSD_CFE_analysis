@@ -31,7 +31,9 @@ end
 if isempty(recent.file)
     rm = [];
 end
-mi(3) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
+mi(3) = uimenu(m,'Text','Save','Enable','off','Tag','savem');
+    uimenu(mi(3),'Text','As Matlab','Callback',@savematlab,'Enable','off','Tag','savem');
+    uimenu(mi(3),'Text','As ASCII','Callback',@saveascii,'Enable','off','Tag','savem');
 mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
 
 guidata(gcf,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'rm',rm,'mi',mi,'mn',m))
@@ -581,7 +583,7 @@ guidata(hObject,props)
 
 
 
-function saveit(hObject,eventdata)
+function savematlab(hObject,eventdata)
 props = guidata(hObject);
 it = findobj('Tag','grid');
 [file,path,indx] = uiputfile(replace(props.file,'.rhs','.mat'));
@@ -606,6 +608,36 @@ end
 % props = rmfield(props,'info');
 
 save(fullfile(path,file),'props')
+
+set(allbut,'Enable','on')
+delete(buf)
+
+
+function saveascii(hObject,eventdata)
+props = guidata(hObject);
+it = findobj('Tag','grid');
+[file,path,indx] = uiputfile(replace(props.file,'.rhs','.txt'));
+
+if ~file
+    return
+end
+
+buf = text(500,875,'Saving...','FontSize',15,'Parent',it);
+allbut = findobj('Type','Uicontrol','Enable','on');
+set(allbut,'Enable','off')
+pause(0.01)
+
+if ~isfield(props,'showlist')
+    props.showlist = get(findobj('Tag','showgraph'),'String');
+end
+
+if ~isfield(props,'hidelist')
+    props.hidelist = get(findobj('Tag','hidegraph'),'String');
+end
+
+% props = rmfield(props,'info');
+
+writematrix(props.data(props.showidx,:),fullfile(path,file))
 
 set(allbut,'Enable','on')
 delete(buf)
