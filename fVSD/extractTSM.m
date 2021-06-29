@@ -2,7 +2,7 @@ function data = extractTSM(folder,trial)
 
 %% Parameters
 chunkLength = 500;
-nDarkFrames = 50;
+nDarkFrames = 50; % Rodrigo: we acquired 16 darkframes
 
 %% Data extraction
 % Obtain header information
@@ -28,7 +28,7 @@ numKern = length(kernpos);
 kernelData = nan(zsize,numKern);
 for A = 1:numChunks
     dataChunk = readTSM(info,chunkLength,A);
-    dataChunk = dataChunk - darkFrame;
+    %dataChunk = dataChunk - darkFrame;
     
     dataChunk = reshape(dataChunk,xsize*ysize,chunkLength); % Reshape in two dimensions to facilitate indexing.
     

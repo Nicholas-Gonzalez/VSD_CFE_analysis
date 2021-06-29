@@ -3,10 +3,10 @@
 %% Define variables for other sections. Always run this section first.
 
 % Folder containing all, or any subset of, the experiments.
-masterFolder = 'Z:\_Lab Personnell_Summer Students\Rodrigo\VSD_Data\21-06-28\Turbo_data';%'E:\Renan\Operant Conditioning\blinded\*';
+masterFolder = 'Z:\_Lab Personnell_Summer Students\Rodrigo\VSD_Data\21-06-28\Turbo_data';
 
-% List .da files in experiment folders.
-listf = dir(fullfile(masterFolder, '1*.da'));
+% List .tsm files in experiment folders.
+listf = dir(fullfile(masterFolder, '*VSD0*.tsm'));
 
 %  % Temporary: ignore folders already extracted.
 %  listf_conv = dir(fullfile(masterFolder, '1*conv*.mat'));
@@ -17,7 +17,7 @@ listf = dir(fullfile(masterFolder, '1*.da'));
 % Find optimal frame for each file.
 for A = 1:length(listf)
     
-    trial = listf(A).name(1:end-3); % Remove .da to obtain trial name.
+    trial = listf(A).name(1:end-4); % Remove .tsm to obtain trial name.
     folder = listf(A).folder;
     try % In case there is an error on a specific file.
         find_kframe(folder,trial);
@@ -33,14 +33,17 @@ display('Optimal frames for kernel drawing have been saved. Please, draw kernels
 % Extract data for each file.
 for A = 1:length(listf)
     
-    trial = listf(A).name(1:end-3); % Remove .da to obtain trial name.
+    trial = listf(A).name(1:end-4); % Remove .tsm to obtain trial name.
     folder = listf(A).folder;    
     if isempty(dir(fullfile(folder,[trial '*.det']))) % Determine whether .det file is present.
         display(['No .det kernel file found for trial ' trial '. Data could not be extracted.'])
         continue
     else
         try % In case there is an error on a specific file.
-            extract_data(folder,trial);
+            data = extractTSM(folder,trial);
+            dataFiltered = vsd_ellipTSM(data);
+            dataDenoised = pca_denoise(dataFiltered);
+            keyboard
         catch
             display(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])
         end
@@ -48,26 +51,26 @@ for A = 1:length(listf)
 end
 
 %% Spike detection and convolution
-
-% Detect spikes for each file.
-for A = 1:length(listf)
-    
-    trial = listf(A).name(1:end-3); % Remove .da to obtain trial name.
-    folder = listf(A).folder;
-    matF = dir(fullfile(folder,[trial 'pre*.mat']));
-    try % In case there is an error on a specific file.
-        %delete(fullfile(folder,[trial '_conv_' date '.mat']))
-        
-        load(fullfile(folder,matF.name),'vsddata')
-        vsd_filtered_ns = vsd_ellip(vsddata);
-        vsdDenoise_ns = pca_denoise(vsd_filtered_ns);
-        
-        [vsd_spiketime,vsd_visualize_spike,vsd_detect_all,~]=detect_spikes_vsd(vsdDenoise_ns);
-        vsd_convFRMat = ksGaussian(vsd_detect_all);
-        
-        save(fullfile(folder,[trial '_convNEW_' date]),'vsd_spiketime','vsd_visualize_spike','vsd_detect_all','vsd_convFRMat')
-        clearvars('vsdDenoise_ns','vsd_spiketime','vsd_visualize_spike','vsd_detect_all','vsd_convFRMat')
-    catch
-        display(['Failed to detect and convolve spikes.' newline 'Folder: ' folder newline 'Trial: ' trial])
-    end
-end
+% 
+% % Detect spikes for each file.
+% for A = 1:length(listf)
+%     
+%     trial = listf(A).name(1:end-3); % Remove .da to obtain trial name.
+%     folder = listf(A).folder;
+%     matF = dir(fullfile(folder,[trial 'pre*.mat']));
+%     try % In case there is an error on a specific file.
+%         %delete(fullfile(folder,[trial '_conv_' date '.mat']))
+%         
+%         load(fullfile(folder,matF.name),'vsddata')
+%         vsd_filtered_ns = vsd_ellip(vsddata);
+%         vsdDenoise_ns = pca_denoise(vsd_filtered_ns);
+%         
+%         [vsd_spiketime,vsd_visualize_spike,vsd_detect_all,~]=detect_spikes_vsd(vsdDenoise_ns);
+%         vsd_convFRMat = ksGaussian(vsd_detect_all);
+%         
+%         save(fullfile(folder,[trial '_convNEW_' date]),'vsd_spiketime','vsd_visualize_spike','vsd_detect_all','vsd_convFRMat')
+%         clearvars('vsdDenoise_ns','vsd_spiketime','vsd_visualize_spike','vsd_detect_all','vsd_convFRMat')
+%     catch
+%         display(['Failed to detect and convolve spikes.' newline 'Folder: ' folder newline 'Trial: ' trial])
+%     end
+% end
