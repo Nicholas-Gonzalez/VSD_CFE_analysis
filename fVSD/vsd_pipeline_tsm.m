@@ -43,12 +43,18 @@ for A = 1:length(listf)
             data = extractTSM(folder,trial);
             dataFiltered = vsd_ellipTSM(data);
             dataDenoised = pca_denoise(dataFiltered);
-            keyboard
         catch
             display(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])
         end
     end
 end
+
+%% Rodrigo plotting section
+
+figure; plot(data(1000:end,2))
+figure; plot(dataFiltered(1000:end,2))
+figure; plot(dataDenoised(1000:end,2))
+
 
 %% Spike detection and convolution
 % 
