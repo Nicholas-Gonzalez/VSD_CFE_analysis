@@ -18,9 +18,11 @@ if nargin==1
 elseif nargin==2
     chunkNumber = 1;
 end
-if chunkLength * chunkNumber > info.PrimaryData.Size(3)
-    chunkLength = info.PrimaryData.Size(3) - chunkLength*(chunkNumber-1);
-end
+
+% trims off the last frames
+% if chunkLength * chunkNumber > info.PrimaryData.Size(3)
+%     chunkLength = info.PrimaryData.Size(3) - chunkLength*(chunkNumber-1);
+% end
 
 % Open file
 fid = fopen(info.Filename,'r');

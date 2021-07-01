@@ -48,6 +48,7 @@ elseif strcmp(fileType,'tsm')
     headerLength(1)=[]; % Delete header length of other file type.
 end
 
+% this output is supressed - Rodrigo 07/01/2021
 fseek(fid, headerLength,'bof');% go back to begining of .da file
 frms=zeros(1,dark_frms);
 for z=1:dark_frms

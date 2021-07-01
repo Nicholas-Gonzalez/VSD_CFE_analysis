@@ -2,7 +2,7 @@ function data = extractTSM(folder,trial)
 
 %% Parameters
 chunkLength = 500;
-nDarkFrames = 50; % Rodrigo: we acquired 16 darkframes
+nDarkFrames = 50;
 
 %% Data extraction
 % Obtain header information

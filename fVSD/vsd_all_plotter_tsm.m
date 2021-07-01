@@ -1,10 +1,10 @@
 function vsd_all_plotter_tsm(trial,data,dataFiltered,dataDenoised)
 
-    % indexes total number of cells in data
+    % indexes total number of cells in data (stored as columns)
     [~,ROIs] = size(data);
     
-    % parametrizes number of cell plots (rows) to be created per page of
-    %   tiled plots
+    % parametrizes number of cell plots (as rows) to be created per page
+    %   of tiled plots
     cpp = 5;
     
     % initializes first tiled plot
@@ -30,11 +30,12 @@ function vsd_all_plotter_tsm(trial,data,dataFiltered,dataDenoised)
         plot(dataDenoised(1000:end,k),'Color',PlotColor)
         title(['ROI ',num2str(k),' denoised'])
         
-        % checks if 5 plots have been generated, if so, makes new tiled 
+        % checks if 5 plots have been generated, if so, makes new tiled
         %   plot
         if mod(k,cpp)==0
             figure;
-            tiledlayout(cpp,3,'TileSpacing','tight','Padding','compact');
+            tiledlayout(cpp,3,'TileSpacing','tight','Padding',...
+                'compact');
         end
     
     end
