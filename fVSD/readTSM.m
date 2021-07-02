@@ -21,11 +21,11 @@ elseif nargin==2
     chunkNumber = 1;
 end
 
-% conditionally removes last frames, unless dark frame feature is
+% Conditionally removes last frames, unless dark frame feature is
 %   activated
-if getDarkFrame ~= true
+if ~getDarkFrame
     
-    % trims off the last frames
+    % Trims off the last frames
     if chunkLength * chunkNumber > info.PrimaryData.Size(3)
         chunkLength = info.PrimaryData.Size(3) - chunkLength*(chunkNumber-1);
     end  

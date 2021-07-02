@@ -42,6 +42,7 @@ for A = 1:length(listf)
         try % In case there is an error on a specific file.
             data = extractTSM(folder,trial);
             dataFiltered = vsd_ellipTSM(data);
+            dataFiltered(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
             %dataFilteredZ = zscore(dataFiltered,[],1);
             dataDenoised = pca_denoise(dataFiltered);
             
