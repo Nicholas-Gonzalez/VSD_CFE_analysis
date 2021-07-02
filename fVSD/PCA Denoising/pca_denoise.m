@@ -15,7 +15,7 @@ plotZCovs = 0; % Whether to plot covariance of z-scored data as a function of PC
 
 %% Run PCA
 dataZsc = zscore(data); %Z-score input data.
-[eig, Z,latent,tsquared,expVar,mu] = pca(dataZsc);
+[eig, Z,~,~,expVar,mu] = pca(dataZsc);
 
 % The projection onto principal component space ("Z") can be obtained by
 % multiplying the mean-subtracted data by eig. That is:

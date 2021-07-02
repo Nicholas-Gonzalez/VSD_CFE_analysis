@@ -1,12 +1,14 @@
-function [data] = readTSM(info,chunkLength,chunkNumber)
+function [data] = readTSM(info,chunkLength,chunkNumber,getDarkFrame)
 % Reads .tsm files, which are stored in FITS standard, but use
 % little-endian byte order instead of big-endian. .tsm also has an
-% additional dark frame at the end, which is currently ignored here.
+% additional dark frame at the end, which is currently ignored here,
+% unless input getDarkFrame is specified as "true"
 
-% INPUT         DESCRIPTION
-% "info"        Header information, extracted using the built-in "fitsinfo" function.
-% "chunkLength" Length of chunk to be read.
-% "chunkNumber" Index of chunk to be read (dependent of chunk length).
+% INPUT          DESCRIPTION
+% "info"         Header information, extracted using the built-in "fitsinfo" function.
+% "chunkLength"  Length of chunk to be read.
+% "chunkNumber"  Index of chunk to be read (dependent of chunk length).
+% "getDarkFrame" Logical to activate dark frame extraction feature
 
 % Check inputs and adjust
 if nargin==1
@@ -19,10 +21,16 @@ elseif nargin==2
     chunkNumber = 1;
 end
 
-% trims off the last frames
-% if chunkLength * chunkNumber > info.PrimaryData.Size(3)
-%     chunkLength = info.PrimaryData.Size(3) - chunkLength*(chunkNumber-1);
-% end
+% conditionally removes last frames, unless dark frame feature is
+%   activated
+if getDarkFrame ~= true
+    
+    % trims off the last frames
+    if chunkLength * chunkNumber > info.PrimaryData.Size(3)
+        chunkLength = info.PrimaryData.Size(3) - chunkLength*(chunkNumber-1);
+    end  
+    
+end
 
 % Open file
 fid = fopen(info.Filename,'r');

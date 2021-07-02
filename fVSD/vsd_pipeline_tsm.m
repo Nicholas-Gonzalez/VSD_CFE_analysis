@@ -42,6 +42,7 @@ for A = 1:length(listf)
         try % In case there is an error on a specific file.
             data = extractTSM(folder,trial);
             dataFiltered = vsd_ellipTSM(data);
+            %dataFilteredZ = zscore(dataFiltered,[],1);
             dataDenoised = pca_denoise(dataFiltered);
             
             % calls Rodrigo's plotter function

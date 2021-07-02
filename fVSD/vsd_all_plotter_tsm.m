@@ -16,19 +16,21 @@ function vsd_all_plotter_tsm(trial,data,dataFiltered,dataDenoised)
     %   tiled plot
     for k = 1:ROIs
     
-        % generates random color for each ROI
-        PlotColor = [rand, rand, rand];
+        % generates random color for each ROI, with lighter colors
+        %   restricted
+        PlotColor = randi([0,60],1,3)/100;
         
-        % plots 3 graphs for each cell
+        % plots 3 graphs for each cell, and removes first "trim" frames
         nexttile
         plot(data(1000:end,k),'Color',PlotColor)
         title(['ROI ',num2str(k),' raw'])
-        nexttile
+        f = nexttile;
         plot(dataFiltered(1000:end,k),'Color',PlotColor)
         title(['ROI ',num2str(k),' filtered'])
-        nexttile
+        d = nexttile;
         plot(dataDenoised(1000:end,k),'Color',PlotColor)
         title(['ROI ',num2str(k),' denoised'])
+        linkaxes([f,d],'y')
         
         % checks if 5 plots have been generated, if so, makes new tiled
         %   plot

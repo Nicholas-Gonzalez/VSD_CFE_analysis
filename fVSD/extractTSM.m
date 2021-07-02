@@ -2,7 +2,6 @@ function data = extractTSM(folder,trial)
 
 %% Parameters
 chunkLength = 500;
-nDarkFrames = 50;
 
 %% Data extraction
 % Obtain header information
@@ -16,9 +15,10 @@ zsize = info.PrimaryData.Size(3); % Length of recording
 % Compute the number of chunks to extract
 numChunks = ceil(zsize/chunkLength);
 
-% Obtain dark frame
-darkFrame = readTSM(info,nDarkFrames);
-darkFrame = mean(darkFrame,3); 
+% Obtains a dark frame by indexing one frame after the end of tsm
+%   recording of length zsize, with special 4th input "getDarkFrame" to
+%   extract just the dark frame
+[darkFrame] = readTSM(info,1,(zsize+1),true);
 
 % Load kernels from .det file
 [det,~,~,kernel_size,kernpos]=readdet(folder,trial);
@@ -27,8 +27,8 @@ numKern = length(kernpos);
 % Iterate data extraction through chunks
 kernelData = nan(zsize,numKern);
 for A = 1:numChunks
-    dataChunk = readTSM(info,chunkLength,A);
-    %dataChunk = dataChunk - darkFrame;
+    dataChunk = readTSM(info,chunkLength,A,false);
+    dataChunk = dataChunk - darkFrame;
     
     dataChunk = reshape(dataChunk,xsize*ysize,chunkLength); % Reshape in two dimensions to facilitate indexing.
     
