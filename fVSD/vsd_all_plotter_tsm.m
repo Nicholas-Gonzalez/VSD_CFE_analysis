@@ -22,13 +22,13 @@ function vsd_all_plotter_tsm(trial,data,dataFiltered,dataDenoised)
         
         % plots 3 graphs for each cell, and removes first "trim" frames
         nexttile
-        plot(data(1000:end,k),'Color',PlotColor)
+        plot(data(1000:(end-100),k),'Color',PlotColor)
         title(['ROI ',num2str(k),' raw'])
         f = nexttile;
-        plot(dataFiltered(1000:end,k),'Color',PlotColor)
+        plot(dataFiltered(1000:(end-100),k),'Color',PlotColor)
         title(['ROI ',num2str(k),' filtered'])
         d = nexttile;
-        plot(dataDenoised(1000:end,k),'Color',PlotColor)
+        plot(dataDenoised(1000:(end-100),k),'Color',PlotColor)
         title(['ROI ',num2str(k),' denoised'])
         linkaxes([f,d],'y')
         
