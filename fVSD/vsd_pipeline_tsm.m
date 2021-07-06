@@ -43,11 +43,11 @@ for A = 1:length(listf)
             data = extractTSM(folder,trial);
             dataFiltered = vsd_ellipTSM(data);
             dataFiltered(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
-            %dataFilteredZ = zscore(dataFiltered,[],1);
+            dataFilteredZ = zscore(dataFiltered,[],1); % z-scores filtered data for plotting purposes
             dataDenoised = pca_denoise(dataFiltered);
             
             % calls Rodrigo's plotter function
-            vsd_all_plotter_tsm(trial,data,dataFiltered,dataDenoised);
+            vsd_all_plotter_tsm(trial,data,dataFilteredZ,dataDenoised);
             
         catch
             display(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])
