@@ -47,7 +47,7 @@ for A = 1:length(listf)
             dataDenoised = pca_denoise(dataFiltered);
             
             % calls Rodrigo's plotter function
-            vsd_all_plotter_tsm(trial,data,dataFilteredZ,dataDenoised);
+            vsd_all_plotter_tsm(data,dataFilteredZ,dataDenoised);
             
         catch
             display(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])

@@ -410,6 +410,7 @@ if contains(file,'.rhs')
         samenm = cellfun(@(x) strcmp(x,file),names);
         dift(dift<0 | isd | samenm | wrtype) = inf;
 
+        % code that searches for subsequent files
         while min(dift)<max(t) + 25 
             cnt = cnt + 1;
             buf.String = ['Loading...File ' num2str(cnt)];
