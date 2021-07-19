@@ -1,7 +1,7 @@
 function data = extractTSM(folder,trial)
 
 %% Parameters
-chunkLength = 500;
+chunkLength = 485;
 shutterThr = 2; % Threshold for detection of initial shutter opening. (In times the mean dark frame intensity.)
 baselineFrames = 10; % Number of frames to average to get the baseline light intesity.
 shutterOpenDur = 40; % Number of frames during the duration it takes to open the shutter.

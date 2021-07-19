@@ -7,6 +7,11 @@ function vsd_all_plotter_tsm(data,dataFiltered,dataDenoised)
     %   of tiled plots
     cpp = 5;
     
+    % parametrizes the number of frames to be trimmed off the beginning
+    %   and end of the recordings
+    trimStart = 1000;
+    trimEnd = 110;
+    
     % initializes first tiled plot
     figure;
     tiledlayout(cpp,3,'TileSpacing','tight','Padding','compact');
@@ -22,13 +27,13 @@ function vsd_all_plotter_tsm(data,dataFiltered,dataDenoised)
         
         % plots 3 graphs for each cell, and removes first "trim" frames
         nexttile
-        plot(data(1000:(end-100),k),'Color',PlotColor)
+        plot(data(trimStart:(end-trimEnd),k),'Color',PlotColor)
         title(['ROI ',num2str(k),' raw'])
         f = nexttile;
-        plot(dataFiltered(1000:(end-100),k),'Color',PlotColor)
+        plot(dataFiltered(trimStart:(end-trimEnd),k),'Color',PlotColor)
         title(['ROI ',num2str(k),' filtered'])
         d = nexttile;
-        plot(dataDenoised(1000:(end-100),k),'Color',PlotColor)
+        plot(dataDenoised(trimStart:(end-trimEnd),k),'Color',PlotColor)
         title(['ROI ',num2str(k),' denoised'])
         linkaxes([f,d],'y')
         
