@@ -3,7 +3,7 @@
 %% Define variables for other sections. Always run this section first.
 
 % Folder containing all, or any subset of, the experiments.
-masterFolder = 'Z:\_Lab Personnell_Summer Students\Rodrigo\VSD_Data\21-07-12\Turbo_data\Sheathed\Soft_stain';
+masterFolder = 'Z:\_Lab Personnell_Summer Students\Rodrigo\VSD_Data\21-07-12\Turbo_data\Sheathed\Strong_stain';
 
 % List .tsm files in experiment folders.
 listf = dir(fullfile(masterFolder, '*VSD0*.tsm'));
@@ -45,6 +45,11 @@ for A = 1:length(listf)
             dataFiltered(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
             dataFilteredZ = zscore(dataFiltered,[],1); % z-scores filtered data for plotting purposes
             dataDenoised = pca_denoise(dataFiltered);
+            
+            % sets ROIs for specific plotter functions and calls stacked
+            %   plotter function (can be disabled)
+            ROIs = [1 2 3 4 6 10 11 12 13 14 17 18 19 20 21 23 25 28 31 32 33];
+            vsd_stacked_plotter_tsm(dataFilteredZ,ROIs)
             
             % calls Rodrigo's plotter function
             vsd_all_plotter_tsm(data,dataFilteredZ,dataDenoised);
