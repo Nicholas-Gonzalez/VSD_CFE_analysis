@@ -48,8 +48,9 @@ for A = 1:length(listf)
             
             % sets ROIs for specific plotter functions and calls stacked
             %   plotter function (can be disabled)
-            ROIs = [1 2 3 4 6 10 11 12 13 14 17 18 19 20 21 23 25 28 31 32 33];
-            vsd_stacked_plotter_tsm(dataFilteredZ,ROIs)
+            %VSD009ROIsV1 = [1 2 3 4 6 10 11 12 13 14 17 18 19 20 21 23 25 28 31 32 33];
+            VSD009ROIsV2 = [1 2 3 4 6 10 11 12 13 14 17 18 19 21 23 26 39 40 41 43];
+            vsd_stacked_plotter_tsm(dataFilteredZ,VSD009ROIsV2)
             
             % calls Rodrigo's plotter function
             vsd_all_plotter_tsm(data,dataFilteredZ,dataDenoised);

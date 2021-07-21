@@ -1,12 +1,12 @@
-function pca_denoise_UI
+function pca_denoise_UI(data)
 %% Parameters
 
 % Load data. Path may need to be changed on your computer.
-load("E:\Renan\Operant Conditioning\blinded\18\101pre_21-Jan-2020.mat",'vsd_filtered_ns','vsddata');
-[b,a] = ellip(2,0.1,40,[10 100]*2/1000);
-vsd_ellip = filtfilt(b,a,vsddata);
+% load("E:\Renan\Operant Conditioning\blinded\18\101pre_21-Jan-2020.mat",'vsd_filtered_ns','vsddata');
+% [b,a] = ellip(2,0.1,40,[10 100]*2/1000);
+% vsd_ellip = filtfilt(b,a,vsddata);
 %data = zscore(vsd_filtered_ns);
-data = zscore(vsd_ellip);
+data = zscore(data);
 %   VARIABLES                   DESCRIPTION
 %   data                        Matrix containing VSD traces. Rows are timepoints and columns are neurons.
 
@@ -293,7 +293,7 @@ keyboard
             % Find minimum covariance and number of PCs to remove.
             [~,idx] = min(zCovs); 
             nPCs = idx - 1; % Need to subtract one because the first element of zCovs corresponds to removal of 0 PCs.
-            
+
             % Recursive step. Call function again with number of PCs above
             % as an input.
             denoised = removeNoise(nPCs);
