@@ -40,20 +40,24 @@ for A = 1:length(listf)
         continue
     else
         try % In case there is an error on a specific file.
-            data = extractTSM(folder,trial);
-            dataFiltered = vsd_ellipTSM(data);
-            dataFiltered(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
-            dataFilteredZ = zscore(dataFiltered,[],1); % z-scores filtered data for plotting purposes
-            dataDenoised = pca_denoise(dataFiltered);
+            
+            % extracts extracellular nerve data
+            %rawNerves = extractTBN(folder,trial);
+            
+            % extracts VSD data and stores it raw, filtered, and denoised
+            rawVSD = extractTSM(folder,trial);
+            filteredVSD = vsd_ellipTSM(rawVSD);
+            filteredVSD(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
+            filteredVSDZ = zscore(filteredVSD,[],1); % z-scores filtered data for plotting purposes
+            denoisedVSD = pca_denoise(filteredVSD);
             
             % sets ROIs for specific plotter functions and calls stacked
             %   plotter function (can be disabled)
-            %VSD009ROIsV1 = [1 2 3 4 6 10 11 12 13 14 17 18 19 20 21 23 25 28 31 32 33];
-            VSD009ROIsV2 = [1 2 3 4 6 10 11 12 13 14 17 18 19 21 23 26 39 40 41 43];
-            vsd_stacked_plotter_tsm(dataFilteredZ,VSD009ROIsV2)
+            ROIsV2 = [1 2 3 4 6 10 11 12 13 14 17 18 19 21 23 26 39 40 41 43];
+            vsd_stacked_plotter_tsm(filteredVSDZ,ROIsV2,masterFolder)
             
             % calls Rodrigo's plotter function
-            vsd_all_plotter_tsm(data,dataFilteredZ,dataDenoised);
+            vsd_all_plotter_tsm(rawVSD,filteredVSDZ,denoisedVSD);
             
         catch
             display(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])

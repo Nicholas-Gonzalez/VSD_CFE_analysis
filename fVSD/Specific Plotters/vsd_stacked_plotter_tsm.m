@@ -1,7 +1,7 @@
-function vsd_stacked_plotter_tsm(allData,ROIs)
+function vsd_stacked_plotter_tsm(allVSD,ROIs,folder,trial)
 
     % selects subset of allData to be plotted based on ROIs
-    plotData = allData(:,ROIs);
+    dataVSD = allVSD(:,ROIs);
     
     % calculates the total number of ROIsto pre-allocate for speed, 
     %   stored as "neurons"
@@ -12,8 +12,8 @@ function vsd_stacked_plotter_tsm(allData,ROIs)
     %   plotData.
     trimStart = 1000;
     trimEnd = 110;
-    plotData(1:trimStart,:) = [];
-    plotData(end-(trimEnd-1):end,:) = [];
+    dataVSD(1:trimStart,:) = [];
+    dataVSD(end-(trimEnd-1):end,:) = [];
     
     % parametrizes the general grid layout of the tiled plot, with r 
     %   rows and c columns.  9 rows and 16 columns will fit perfectly
@@ -30,7 +30,7 @@ function vsd_stacked_plotter_tsm(allData,ROIs)
     
     % generates table to be read by the stacked plot function with
     %   column headers specified by tabNames
-    tabData = array2table(plotData,'VariableNames',tabNames);
+    tabData = array2table(dataVSD,'VariableNames',tabNames);
     
     % initializes first tiled plot with r rows and c columns
     figure('color','w');
@@ -46,8 +46,8 @@ function vsd_stacked_plotter_tsm(allData,ROIs)
     ax = gca;
     ax.XLabel = 'Time (ms)';
     ticks = findobj(VSDplot.NodeChildren, 'Type','Axes');
-    set(ticks, 'YTick', [])
-    [xpoints,~] = size(plotData);
+    set(ticks, 'YTick', []);
+    [xpoints,~] = size(dataVSD);
     set(ticks, 'XTick', 0:(xpoints/6):xpoints);
     
     % NOTES: need to add disabling feature (so if it's blank, don't
@@ -55,7 +55,7 @@ function vsd_stacked_plotter_tsm(allData,ROIs)
     
     % loads in frames for plotting
     frameFolder = 'Z:\_Lab Personnell_Summer Students\Rodrigo\VSD_Data\21-07-12\Turbo_data\Sheathed\Strong_stain\Plotting_frames';
-    clearFrame = imread(fullfile(frameFolder,'\21-07-12_RodrigoVSD009_frame_clear.tif'));
+    clearFrame = imread(fullfile(folder,'\21-07-12_RodrigoVSD009_frame.tif'));
     ROIFrame = imread(fullfile(frameFolder,'\21-07-12_RodrigoVSD009_frame_ROIs.png'));
     
     nexttile(13,[4 4]);
