@@ -31,9 +31,7 @@ end
 if isempty(recent.file)
     rm = [];
 end
-mi(3) = uimenu(m,'Text','Save','Enable','off','Tag','savem');
-    uimenu(mi(3),'Text','As Matlab','Callback',@savematlab,'Enable','off','Tag','savem');
-    uimenu(mi(3),'Text','As ASCII','Callback',@saveascii,'Enable','off','Tag','savem');
+mi(3) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
 mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
 
 guidata(gcf,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'rm',rm,'mi',mi,'mn',m))
@@ -64,11 +62,20 @@ uicontrol('Position',[1000 290 100 20],'Style','pushbutton','Tag','adjust',...
               'Callback',@zoom,'String','decrease y-scale','Enable','off');
           
 uicontrol('Position',[1110 350 100 20],'Style','pushbutton','Tag','adjust',...
-              'Callback',@remove_artifact,'String','Remove Artifact','Enable','off');
+              'Callback',@remove_artifact,'String','Remove Artifact','Enable','off',...
+              'TooltipString','Attempts to remove artifact by stimulation.  Sometimes it is not effective');
 uicontrol('Position',[1110 330 100 20],'Style','pushbutton','Tag','adjust',...
               'Callback',@edit_undo,'String','Edit undo','Enable','off');
+uicontrol('Position',[1110 310 100 20],'Style','pushbutton','Tag','adjust',...
+              'Callback',@decimateit,'String','Reduce sampling','Enable','off',...
+              'TooltipString','Reduces the number or samples by half using the decimate function');
 text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
+
+
+function decimateit(hObject,eventdata)
+props = guidata(hObject);
+guidata(hObject,props)
 
 
 function edit_undo(hObject,eventdata)
@@ -353,7 +360,8 @@ end
 recent = props.recent;
 
 it = findobj('Tag','grid');
-buf = text(500,875,'Loading...','FontSize',15,'Parent',it);
+delete(findobj('Tag','notify'))
+buf = text(500,875,'Loading...','FontSize',15,'Parent',it,'Tag','notify');
 pause(0.01)
 
 if contains(file,'.rhs')
@@ -392,7 +400,12 @@ if contains(file,'.rhs')
         cnt = cnt + 1;
         buf.String = 'Loading...File 1';
         pause(0.01);
-        [data,t,stim,stim_param,notes,amplifier_channels, board_adc_channels, board_adc_data] = read_Intan_RHS2000_file(fullfile(path,fdir(idx).name));
+        try
+            [data,t,stim,stim_param,notes,amplifier_channels, board_adc_channels, board_adc_data] = read_Intan_RHS2000_file(fullfile(path,fdir(idx).name));
+        catch
+            buf.String = 'Couldn''t load file';
+            pause(0.01);            
+        end
         if t(1)>0
              out = questdlg('Warning!  The selected file is not the first file of this recording.  Recommend pressing ''Cancel'' and choosing another file',...
                  'Warning!','Continue','Cancel','Cancel');
@@ -410,7 +423,6 @@ if contains(file,'.rhs')
         samenm = cellfun(@(x) strcmp(x,file),names);
         dift(dift<0 | isd | samenm | wrtype) = inf;
 
-        % code that searches for subsequent files
         while min(dift)<max(t) + 25 
             cnt = cnt + 1;
             buf.String = ['Loading...File ' num2str(cnt)];
@@ -559,8 +571,8 @@ props.info(9,2) = text(1030,115,'Press enter to apply','Parent',it,'Horizontal',
 delete(buf)
 
 set(findobj('Tag','savem'),'Enable','on');
-set(findobj('Tag','showlist'),'Enable','on');
-set(findobj('Tag','hidelist'),'Enable','on');
+set(findobj('Tag','showgraph'),'Enable','on');
+set(findobj('Tag','hidegraph'),'Enable','on');
 if isfield(props,'yaxis')
     set(props.yaxis,'Parent',gcf,'Enable','on')
 end
@@ -584,7 +596,7 @@ guidata(hObject,props)
 
 
 
-function savematlab(hObject,eventdata)
+function saveit(hObject,eventdata)
 props = guidata(hObject);
 it = findobj('Tag','grid');
 [file,path,indx] = uiputfile(replace(props.file,'.rhs','.mat'));
@@ -609,36 +621,6 @@ end
 % props = rmfield(props,'info');
 
 save(fullfile(path,file),'props')
-
-set(allbut,'Enable','on')
-delete(buf)
-
-
-function saveascii(hObject,eventdata)
-props = guidata(hObject);
-it = findobj('Tag','grid');
-[file,path,indx] = uiputfile(replace(props.file,'.rhs','.txt'));
-
-if ~file
-    return
-end
-
-buf = text(500,875,'Saving...','FontSize',15,'Parent',it);
-allbut = findobj('Type','Uicontrol','Enable','on');
-set(allbut,'Enable','off')
-pause(0.01)
-
-if ~isfield(props,'showlist')
-    props.showlist = get(findobj('Tag','showgraph'),'String');
-end
-
-if ~isfield(props,'hidelist')
-    props.hidelist = get(findobj('Tag','hidegraph'),'String');
-end
-
-% props = rmfield(props,'info');
-
-writematrix(props.data(props.showidx,:),fullfile(path,file))
 
 set(allbut,'Enable','on')
 delete(buf)
