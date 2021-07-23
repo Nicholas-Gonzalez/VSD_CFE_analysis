@@ -15,9 +15,9 @@ function data = extractTBN(folder,trial)
     channels = abs(TBNchannels);
     
     % reads .tbn file as float64 format and uses this to plot
-    fileID = fopen(fullfile(folder,[trial,'.tbn']));
-    A3 = fread(fileID,'float64');
-    fclose(fileID);
+    fileID2 = fopen(fullfile(folder,[trial,'.tbn']));
+    A3 = fread(fileID2,'float64');
+    fclose(fileID2);
     
     %trims off first 2 values of A2
     %A2(1:2) = [];

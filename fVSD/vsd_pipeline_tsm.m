@@ -54,7 +54,8 @@ for A = 1:length(listf)
             % sets ROIs for specific plotter functions and calls stacked
             %   plotter function (can be disabled)
             ROIsV2 = [1 2 3 4 6 10 11 12 13 14 17 18 19 21 23 26 39 40 41 43];
-            vsd_stacked_plotter_tsm(filteredVSDZ,ROIsV2,masterFolder)
+            IntanSignals = [2 3 4 7];
+            vsd_stacked_plotter_tsm(filteredVSDZ,ROIsV2,folder,trial,IntanSignals);
             
             % calls Rodrigo's plotter function
             vsd_all_plotter_tsm(rawVSD,filteredVSDZ,denoisedVSD);
