@@ -3,7 +3,7 @@
 %% Define variables for other sections. Always run this section first.
 
 % Folder containing all, or any subset of, the experiments.
-masterFolder = 'Z:\_Lab Personnell_Summer Students\Rodrigo\VSD_Data\21-07-12\Turbo_data\Sheathed\Strong_stain';
+masterFolder = fileread('TSM_path_appdata.txt');
 
 % List .tsm files in experiment folders.
 listf = dir(fullfile(masterFolder, '*VSD0*.tsm'));
