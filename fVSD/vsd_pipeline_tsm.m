@@ -26,7 +26,7 @@ for A = 1:length(listf)
     end
 end
 
-display('Optimal frames for kernel drawing have been saved. Please, draw kernels for each file before proceeding.')
+disp('Optimal frames for kernel drawing have been saved. Please, draw kernels for each file before proceeding.')
 
 %% Extract raw, filtered and denoised data.
 
