@@ -1,23 +1,28 @@
-function [frame,frame_pic]=find_kframe(fpath, trial)
+function [frame,frame_pic]=find_kframe(fpath,fig_visible)
 %This fuction finds the best frame to draw the kernels.  It saves the frame
 %as (eg.  101_frame.tif).  It also saves the frame number and a matrix of
 % the frame in a matlab document (eg.  101pre_date.mat).
-
-% fpath='F:\15-09-09\';
-% trial=101;
+%
+% INPUT:
+% fpath =  name and path of file, be sure to include extension
+%
+% EXAMPLE:
+% [frame,frame_pic]=find_kframe('D:\Data\CFE_VSD\21-08-18\VSD_CFE001.tsm');
 
 %% -------------------------------Parameters--------------------------------%
 numfrm=200;
 dark_frms=200;% specify the number of dark frames
 avg_frms=200;
 
-
-fig_visible='off';
+if nargin<2
+    fig_visible = true;
+end
 monitor=2;
 figure_size=1;
 pic_size=.5;
 
-fileType = 'tsm'; % Either 'da' or 'tsm'.
+[folder,fname,fileType] = fileparts(fpath); % Either 'da' or 'tsm'.
+trial = char(regexp(fname,'\d+$','match'));
 headerLength = [2560*2 2880]; % Header lengths for 'da' and 'tsm' files, respectively.
 
 %% -------------------------------------------------------------------------%
@@ -25,23 +30,23 @@ headerLength = [2560*2 2880]; % Header lengths for 'da' and 'tsm' files, respect
 MP = get(0,'MonitorPositions');
 
 %Archive old matlab files
-file=dir(fullfile(fpath, [num2str(trial) 'pre_*.mat']));
+file=dir(fullfile(folder, [trial 'pre_*.mat']));
 if size(file,1)
-    if ~exist(fullfile(fpath, 'Archives'),'dir');    mkdir(fullfile(fpath, 'Archives'));      end
-    copyfile(fullfile(fpath, file.name), fullfile(fpath, 'Archives'))
-    delete(fullfile(fpath, file.name))
+    if ~exist(fullfile(folder, 'Archives'),'dir');    mkdir(fullfile(folder, 'Archives'));      end
+    copyfile(fullfile(folder, file.name), fullfile(folder, 'Archives'))
+    delete(fullfile(folder, file.name))
 end
 
-if strcmp(fileType,'da')
-    fid = fopen(fullfile(fpath, [num2str(trial) '.da']),'r');
+if strcmp(fileType,'.da')
+    fid = fopen(fpath,'r');
     header = fread(fid, 2560, 'int16');
     xsize = header(385);
     ysize = header(386);
     all_frm = header(2001)+header(2002)*32000;%determine duration of recording
     headerLength(2)=[]; % Delete header length of other file type.
-elseif strcmp(fileType,'tsm')
-    fid = fopen(fullfile(fpath, [num2str(trial) '.tsm']),'r');
-    info = fitsinfo(fullfile(fpath, [num2str(trial) '.tsm']));
+elseif strcmp(fileType,'.tsm')
+    fid = fopen(fpath,'r');
+    info = fitsinfo(fpath);
     xsize = info.PrimaryData.Size(2); % Note: xsize is the second, not the first value.
     ysize = info.PrimaryData.Size(1);
     all_frm = info.PrimaryData.Size(3);
@@ -112,12 +117,12 @@ end
 idx=I+sum(dist_mean(1:I-1)==0);
 frame=real_frm(idx)*round(all_frm / numfrm);
 frame_pic=pic(:,:,idx);
-imwrite(frame_pic,fullfile(fpath, [num2str(trial) '_frame.tif']))
-save(fullfile(fpath, [num2str(trial) 'pre_' date]),'frame','frame_pic')
+imwrite(frame_pic,fullfile(folder, [fname  '_frame.tif']))
+save(fullfile(folder, [fname '_' date]),'frame','frame_pic')
 
 %generate data figure
 close(findobj(0, 'Name', 'Contrast'))
-figure('Name' , 'Contrast','NumberTitle' , 'off','Visible',fig_visible);
+fig1 = figure('Name' , 'Contrast','NumberTitle' , 'off','Visible',fig_visible);
 subplot(2,3,1:3); image(see_pic*200); ax=gca; ax.Title.String='Frame Normalized Subtraction';
 for e=1:round(mov_frms/2)
     if e<round(mov_frms/2);   line(xsize*[e e] , [0 256],'Color','k','LineWidth',1);  end
@@ -132,17 +137,16 @@ subplot(2,3,6);plot(movement1);          hold on; scatter(idx,movement1(idx));  
 % set(gcf,'Position',[round(MP(monitor,1)*.75) MP(monitor,2)+MP(monitor,2)*0.01  figure_size.*MP(monitor,4)-MP(monitor,4)*0.08   figure_size.*MP(monitor,4)-MP(monitor,4)*0.08]);
 
 %save data figure
-export_fig(fullfile(fpath, [num2str(trial) '_frame_selection_data']),'-png')
+saveas(fig1,fullfile(folder, [fname '_frame_selection_data.png']))
 
 close(findobj(0, 'Name', 'Picture'))
-figure('Name' , 'Picture','NumberTitle' , 'off','Visible',fig_visible);
+fig2 = figure('Name' , 'Picture','NumberTitle' , 'off','Visible',fig_visible);
 frm_avg_r=frm_avg_r/max(max(frm_avg_r(10:end-10,10:end-10)));
 image(repmat(frm_avg_r,[1 1 3]))
-axis image
 % set(gcf,'Position',[round(MP(monitor,1)*.75) MP(monitor,2)+MP(monitor,2)*0.01  pic_size.*MP(monitor,4)-MP(monitor,4)*0.08   pic_size.*MP(monitor,4)-MP(monitor,4)*0.08]);
 
 %save picture
-export_fig(fullfile(fpath, [num2str(trial) '_picture']),'-png')
+saveas(fig2,fullfile(folder, [fname '_picture.png']))
 
 
 fclose(fid);

@@ -13,17 +13,10 @@ listf = dir(fullfile(masterFolder, '*VSD*.tsm'));
 %  listf = listf(~ismember({listf.folder},{listf_conv.folder}));
 
 %% Find the optimal frame for drawing the kernels. This step will also create the .mat files on which data will be saved at other sections.
-
+disp('running find_kframe')
 % Find optimal frame for each file.
-for A = 1:length(listf)
-    
-    trial = listf(A).name(1:end-4); % Remove .tsm to obtain trial name.
-    folder = listf(A).folder;
-    try % In case there is an error on a specific file.
-        find_kframe(folder,trial);
-    catch
-        display(['Failed to obtain optimal frame.' newline 'Folder: ' folder newline 'Trial: ' trial])
-    end
+for a = 1:length(listf)
+    find_kframe(fullfile(listf(a).folder,listf(a).name),false);% I removed trial, I had this before I relized that it is better to encode and read trial numbe in the filename itself
 end
 
 disp('Optimal frames for kernel drawing have been saved. Please, draw kernels for each file before proceeding.')
@@ -31,10 +24,10 @@ disp('Optimal frames for kernel drawing have been saved. Please, draw kernels fo
 %% Extract raw, filtered and denoised data.
 
 % Extract data for each file.
-for A = 1:length(listf)
+for a = 1:length(listf)
     
-    trial = listf(A).name(1:end-4); % Remove .tsm to obtain trial name.
-    folder = listf(A).folder;    
+    trial = listf(a).name(1:end-4); % Remove .tsm to obtain trial name.
+    folder = listf(a).folder;    
     if isempty(dir(fullfile(folder,[trial '*.det']))) % Determine whether .det file is present.
         display(['No .det kernel file found for trial ' trial '. Data could not be extracted.'])
         continue
