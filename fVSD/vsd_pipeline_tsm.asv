@@ -16,17 +16,12 @@ listf = dir(fullfile(masterFolder, '*VSD*.tsm'));
 
 % Find optimal frame for each file.
 for A = 1:length(listf)
-    
     trial = listf(A).name(1:end-4); % Remove .tsm to obtain trial name.
     folder = listf(A).folder;
-    try % In case there is an error on a specific file.
-        find_kframe(folder,trial);
-    catch
-        display(['Failed to obtain optimal frame.' newline 'Folder: ' folder newline 'Trial: ' trial])
-    end
+    find_kframe(folder,trial);
 end
 
-display('Optimal frames for kernel drawing have been saved. Please, draw kernels for each file before proceeding.')
+disp('Optimal frames for kernel drawing have been saved. Please, draw kernels for each file before proceeding.')
 
 %% Extract raw, filtered and denoised data.
 
