@@ -1,5 +1,5 @@
 function Intan_gui
-%intan gui
+
 
 f = figure('Position',[100 50 1300 900]);
 
