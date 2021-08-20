@@ -12,11 +12,13 @@ listf = dir(fullfile(masterFolder, '*VSD*.tsm'));
 %  listf_conv = dir(fullfile(masterFolder, '1*conv*.mat'));
 %  listf = listf(~ismember({listf.folder},{listf_conv.folder}));
 
+fnames = join(string([{listf.folder}', {listf.name}']),'\');
+
 %% Find the optimal frame for drawing the kernels. This step will also create the .mat files on which data will be saved at other sections.
 disp('running find_kframe')
 % Find optimal frame for each file.
 for a = 1:length(listf)
-    find_kframe(fullfile(listf(a).folder,listf(a).name),false);% I removed trial, I had this before I relized that it is better to encode and read trial numbe in the filename itself
+    find_kframe(fnames{a},false);% I removed trial, I had this before I relized that it is better to encode and read trial numbe in the filename itself
 end
 
 disp('Optimal frames for kernel drawing have been saved. Please, draw kernels for each file before proceeding.')
@@ -38,7 +40,7 @@ for a = 1%:length(listf)
             %rawNerves = extractTBN(folder,trial);
             
             % extracts VSD data and stores it raw, filtered, and denoised
-            rawVSD = extractTSM(folder,trial);
+            rawVSD = extractTSM(fnames{a});
             filteredVSD = vsd_ellipTSM(rawVSD);
             filteredVSD(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
             filteredVSDZ = zscore(filteredVSD,[],1); % z-scores filtered data for plotting purposes

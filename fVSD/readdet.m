@@ -1,15 +1,9 @@
-function [det,pixels,kern_center,kernel_size,kernpos]=readdet(fpath,trial)
+function [det,pixels,kern_center,kernel_size,kernpos]=readdet(fpath)
 % Function for reading kernel coordinates from .det file
-% "fpath" -- Full path where .det file is located.
-% "trial" -- File name of the target .det file, minus the extension.
-
-% 
-% Parameters
 
 pixSz = 256; % Size of the acquired image on which kernels were drawn. Currently assumes X and Y dimensions are the same.
 
-detfile = dir(fullfile(fpath, [num2str(trial) '*.det']));
-fid_det = fopen(fullfile(fpath, detfile.name),'r');
+fid_det = fopen(fpath,'r');
 det = textscan(fid_det,'%f','Delimiter',{',','\n'});
 det = cell2mat(det);
 det(isnan(det)) = 0;

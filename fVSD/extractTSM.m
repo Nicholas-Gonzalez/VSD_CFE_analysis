@@ -1,4 +1,4 @@
-function data = extractTSM(folder,trial)
+function data = extractTSM(fpath)
 
 %% Parameters
 chunkLength = 485;
@@ -13,7 +13,7 @@ nDarkFrames = 50; % Number of dark frames in the beginning of the recording to u
 
 %% Data extraction
 % Obtain header information
-info = fitsinfo(fullfile(folder,[trial '.tsm']));
+info = fitsinfo(fpath);
 
 % Obtain image size and recording length
 xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
@@ -40,8 +40,11 @@ switch darkFrameMode
         darkFrame = zeros(xsize,ysize); % Null dark frame.
 end
 
+% get det file name
+[folder, fname,ext] = fileparts(fpath);
+
 % Load kernels from .det file
-[det,~,~,kernel_size,kernpos]=readdet(folder,trial);
+[det,~,~,kernel_size,kernpos]=readdet(fullfile(folder,[fname '.det']));
 numKern = length(kernpos);
 
 % Iterate data extraction through chunks
