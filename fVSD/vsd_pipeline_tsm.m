@@ -24,12 +24,12 @@ disp('Optimal frames for kernel drawing have been saved. Please, draw kernels fo
 %% Extract raw, filtered and denoised data.
 
 % Extract data for each file.
-for a = 1:length(listf)
+for a = 1%:length(listf)
     
     trial = listf(a).name(1:end-4); % Remove .tsm to obtain trial name.
     folder = listf(a).folder;    
     if isempty(dir(fullfile(folder,[trial '*.det']))) % Determine whether .det file is present.
-        display(['No .det kernel file found for trial ' trial '. Data could not be extracted.'])
+        disp(['No .det kernel file found for trial ' trial '. Data could not be extracted.'])
         continue
     else
         try % In case there is an error on a specific file.
@@ -57,7 +57,7 @@ for a = 1:length(listf)
             vsd_all_plotter_tsm(rawVSD,filteredVSDZ,denoisedVSD);
             
         catch
-            display(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])
+            disp(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])
         end
     end
 end
@@ -83,6 +83,6 @@ end
 %         save(fullfile(folder,[trial '_convNEW_' date]),'vsd_spiketime','vsd_visualize_spike','vsd_detect_all','vsd_convFRMat')
 %         clearvars('vsdDenoise_ns','vsd_spiketime','vsd_visualize_spike','vsd_detect_all','vsd_convFRMat')
 %     catch
-%         display(['Failed to detect and convolve spikes.' newline 'Folder: ' folder newline 'Trial: ' trial])
+%         disp(['Failed to detect and convolve spikes.' newline 'Folder: ' folder newline 'Trial: ' trial])
 %     end
 % end
