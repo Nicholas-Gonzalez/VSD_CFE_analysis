@@ -1,4 +1,4 @@
-function data = extractTSM(fpath)
+function data = extractTSM(fpath, detpath)
 
 %% Parameters
 chunkLength = 485;
@@ -40,11 +40,8 @@ switch darkFrameMode
         darkFrame = zeros(xsize,ysize); % Null dark frame.
 end
 
-% get det file name
-[folder, fname,ext] = fileparts(fpath);
-
 % Load kernels from .det file
-[det,~,~,kernel_size,kernpos]=readdet(fullfile(folder,[fname '.det']));
+[det,~,~,kernel_size,kernpos]=readdet(detpath);
 numKern = length(kernpos);
 
 % Iterate data extraction through chunks
