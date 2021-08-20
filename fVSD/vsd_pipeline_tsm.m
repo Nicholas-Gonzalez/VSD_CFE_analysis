@@ -65,11 +65,13 @@ for a = 5%:length(listf)
             denoisedVSD = pca_denoise(filteredVSD);
             
             notes = string(readcell(fullfile(fileparts(cfeconn{a,2}),'notes.xlsx')));
-            IntanSignals = notes(2:end,notes(1,:)=="good channels");keyboard
+            IntanSignals = notes(2:end,notes(1,:)=="good channels");
+            
+            [~,~,roixy]=readdet(detname);
             
             tiffnm = replace(cfeconn{a,1},'.tsm','_frame.tif');
             frameim = imread(tiffnm);
-            vsd_stacked_plotter_tsm(filteredVSDZ,1:size(rawVSD,2),cfeconn{a,2},frameim,IntanSignals,IntanSignals);
+            vsd_stacked_plotter_tsm(filteredVSDZ,1:size(rawVSD,2),cfeconn{a,2},frameim,IntanSignals,IntanSignals,roixy);
             
             % calls Rodrigo's plotter function that plots all data,
             %   including raw, filtered, and denoised side-by-side

@@ -1,4 +1,4 @@
-function vsd_stacked_plotter_tsm(allVSD,ROIs,RHSname,frameim, IntanSignals,IntanLabels)
+function vsd_stacked_plotter_tsm(allVSD,ROIs,RHSname,frameim, IntanSignals,IntanLabels,roixy)
 
 % USAGE: vsd_stacked_plotter_tsm
 % DESCRIPTION: utlizes "tiledlayout" and "stackedplot" functions to
@@ -39,6 +39,7 @@ function vsd_stacked_plotter_tsm(allVSD,ROIs,RHSname,frameim, IntanSignals,Intan
 %                       NOTE: IntanSignals and IntanLabels can be ignored when 
 %                       calling function from driver, and "vsd_stacked_plotter_tsm" 
 %                       will ignore plotting nerve signals.
+%  roixy         =       ROI positions
 % OUTPUTS: none (generates figure)
 % CONTACT: Rodrigo Gonzales-Rojas (rag13@rice.edu or 
 %   rodrigogonzrojas@gmail.com)
@@ -226,6 +227,7 @@ end
 % plots frames with and without ROIs.
 nexttile(13,[4 4]);
 imshow(frameim);
+text(roixy(ROIs,1),roixy(ROIs,2),string(ROIs))
 %     nexttile(77,[4 4]);
 %     imshow(ROIFrame);
 
