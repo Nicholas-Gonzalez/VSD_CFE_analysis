@@ -52,7 +52,7 @@ offset = info.PrimaryData.Offset + ... Header information takes 2880 bytes.
 fseek(fid,offset,'bof');
 
 % Read data.
-data = fread(fid,frameLength*chunkLength,'int16'); 
+data = fread(fid,frameLength*chunkLength,'int16=>single');% single saves about 25% processing time and requires half of memory 
 
 % Format data.
 data = reshape(data,[xsize ysize chunkLength]); 
