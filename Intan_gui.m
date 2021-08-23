@@ -622,6 +622,10 @@ set(allbut,'Enable','on')
 delete(buf)
 
 function help(hObject,eventdata)
-helptxt  = fileread('help_readme.txt');%keyboard% not the right text reading funcitons
-msgbox(helptxt)
+if exist('help_readme.txt','file')
+    helptxt  = fileread('help_readme.txt');%keyboard% not the right text reading funcitons
+    msgbox(helptxt)
+else
+    msgbox('help_readme.txt file not found')
+end
 
