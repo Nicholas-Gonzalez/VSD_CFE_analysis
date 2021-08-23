@@ -33,6 +33,7 @@ if isempty(recent.file)
 end
 mi(3) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
 mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
+mi(4) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
 
 guidata(gcf,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'rm',rm,'mi',mi,'mn',m))
 
@@ -136,12 +137,9 @@ end
 guidata(hObject,props)
 
 
-
-
 function toworkspace(hObject,eventdata)
 props = guidata(hObject);
 assignin('base', 'out', props);
-
 
 
 function sortlist(hObject,eventdata)
@@ -251,7 +249,6 @@ else
 end
 guidata(hObject,props)
 plotdata
-
 
 
 function selection(hObject,eventdata)
@@ -594,8 +591,6 @@ props.notes.(hObject.Tag) = hObject.String;
 guidata(hObject,props)
 
 
-
-
 function saveit(hObject,eventdata)
 props = guidata(hObject);
 it = findobj('Tag','grid');
@@ -621,7 +616,12 @@ end
 % props = rmfield(props,'info');
 
 save(fullfile(path,file),'props')
+disp(['Saved ' fullfile(path,file)])
 
 set(allbut,'Enable','on')
 delete(buf)
+
+function help(hObject,eventdata)
+helptxt  = fileread('help_readme.txt');%keyboard% not the right text reading funcitons
+msgbox(helptxt)
 
