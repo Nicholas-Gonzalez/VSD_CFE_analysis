@@ -23,7 +23,10 @@ end
 
 
 m = uimenu('Text','Intan');
-mi(1) = uimenu(m,'Text','Open','Callback',@loadRHS);
+mi(1) = uimenu(m,'Text','Open');
+om(1) = uimenu(mi(1),'Text','Intan','Callback',@loadRHS);
+om(1) = uimenu(mi(1),'Text','VSD');
+om(1) = uimenu(mi(1),'Text','Intan and VSD','Callback',@loadBoth);
 mi(2) = uimenu(m,'Text','Open Recent');
 for r=1:length(recent.file)
     rm(r) = uimenu(mi(2),'Text',recent.file{r},'Callback',@loadRHS);
@@ -72,7 +75,8 @@ uicontrol('Position',[1110 310 100 20],'Style','pushbutton','Tag','adjust',...
               'TooltipString','Reduces the number or samples by half using the decimate function');
 text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
-
+function loadBoth(hObject,eventdata)
+loadRHS(hObject,eventdata)
 
 function decimateit(hObject,eventdata)
 props = guidata(hObject);
@@ -337,7 +341,7 @@ it = findobj('Tag','grid');
 allbut = findobj('Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
 
-if strcmp(hObject.Text,'Open')
+if ~isempty(regexp(hObject.Text,'Intan','once'))
     [file, path, id] = uigetfile('C:\Users\cneveu\Desktop\Data\intan_data\*.rhs;*.mat',...
                              'Select an RHS2000 Data File', 'MultiSelect', 'on');
 else
