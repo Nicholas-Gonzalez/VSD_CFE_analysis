@@ -25,7 +25,7 @@ end
 m = uimenu('Text','Intan');
 mi(1) = uimenu(m,'Text','Open');
 om(1) = uimenu(mi(1),'Text','Intan','Callback',@loadRHS);
-om(1) = uimenu(mi(1),'Text','VSD');
+om(1) = uimenu(mi(1),'Text','VSD','Callback',@loadVSD);
 om(1) = uimenu(mi(1),'Text','Intan and VSD','Callback',@loadBoth);
 mi(2) = uimenu(m,'Text','Open Recent');
 for r=1:length(recent.file)
@@ -77,6 +77,22 @@ text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
 function loadBoth(hObject,eventdata)
 loadRHS(hObject,eventdata)
+loadVSD(hObject,eventdata)
+
+function loadVSD(hObject,eventdata)
+f2 = figure;
+f2.Position(3:4) = [400 400];
+uicontrol('Position',[50 370 200 20],'Style','text','String',"Select Frame file (.tif)");
+frm = uicontrol('Position',[10 350 300 20],'Style','edit','String',pwd,'Tag','framefn');
+uicontrol('Position',[315 350 60 20],'Style','pushbutton','String',"Browse",'Callback',@openkframe);
+
+uicontrol('Position',[50 300 200 20],'Style','text','String',"Select Frame VSD (.tsm)");
+vsd = uicontrol('Position',[10 280 300 20],'Style','edit','String',pwd,'Tag','vsdfn');
+uicontrol('Position',[315 280 60 20],'Style','pushbutton','String',"Browse",'Callback',@openkframe);
+
+
+function openkframe(hObject,eventdata)
+[file, path, id] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tif','Select frame file');
 
 function decimateit(hObject,eventdata)
 props = guidata(hObject);
