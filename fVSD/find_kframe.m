@@ -46,7 +46,9 @@ if strcmp(fileType,'.da')
     headerLength(2)=[]; % Delete header length of other file type.
 elseif strcmp(fileType,'.tsm')
     fid = fopen(fpath,'r');
+    warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
     info = fitsinfo(fpath);
+    warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
     xsize = info.PrimaryData.Size(2); % Note: xsize is the second, not the first value.
     ysize = info.PrimaryData.Size(1);
     all_frm = info.PrimaryData.Size(3);

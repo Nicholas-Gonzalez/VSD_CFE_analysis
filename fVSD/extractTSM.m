@@ -1,4 +1,4 @@
-function data = extractTSM(fpath, detpath)
+function [data,tm] = extractTSM(fpath, detpath)
 
 %% Parameters
 chunkLength = 485;
@@ -13,13 +13,16 @@ nDarkFrames = 50; % Number of dark frames in the beginning of the recording to u
 
 %% Data extraction
 % Obtain header information
+warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(fpath);
+warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
 
 % Obtain image size and recording length
 xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
 ysize = info.PrimaryData.Size(1);
 zsize = info.PrimaryData.Size(3); % Length of recording
-
+sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
+tm = 0:sr:zsize*sr-sr;
 % Compute the number of chunks to extract
 numChunks = ceil(zsize/chunkLength);
 
