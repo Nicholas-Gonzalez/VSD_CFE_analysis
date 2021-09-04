@@ -141,12 +141,10 @@ pause(0.1)
 matprops = load(fullfile(path,file));
 set(matprog,'String','loaded','ForeGroundColor','k')
 vsdprops.matprops.intan = matprops.props.vsdprops.intan;
-vsdprops.matprops.intan.data = double(vsdprops.matprops.intan.data);
-vsdprops.matprops.vsd.data = double(matprops.props.vsdprops.vsd.data)/2^15;
+vsdprops.matprops.intan.data = vsdprops.matprops.intan.data;
+vsdprops.matprops.vsd.data = matprops.props.vsdprops.vsd.data;
 vsdprops.matprops.vsd.tm = matprops.props.vsdprops.vsd.tm;
-vsdprops.matprops.data = double(matprops.props.data);
-idx = startsWith(string(matprops.props.ch),'V-');
-vsdprops.matprops.data(idx,:) = vsdprops.matprops.data(idx,:)/2^15;
+vsdprops.matprops.data = matprops.props.data;
 vsdprops.matprops.showlist = matprops.props.showlist;
 vsdprops.matprops.hidelist = matprops.props.hidelist;
 vsdprops.matprops.showidx = matprops.props.showidx;
@@ -185,6 +183,10 @@ uicontrol(hObject.Parent,'Position',[380 240 60 20],'Style','text','String',"com
 getvsdfile(findobj(hObject.Parent,'Tag','tiffns'))
 
 function loadall(hObject,eventdata)
+allbut = findobj(hObject.Parent,'Type','Uicontrol','Enable','on','-not','Style','text');
+set(allbut,'Enable','off')
+pause(0.1)
+
 vsdprops = guidata(hObject);
 iObject = findobj('Tag',vsdprops.intan_tag);
 
@@ -227,7 +229,10 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
             set(tsm_prog,'String',"loading...",'ForegroundColor','b');
             pause(0.1)
             [data,tm] = extractTSM(tsm,det);
-            vsdprops.vsd.data = data;
+            data = data';
+            vsdprops.vsd.min = min(data,[],2);
+            vsdprops.vsd.d2uint = repelem(2^16,size(data,1),1)./range(data,2);
+            vsdprops.vsd.data = convert_uint(data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'uint16');
             vsdprops.vsd.tm = tm;
             set(tsm_prog,'String','saving...')
             save(replace(vsdprops.files(vsdprops.files(:,1)=="tsmfns",2),'.tsm','.mat'),'vsdprops')
@@ -247,6 +252,11 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         [data, vsdprops.intan.tm, stim, ~, notes, amplifier_channels] = read_Intan_RHS2000_file(rfn);
 
         vsdprops.intan.data = [data;stim];
+        
+        sz = size(vsdprops.intan.data);
+        vsdprops.intan.min = min(vsdprops.intan.data,[],2);
+        vsdprops.intan.d2uint = repelem(2^16,sz(1),1)./range(vsdprops.intan.data,2);
+        vsdprops.intan.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'uint16');
 
         vsdprops.intan.ch = [string({amplifier_channels.native_channel_name})';...
                     join([string((1:size(data,1))'), repelem(" stim(uA)",size(data,1),1)])];
@@ -293,26 +303,28 @@ intch = isfield(vsdprops,'intan') || (isfield(vsdprops,'matprops') && isfield(vs
 vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd'));
 if intch && vsdch
     if isfield(vsdprops,'intan')
-        intan = vsdprops.intan.data(:,1:2:end);
+        intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
         itm = vsdprops.intan.tm(1:2:end);
         if isfield(vsdprops,'vsd')
-            vdata = vsdprops.vsd.data;
+            vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
             tm = vsdprops.vsd.tm;
         else
-            vdata = vsdprops.matprops.vsd.data;
+            vsd = convert_uint(vsdprops.matprops.vsd.data, vsdprops.matprops.vsd.d2uint,...
+                vsdprops.matprops.vsd.min,'double');
             tm = vsdprops.matprops.vsd.tm;
         end
         sr = diff(vsdprops.vsd.tm(1:2));
         vtm = min(itm):sr:max(itm);
         prsz = length(min(itm):sr:min(tm)-sr);
         posz = length(max(tm)+sr:sr:max(itm));
-        vsd = [repmat(vdata(1,:),prsz,1);  vdata; repmat(vdata(end,:),posz,1)];
-        vsd = interp1(vtm, vsd, itm);
+        vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
+        vsd = interp1(vtm, vsd', itm);
+        vsd = vsd';
         
-        props.data = [intan ; vsd'];
-        props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,2),1) num2str((1:size(vsd,2))','%03u')])];
+        props.data = [intan ; vsd];
+        props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
         props.tm = itm;
-        showidx = [(1:size(intan,1)/2)  (1:size(vsd,2))+size(intan,1)];
+        showidx = [(1:size(intan,1)/2)  (1:size(vsd,1))+size(intan,1)];
         props.showlist = props.ch(showidx);
         props.showidx = showidx;
         hideidx = size(intan,1)/2+1:size(intan,1);
@@ -323,19 +335,23 @@ if intch && vsdch
         props.notes = vsdprops.intan.notes;
     else
         if isfield(vsdprops,'vsd')
-            intan = vsdprops.matprops.intan.data;
+            intan = convert_uint(vsdprops.matprops.intan.data, vsdprops.matprops.intan.d2uint,...
+                vsdprops.matprops.intan.min, 'double');
             itm = vsdprops.matprops.intan.tm;  
-            vdata = vsdprops.vsd.data;
+            vsd = vsdprops.vsd.data;
             tm = vsdprops.vsd.tm;
             sr = diff(vsdprops.vsd.tm(1:2));
             vtm = min(itm):sr:max(itm);
             prsz = length(min(itm):sr:min(tm)-sr);
             posz = length(max(tm)+sr:sr:max(itm));
-            vsd = [repmat(vdata(1,:),prsz,1);  vdata; repmat(vdata(end,:),posz,1)];
-            vsd = interp1(vtm, vsd, itm);
+            vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
+
+            vsd = convert_uint(vsd, vsdprops.vsd.d2uint, vsdprops.vsd.mind,'double');
+            vsd = interp1(vtm, vsd', itm);
+            vsd = vsd';
             
-            props.data = [intan ; vsd'];
-            props.ch = [vsdprops.matprops.intan.ch ;  string([repelem('V-',size(vsd,2),1) num2str((1:size(vsd,2))','%03u')])];
+            props.data = [intan ; vsd];
+            props.ch = [vsdprops.matprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
             props.tm = itm;
             showidx = [(1:size(intan,1)/2)  (1:size(vsd,2))+size(intan,1)];
             props.showlist = props.ch(showidx);
@@ -347,7 +363,9 @@ if intch && vsdch
             props.finfo = vsdprops.matprops.intan.finfo;
             props.notes = vsdprops.matprops.intan.notes;
         else
-            props.data = vsdprops.matprops.data;
+            props.d2uint = vsdprops.matprops.d2uint;
+            props.min = vsdprops.matprops.min;
+            props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');  
             props.tm = vsdprops.matprops.tm;
             props.ch = vsdprops.matprops.ch;
             props.showlist = vsdprops.matprops.showlist;
@@ -360,11 +378,38 @@ if intch && vsdch
         end
     end
     props.files = vsdprops.files;
-
-else
-    
 end
+try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
+
+props.vsdprops = vsdprops;   
+
 guidata(findobj('Tag',props.intan_tag),props)
+
+function out = convert_uint(data,d2uint,mind,vtype)% converts data from uint16 2 double, vica versa
+% data must be 2d array.  d2uint is the conversion factor from double
+% to uint16, mind is the minimun subtracted from the data when in original
+% double format. vtype is the desired output class (double or uint16).  If
+% data is already in the type specified by vtype, the out will be
+% indentical to the input data.
+sz = size(data);
+[~, didx] = max(sz);
+if didx==1% making the second dimension time, converts output back.
+    data = data';
+end
+
+if strcmp(vtype,'double') && isa(data,'uint16')
+    out = double(data)./repmat(d2uint,1,size(data,2)) + repmat(mind,1,size(data,2));
+elseif strcmp(vtype,'uint16') && isa(data,'double')
+    out = uint16((data - repmat(mind,1,size(data,2)))./repmat(d2uint,1,size(data,2)));
+elseif isa(data,vtype)
+    out = data;
+else
+    error('data not in correct format')
+end
+
+if didx==1
+    out = out';
+end
 
 function cancelvsd(hObject,eventdata)
 close(hObject.Parent)
@@ -944,7 +989,7 @@ filterp.fatt = fatt;
 filterp.fpass = fpass;
 filterp.fstop = fstop;
 filterp.meth = meth{midx};
-filterp.idx = idx;
+filterp.idx = idx;keyboard
 if ~isfield(props,'filter')
     props.filter = filterp;
 else
@@ -1068,12 +1113,12 @@ if ~isfield(props,'hidelist')
     props.hidelist = get(findobj('Tag','hidegraph'),'String');
 end
 
-% props = rmfield(props,'info');
+
 props = rmfield(props,'ax');
-% props.vsdprops.intan.data = int16(props.vsdprops.intan.data);
-idx = find(startsWith(string(props.ch),'V-'));
-props.data(idx,:) = props.data(idx,:)*2^15;
-props.data = int16(props.data);
+props.min = min(props.data,[],2);
+props.d2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+props.data = convert_uint(props.data, props.d2uint, props.min, 'uint16');
+
 save(fullfile(path,file),'props')
 disp(['Saved ' fullfile(path,file)])
 
