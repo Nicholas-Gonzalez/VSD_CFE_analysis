@@ -1126,6 +1126,10 @@ props.min = min(props.data,[],2);
 props.d2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
 props.data = convert_uint(props.data, props.d2uint, props.min, 'uint16');
 
+props.bmin = min(props.databackup,[],2);
+props.bd2uint = repelem(2^16,size(props.databackup,1),1)./range(props.databackup,2);
+props.databackup = convert_uint(props.databackup, props.d2uint, props.min, 'uint16');
+
 save(fullfile(path,file),'props')
 disp(['Saved ' fullfile(path,file)])
 
