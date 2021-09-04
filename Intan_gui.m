@@ -129,6 +129,11 @@ vsdprops.files = strings(5,2);
 vsdprops.files(:,1) = ["tiffns";"detfns";"tsmfns";"rhsfns";"xlsxfns"];
 vsdprops.load_tag = load_tag;
 vsdprops.intan_tag = hintan.Tag;
+
+allbut = findobj(hintan,'Type','Uicontrol','Enable','on');
+set(allbut,'Enable','off')
+vsdprops.allbut = allbut;
+
 guidata(f2,vsdprops)
 
 function loadmat(hObject,eventdata)
@@ -145,6 +150,8 @@ vsdprops.matprops.intan.data = vsdprops.matprops.intan.data;
 vsdprops.matprops.vsd.data = matprops.props.vsdprops.vsd.data;
 vsdprops.matprops.vsd.tm = matprops.props.vsdprops.vsd.tm;
 vsdprops.matprops.data = matprops.props.data;
+vsdprops.matprops.min = matprops.props.min;
+vsdprops.matprops.d2uint = matprops.props.d2uint;
 vsdprops.matprops.showlist = matprops.props.showlist;
 vsdprops.matprops.hidelist = matprops.props.hidelist;
 vsdprops.matprops.showidx = matprops.props.showidx;
@@ -382,7 +389,7 @@ end
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
 props.vsdprops = vsdprops;   
-
+set(vsdprops.allbut,'Enable','on')
 guidata(findobj('Tag',props.intan_tag),props)
 
 function out = convert_uint(data,d2uint,mind,vtype)% converts data from uint16 2 double, vica versa
@@ -400,7 +407,7 @@ end
 if strcmp(vtype,'double') && isa(data,'uint16')
     out = double(data)./repmat(d2uint,1,size(data,2)) + repmat(mind,1,size(data,2));
 elseif strcmp(vtype,'uint16') && isa(data,'double')
-    out = uint16((data - repmat(mind,1,size(data,2)))./repmat(d2uint,1,size(data,2)));
+    out = uint16((data - repmat(mind,1,size(data,2))).*repmat(d2uint,1,size(data,2)));
 elseif isa(data,vtype)
     out = data;
 else
@@ -989,12 +996,8 @@ filterp.fatt = fatt;
 filterp.fpass = fpass;
 filterp.fstop = fstop;
 filterp.meth = meth{midx};
-filterp.idx = idx;keyboard
-if ~isfield(props,'filter')
-    props.filter = filterp;
-else
-    props.filter(end+1) = filterp;
-end
+filterp.idx = idx;
+
     
 props.databackup = props.data;
 
@@ -1003,12 +1006,16 @@ for d=idx
     props.data(d,:) = filter(Hd,props.data(d,:));
 end
 
+if ~isfield(props,'filter')
+    props.filter = filterp;
+else
+    props.filter(end+1) = filterp;
+end
+
 guidata(findobj('Tag',props.intan_tag),props)
 close(hObject.Parent)
 plotdata
-% for some reason the filter struct which logs all the filters applied to
-% data has multiple entries when should only have one.  Will not mess with
-% function of the filter.
+
 function preview(hObject,eventdata)% get a preview of the data to optimize filtering parameters
 
 allbut = findobj(hObject.Parent,'Type','Uicontrol','Enable','on');
