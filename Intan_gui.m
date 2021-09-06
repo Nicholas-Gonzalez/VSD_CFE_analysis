@@ -1,4 +1,4 @@
-function Intan_gui
+function Intan_gui % main app
 
 intan_tag = ['intan_tag' num2str(randi(1e4,1))];
 f = figure('Position',[100 50 1300 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
@@ -74,9 +74,15 @@ uicontrol('Position',[1110 310 100 20],'Style','pushbutton','Tag','adjust',...
 uicontrol('Position',[1110 290 100 20],'Style','pushbutton','Tag','filter',...
               'Callback',@filterit,'String','Filter','Enable','off',...
               'Tag','filter','TooltipString','Filters the data');
+     
+uicontrol('Position',[1110 50 100 40],'Style','pushbutton','Tag','plotagain',...
+              'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
+              'Tag','filter','TooltipString','Plots the data again');
+          
 text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
 %% loading methods
+% This is the app that loads that data into the guidata
 function loadapp(hObject,eventdata)
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
 f2.Position(3:4) = [540 300];
@@ -497,6 +503,152 @@ for s=1:size(strs,2)
 end
 guidata(hObject,vsdprops)
 %% main app methods
+% does the plotting and the adjusting y axis
+function loadplotwidgets(hObject,eventdata)% sets up the widgets to contain all the traces and adds file information on bottom right
+props = guidata(hObject);
+
+allbut = findobj('Type','Uicontrol','Enable','on');
+set(allbut,'Enable','off')
+
+slistobj = findobj('Tag','showgraph');
+slistobj.String = props.showlist;
+slistobj.Max = length(props.showlist);
+hlistobj = findobj('Tag','hidegraph');
+hlistobj.String = props.hidelist;
+hlistobj.Max = length(props.hidelist);
+
+
+if isfield(props,'info')
+    if any(isgraphics(props.info),'all')
+        delete(props.info)
+    end
+    props = rmfield(props, 'info');
+end
+
+
+it = findobj('Tag','grid');
+delete(findobj('Tag','info'))
+props.info(1,1) = text(1020,250,'File:','Parent',it,'Horizontal','right','Tag','info');
+props.info(1,2) = text(1030,250,props.finfo.file,'Parent',it,'Interpreter','none','Tag','info');
+
+props.info(2,1) = text(1020,235,'Folder:','Parent',it,'Horizontal','right','Tag','info');
+props.info(2,2) = text(1030,235,props.finfo.path,'Parent',it,'Interpreter','none','Tag','info');
+
+props.info(3,1) = text(1020,220,'Duration:','Parent',it,'Horizontal','right','Tag','info');
+props.info(3,2) = text(1030,220,[num2str(props.finfo.duration) ' seconds'],'Parent',it,'Tag','info');
+
+% props.info(4,1) = text(1020,205,'# of Files:','Parent',it,'Horizontal','right','Tag','info');
+% props.info(4,2) = text(1030,205,num2str(props.finfo.numfiles),'Parent',it,'Tag','info');
+
+props.info(5,1) = text(1020,190,'Date:','Parent',it,'Horizontal','right','Tag','info');
+props.info(5,2) = text(1030,190,props.finfo.date,'Parent',it,'Tag','info');
+
+props.info(6,1) = text(1020,170,'Note 1:','Parent',it,'Horizontal','right','Tag','info');
+props.info(6,2) = uicontrol('Position',[1030 160 220 20],'Style','edit','Tag','note1',...
+              'Callback',@note,'String',props.notes.note1,'Horizontal','left');
+          
+props.info(7,1) = text(1020,150,'Note 2:','Parent',it,'Horizontal','right','Tag','info');
+props.info(7,2) = uicontrol('Position',[1030 140 220 20],'Style','edit','Tag','note2',...
+              'Callback',@note,'String',props.notes.note2,'Horizontal','left');
+          
+props.info(8,1) = text(1020,130,'Note 3:','Parent',it,'Horizontal','right','Tag','info');
+props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','note3',...
+              'Callback',@note,'String',props.notes.note3,'Horizontal','left');
+props.info(9,2) = text(1030,115,'Press enter to apply','Parent',it,'Horizontal','left','Tag','info');
+
+
+set(findobj('Tag','savem'),'Enable','on');
+set(findobj('Tag','showgraph'),'Enable','on');
+set(findobj('Tag','hidegraph'),'Enable','on');
+if isfield(props,'yaxis')
+    set(props.yaxis,'Parent',gcf,'Enable','on')
+end
+set(findobj('Tag','adjust'),'Enable','on')
+set(findobj('Tag','showsort'),'Enable','on')
+set(findobj('Tag','filter'),'Enable','on')
+
+
+guidata(hObject,props)
+
+set(allbut(isvalid(allbut)),'Enable','on')
+
+plotdata
+
+function plotdata
+props = guidata(gcf);
+% if isfield(props,'ax')
+% %     delete(props.ax)
+%     delete(props.txt)
+%     delete(props.yaxis)
+% end
+
+set(findobj('Tag','yaxis_label'),'Visible','on')
+allbut = findobj('Type','Uicontrol','Enable','on');
+set(allbut,'Enable','off')
+it = findobj('Tag','grid');
+buf = text(500,875,'Plotting...','FontSize',15,'Parent',it);
+pause(0.1)
+
+f = gcf;
+data = props.data;
+
+showstr = get(findobj('Tag','showgraph'),'String');
+idx = cellfun(@(x) find(contains(props.ch,x)),showstr);
+nch = length(idx);
+
+tm = props.tm;
+gsize = f.Position(4) - 100;
+posy = linspace(gsize - gsize/nch,0,nch) + 50;
+
+if ~isfield(props,'plt')
+    props.plt = gobjects(nch,1);
+    props.txt = gobjects(nch,1);
+    props.chk = gobjects(nch,1);
+end
+
+if length(props.plt)>nch
+    delete(props.plt(nch+1:end))
+    delete(props.txt(nch+1:end))
+    delete(props.chk(nch+1:end))
+elseif length(props.plt)<nch
+    props.plt(end+1:nch) = gobjects(1,nch-length(props.plt));
+    props.txt(end+1:nch) = gobjects(1,nch-length(props.txt));
+    props.chk(end+1:nch) = gobjects(1,nch-length(props.chk));
+end
+    
+
+ax = gobjects(nch,1);
+for d=1:nch
+    if ~isgraphics(props.plt(d))
+        ax(d) = axes('Units','pixels','Position',[85   posy(d)   880   gsize/nch]);
+        props.plt(d) = plot(tm,data(idx(d),:));
+        props.chk(d) = uicontrol('Style','checkbox','Callback',@yaxis,'Value',false);
+        props.txt(d) = uicontrol('Style','text');
+    else
+        ax(d) = props.plt(d).Parent;
+        set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch],'Tag','paxis')
+        set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
+    end
+    chpos = posy(d) + gsize/nch/2 - 5;
+    set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off','Tag',['c' num2str(d)]);
+    set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
+%     txt(d) = text(30,posy(d) + gsize/nch/2, props.showlist{d}  ,'Parent',it,'Horizontal','center');
+    
+    if d~=nch
+        props.plt(d).Parent.XTick = [];
+    end
+end
+set(ax,'YTick',[],'XLim',[0 max(tm)])
+linkaxes(ax,'x')
+set(findobj('Tag','adjust'),'Enable','on')
+set(findobj('Tag','showsort'),'Enable','on')
+set([props.chk;props.txt],'Visible','on')
+
+
+delete(buf)
+guidata(gcf,props)
+set(allbut,'Enable','on')
+
 function decimateit(hObject,eventdata)
 props = guidata(hObject);
 guidata(hObject,props)
@@ -674,145 +826,17 @@ else
 end
 guidata(hObject,props)
 
-function plotdata
-props = guidata(gcf);
-if isfield(props,'ax')
-    delete(props.ax)
-    delete(props.txt)
-    delete(props.yaxis)
-end
-
-set(findobj('Tag','yaxis_label'),'Visible','on')
-allbut = findobj('Type','Uicontrol','Enable','on');
-set(allbut,'Enable','off')
-it = findobj('Tag','grid');
-buf = text(500,875,'Plotting...','FontSize',15,'Parent',it);
-pause(0.1)
-
-f = gcf;
-data = props.data;
-
-% listobj = findobj('Tag','hidegraph');
-% lstr = listobj.String;
-% lstr = cellfun(@(x) str2double(string(regexp(x,'\d+','match')))+32*contains(x,'stim'),lstr);
-% show = true(size(data,1),1);
-% if ~isempty(listobj.String)
-%     show(lstr) = false;
-% end
-showstr = get(findobj('Tag','showgraph'),'String');
-% idx = cellfun(@(x) str2double(string(regexp(x,'\d+','match')))+32*contains(x,'stim'),showstr);
-idx = cellfun(@(x) find(contains(props.ch,x)),showstr);
-nch = length(idx);
-
-tm = props.tm;
-gsize = f.Position(4) - 100;
-posy = linspace(gsize - gsize/nch,0,nch) + 50;
-axf = gobjects(nch,1);
-txt = gobjects(nch,1);
-for d=1:nch
-    axf(d) = axes('Units','pixels','Position',[70   posy(d)   880   gsize/nch]);
-    plot(tm,data(idx(d),:));
-        txt(d) = text(30,posy(d) + gsize/nch/2, props.showlist{d}  ,'Parent',it,'Horizontal','center');
-    if d~=nch
-        axf(d).XTick = [];
-    end
-    chk(d) = uicontrol('Position',[3 posy(d) + gsize/nch/2  15 15],'Style','checkbox',...
-              'Callback',@yaxis,'Value',false);
-end
-set(axf,'YTick',[],'XLim',[0 max(tm)])
-linkaxes(axf,'x')
-set(findobj('Tag','adjust'),'Enable','on')
-set(findobj('Tag','showsort'),'Enable','on')
-
-delete(buf)
-props.ax = axf;
-props.txt = txt;
-props.yaxis = chk;
-guidata(gcf,props)
-set(allbut,'Enable','on')
-
-function yaxis(hObject,eventdata)
+function yaxis(hObject,eventdata)% turns on/off the y-axis
 props = guidata(hObject);
-for a=1:length(props.ax)
-    if props.ax(a).Position(2)<hObject.Position(2) && sum(props.ax(a).Position([2 4]))>hObject.Position(2)
-        if hObject.Value
-            set(props.ax(a),'YTickMode','auto')
-        else
-            set(props.ax(a),'YTick',[])
-        end
-    end
+tag = hObject.Tag;
+if hObject.Value
+    set(props.plt(str2double(tag(2:end))).Parent,'YTickMode','auto')
+else
+    set(props.plt(str2double(tag(2:end))).Parent,'YTick',[])
 end
 
-function loadplotwidgets(hObject,eventdata)
-props = guidata(hObject);
-
-allbut = findobj('Type','Uicontrol','Enable','on');
-set(allbut,'Enable','off')
-
-slistobj = findobj('Tag','showgraph');
-slistobj.String = props.showlist;
-slistobj.Max = length(props.showlist);
-hlistobj = findobj('Tag','hidegraph');
-hlistobj.String = props.hidelist;
-hlistobj.Max = length(props.hidelist);
-
-
-if isfield(props,'info')
-    if any(isgraphics(props.info),'all')
-        delete(props.info)
-    end
-    props = rmfield(props, 'info');
-end
-
-
-it = findobj('Tag','grid');
-delete(findobj('Tag','info'))
-props.info(1,1) = text(1020,250,'File:','Parent',it,'Horizontal','right','Tag','info');
-props.info(1,2) = text(1030,250,props.finfo.file,'Parent',it,'Interpreter','none','Tag','info');
-
-props.info(2,1) = text(1020,235,'Folder:','Parent',it,'Horizontal','right','Tag','info');
-props.info(2,2) = text(1030,235,props.finfo.path,'Parent',it,'Interpreter','none','Tag','info');
-
-props.info(3,1) = text(1020,220,'Duration:','Parent',it,'Horizontal','right','Tag','info');
-props.info(3,2) = text(1030,220,[num2str(props.finfo.duration) ' seconds'],'Parent',it,'Tag','info');
-
-% props.info(4,1) = text(1020,205,'# of Files:','Parent',it,'Horizontal','right','Tag','info');
-% props.info(4,2) = text(1030,205,num2str(props.finfo.numfiles),'Parent',it,'Tag','info');
-
-props.info(5,1) = text(1020,190,'Date:','Parent',it,'Horizontal','right','Tag','info');
-props.info(5,2) = text(1030,190,props.finfo.date,'Parent',it,'Tag','info');
-
-props.info(6,1) = text(1020,170,'Note 1:','Parent',it,'Horizontal','right','Tag','info');
-props.info(6,2) = uicontrol('Position',[1030 160 220 20],'Style','edit','Tag','note1',...
-              'Callback',@note,'String',props.notes.note1,'Horizontal','left');
-          
-props.info(7,1) = text(1020,150,'Note 2:','Parent',it,'Horizontal','right','Tag','info');
-props.info(7,2) = uicontrol('Position',[1030 140 220 20],'Style','edit','Tag','note2',...
-              'Callback',@note,'String',props.notes.note2,'Horizontal','left');
-          
-props.info(8,1) = text(1020,130,'Note 3:','Parent',it,'Horizontal','right','Tag','info');
-props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','note3',...
-              'Callback',@note,'String',props.notes.note3,'Horizontal','left');
-props.info(9,2) = text(1030,115,'Press enter to apply','Parent',it,'Horizontal','left','Tag','info');
-
-
-set(findobj('Tag','savem'),'Enable','on');
-set(findobj('Tag','showgraph'),'Enable','on');
-set(findobj('Tag','hidegraph'),'Enable','on');
-if isfield(props,'yaxis')
-    set(props.yaxis,'Parent',gcf,'Enable','on')
-end
-set(findobj('Tag','adjust'),'Enable','on')
-set(findobj('Tag','showsort'),'Enable','on')
-set(findobj('Tag','filter'),'Enable','on')
-
-
-guidata(hObject,props)
-
-set(allbut(isvalid(allbut)),'Enable','on')
-
-plotdata
 %% filtering methods
+% Opens the app to filters the data
 function filterit(hObject,eventdata)% main app for filtering data
 props = guidata(hObject);
 mfpos = get(findobj('Tag',props.intan_tag),'Position');
@@ -1121,7 +1145,9 @@ if ~isfield(props,'hidelist')
 end
 
 
-props = rmfield(props,'ax');
+props = rmfield(props,'plt');
+props = rmfield(props,'txt');
+props = rmfield(props,'chk');
 props.min = min(props.data,[],2);
 props.d2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
 props.data = convert_uint(props.data, props.d2uint, props.min, 'uint16');
