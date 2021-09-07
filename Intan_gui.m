@@ -1,7 +1,7 @@
 function Intan_gui % main app
 
 intan_tag = ['intan_tag' num2str(randi(1e4,1))];
-f = figure('Position',[100 50 1300 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
+f = figure('Position',[100 50 1600 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 
 it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
           'Visible','on','XLim',[0 f.Position(3)],'YLim',[0 f.Position(4)],...
@@ -78,6 +78,7 @@ uicontrol('Position',[1110 290 100 20],'Style','pushbutton','Tag','filter',...
 uicontrol('Position',[1110 50 100 40],'Style','pushbutton','Tag','plotagain',...
               'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
               'Tag','filter','TooltipString','Plots the data again');
+
           
 text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
@@ -167,7 +168,13 @@ vsdprops.matprops.Max = matprops.props.Max;
 vsdprops.matprops.tm = matprops.props.tm;
 vsdprops.matprops.ch = matprops.props.ch;
 vsdprops.matprops.finfo = matprops.props.finfo;
+vsdprops.matprops.im = matprops.props.im;
+vsdprops.matprops.det = matprops.props.det;
+vsdprops.matprops.kern_center = matprops.props.kern_center;
+vsdprops.matprops.pixels = matprops.props.pixels;
+vsdprops.matprops.kernpos = matprops.props.kernpos;
 vsdprops.files = matprops.props.files;
+
 
 for f=1:size(matprops.props.vsdprops.files,1)
     ft = matprops.props.vsdprops.files{f,1};
@@ -195,7 +202,7 @@ set(findobj(hObject.Parent,'Tag','tiffns'),'String',fullfile(path,replace(file,'
 uicontrol(hObject.Parent,'Position',[380 240 60 20],'Style','text','String',"complete");
 getvsdfile(findobj(hObject.Parent,'Tag','tiffns'))
 
-function loadall(hObject,eventdata)
+function loadall(hObject,eventdata)% loads all the data into vsdprops
 allbut = findobj(hObject.Parent,'Type','Uicontrol','Enable','on','-not','Style','text');
 set(allbut,'Enable','off')
 pause(0.1)
@@ -215,7 +222,8 @@ end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','detp'),'String'),'loaded')
     if fex(vsdprops.files(:,1)=="detfns") && get(findobj('Tag','detc'),'Value')==1
-        [vsdprops.det,pixels,vsdprops.kern_center,kernel_size,kernpos] = readdet(vsdprops.files(vsdprops.files(:,1)=="detfns",2));
+        [vsdprops.det,vsdprops.pixels,vsdprops.kern_center,kernel_size,vsdprops.kernpos] = ...
+            readdet(vsdprops.files(vsdprops.files(:,1)=="detfns",2),size(vsdprops.im,2),size(vsdprops.im,1));
         set(findobj(hObject.Parent,'Tag','detp'),'String',"loaded");
     elseif get(findobj('Tag','detc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','detp'),'String',"not found",'ForegroundColor','r');
@@ -388,13 +396,24 @@ if intch && vsdch
             props.Max = vsdprops.matprops.Max;
             props.finfo = vsdprops.matprops.finfo;
             props.notes = vsdprops.matprops.notes;
+            props.im = vsdprops.matprops.im;
+            props.det = vsdprops.matprops.det;
+            props.kern_center = vsdprops.matprops.kern_center;
+            props.pixels = vsdprops.matprops.pixels;
+            props.kernpos = vsdprops.matprops.kernpos;
         end
     end
     props.files = vsdprops.files;
 end
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
-props.vsdprops = vsdprops;   
+props.vsdprops = vsdprops; 
+if isfield(vsdprops,'im')
+    props.im = vsdprops.im;
+    props.det = vsdprops.det;
+    props.kern_center = vsdprops.kern_center;
+    props.kernpos = vsdprops.kernpos;
+end
 set(vsdprops.allbut,'Enable','on')
 guidata(findobj('Tag',props.intan_tag),props)
 
@@ -556,6 +575,14 @@ props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','n
               'Callback',@note,'String',props.notes.note3,'Horizontal','left');
 props.info(9,2) = text(1030,115,'Press enter to apply','Parent',it,'Horizontal','left','Tag','info');
 
+axes('Units','pixels','Position', [1270 550 300 300],'Tag','frameim','YTick',[],'XTick',[],'Box','on')
+if length(size(props.im))==3
+    props.imsh = imshow(props.im);
+else
+    props.im = repmat(props.im,1,1,3);
+    props.imsh = imshow(props.im);
+end
+
 
 set(findobj('Tag','savem'),'Enable','on');
 set(findobj('Tag','showgraph'),'Enable','on');
@@ -567,11 +594,9 @@ set(findobj('Tag','adjust'),'Enable','on')
 set(findobj('Tag','showsort'),'Enable','on')
 set(findobj('Tag','filter'),'Enable','on')
 
-
 guidata(hObject,props)
-
+updataroi(hObject)
 set(allbut(isvalid(allbut)),'Enable','on')
-
 plotdata
 
 function plotdata
@@ -1113,6 +1138,46 @@ obj = findobj(hObject.Parent,'Tag','fripple','-or','Tag','fattlower','-or','Tag'
     '-or','Tag','fphigher','-or','Tag','fslower','-or','Tag','fshigher');
 set(obj,'ForegroundColor','k','TooltipString','')
 preview(hObject)
+
+%% vsd frame image and ROI methods
+function updataroi(hObject,eventdata)
+props = guidata(hObject);
+props.color = [1    0.5   0.5;...
+               0.5    1   0.5;...
+               0.5  0.5   1;...
+               1    0.7   0.7;...
+               0.7  1     0.7;...
+               0.7  0.7   1;...
+               1    0.85  0.7;...
+               0.85	 1     0.7;...
+               0.85  0.7   1;...
+               1    0.7   0.85;...
+               0.7  1      0.85;...
+               0.7  0.85    1];
+
+im = props.imsh.CData;
+im = imrotate(im,90);
+R = im(:,:,1)';
+G = im(:,:,2)';
+B = im(:,:,3)';
+cnt = 1;
+for r=1:length(props.kernpos)
+    if r<length(props.kernpos)
+        pix = props.det(props.kernpos(r):props.kernpos(r+1)-1);
+    else
+        pix = props.det(props.kernpos(r):length(props.det));
+    end
+    pix(pix==0) = [];
+
+    
+    cnt(cnt>size(props.color,1)) = 1; %#ok<AGROW>
+    R(pix) = R(pix).*props.color(cnt,1); 
+    G(pix) = G(pix).*props.color(cnt,2); 
+    B(pix) = B(pix).*props.color(cnt,3); 
+    cnt = cnt+1;
+end
+props.imsh.CData = imrotate(cat(3,R',G',B'),90);
+
 %% misc methods
 function note(hObject,eventdata)
 props = guidata(hObject);
