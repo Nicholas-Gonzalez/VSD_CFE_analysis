@@ -627,36 +627,40 @@ posy = linspace(gsize - gsize/nch,0,nch) + 50;
 
 if ~isfield(props,'plt')
     props.plt = gobjects(nch,1);
-    props.txt = gobjects(nch,1);
-    props.chk = gobjects(nch,1);
 end
+lengthplt = length(props.plt);
 
 if length(props.plt)>nch
     delete(props.plt(nch+1:end))
-    delete(props.txt(nch+1:end))
-    delete(props.chk(nch+1:end))
 elseif length(props.plt)<nch
     props.plt(end+1:nch) = gobjects(1,nch-length(props.plt));
-    props.txt(end+1:nch) = gobjects(1,nch-length(props.txt));
-    props.chk(end+1:nch) = gobjects(1,nch-length(props.chk));
 end
     
+for c = nch+1:lengthplt
+    delete(findobj(hObject.Parent,'Tag',['c' num2str(c)]))
+    delete(findobj(hObject.Parent,'Tag',['t' num2str(c)]))
+end
+
 
 ax = gobjects(nch,1);
 for d=1:nch
+    chpos = posy(d) + gsize/nch/2 - 5;
     if ~isgraphics(props.plt(d))
         ax(d) = axes('Units','pixels','Position',[85   posy(d)   880   gsize/nch]);
         props.plt(d) = plot(tm,data(idx(d),:));
-        props.chk(d) = uicontrol('Style','checkbox','Callback',@yaxis,'Value',false);
-        props.txt(d) = uicontrol('Style','text');
+        uicontrol('Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
+            'Value',false,'Visible','off','Tag',['c' num2str(d)]);
+        uicontrol('Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
     else
         ax(d) = props.plt(d).Parent;
         set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch],'Tag','paxis')
         set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
+        set(findobj(hObject.Parent,'Tag',['c' num2str(c)]),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
+        set(findobj(hObject.Parent,'Tag',['t' num2str(c)]),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
     end
-    chpos = posy(d) + gsize/nch/2 - 5;
-    set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off','Tag',['c' num2str(d)]);
-    set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
+%     chpos = posy(d) + gsize/nch/2 - 5;
+%     set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off','Tag',['c' num2str(d)]);
+%     set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
 %     txt(d) = text(30,posy(d) + gsize/nch/2, props.showlist{d}  ,'Parent',it,'Horizontal','center');
     
     if d~=nch
@@ -854,10 +858,11 @@ guidata(hObject,props)
 function yaxis(hObject,eventdata)% turns on/off the y-axis
 props = guidata(hObject);
 tag = hObject.Tag;
+chk = findobj(hObject.Parent,'Tag',tag);
 if hObject.Value
-    set(props.plt(str2double(tag(2:end))).Parent,'YTickMode','auto')
+    set(chk,'YTickMode','auto')
 else
-    set(props.plt(str2double(tag(2:end))).Parent,'YTick',[])
+    set(chk,'YTick',[])
 end
 
 %% filtering methods
@@ -1156,7 +1161,7 @@ props.color = [1    0.5   0.5;...
                0.7  0.85    1];
 
 im = props.imsh.CData;
-im = imrotate(im,90);
+% im = imrotate(im,90);
 R = im(:,:,1)';
 G = im(:,:,2)';
 B = im(:,:,3)';
@@ -1176,7 +1181,7 @@ for r=1:length(props.kernpos)
     B(pix) = B(pix).*props.color(cnt,3); 
     cnt = cnt+1;
 end
-props.imsh.CData = imrotate(cat(3,R',G',B'),90);
+props.imsh.CData = cat(3,R',G',B');
 
 %% misc methods
 function note(hObject,eventdata)

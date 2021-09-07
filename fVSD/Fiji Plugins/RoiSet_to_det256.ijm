@@ -1,9 +1,11 @@
 // Setup variables
-w = 256;
-h = 256;
+//getDimensions(w, h, channels, slices, frames);
+getDimensions(w, h, channels, slices, frames);
+//w = 256;
+//h = 256;
 
 // generate dummy image used by ROI manager
-newImage("temp image for RoiSet_to_det.ijm", "8-bit", w, h, 1);  
+newImage("temp image for RoiSet_to_det.ijm", "8-bit", w, h, 0);  
 ID = getImageID();
 
 // count number of ROIs or ask for RoiSet file if no ROI is defined
@@ -17,12 +19,14 @@ if (n_ROI == 0) {
 // generate the body of det file
 str = "";
 for (n = 0; n < n_ROI; n++) {
+	updateDisplay();
 	roiManager("select", n);
 	for (y = 0; y < h; y++) {
 		for (x = 0; x < w; x++) {
-			i = y*h + x + 1;  // convert x-y coordinate to detector index (index is 1 at the top-left corner)
+			i = y*w + x + 1;  // this was incorrect, should be *w not *h it would only be erroneous if x and y are not equal// convert x-y coordinate to detector index (index is 1 at the top-left corner)
 			if (Roi.contains(x,y)) {
 				str = str + d2s(i,0) + "\r\n";
+				setPixel(x, y, 100+n);// sanity check when w ~= h
 			}
 			
 		}

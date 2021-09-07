@@ -14,6 +14,11 @@ numfrm=200;
 dark_frms=200;% specify the number of dark frames
 avg_frms=200;
 
+if nargin==0
+    [file, path, id] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
+    fpath = fullfile(path,file);
+end
+
 if nargin<2
     fig_visible = true;
 end

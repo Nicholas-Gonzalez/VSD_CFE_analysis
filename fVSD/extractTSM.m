@@ -1,5 +1,13 @@
 function [data,tm] = extractTSM(fpath, detpath)
 
+if nargin==0
+    [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
+    fpath = fullfile(path,file);
+    [dfile, dpath, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.det','Select det file');
+    detpath = fullfile(dpath,dfile);
+end
+
+
 %% Parameters
 chunkLength = 485;
 shutterThr = 2; % Threshold for detection of initial shutter opening. (In times the mean dark frame intensity.)
@@ -61,9 +69,7 @@ for a = 1:numChunks
     dataChunk = dataChunk - darkFrame;
     
     dataChunk = reshape(dataChunk,xsize*ysize,alength); % Reshape in two dimensions to facilitate indexing.
-    if a==100
-        keyboard
-    end
+
     chunkWin = 1+alength*(a-1):alength*a; % Index of the temporal window of the chunk.
     
     for b = 1:numKern
