@@ -82,6 +82,8 @@ uicontrol('Position',[1110 50 100 40],'Style','pushbutton','Tag','plotagain',...
           
 text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
+axes('Units','pixels','Position', [1270 550 300 300],'YTick',[],'XTick',[],'Box','on');
+
 %% loading methods
 % This is the app that loads that data into the guidata
 function loadapp(hObject,eventdata)
@@ -171,7 +173,6 @@ vsdprops.matprops.finfo = matprops.props.finfo;
 vsdprops.matprops.im = matprops.props.im;
 vsdprops.matprops.det = matprops.props.det;
 vsdprops.matprops.kern_center = matprops.props.kern_center;
-vsdprops.matprops.pixels = matprops.props.pixels;
 vsdprops.matprops.kernpos = matprops.props.kernpos;
 vsdprops.files = matprops.props.files;
 
@@ -213,7 +214,8 @@ iObject = findobj('Tag',vsdprops.intan_tag);
 fex = arrayfun(@exist,vsdprops.files(:,2));
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
     if fex(vsdprops.files(:,1)=="tiffns") && get(findobj('Tag','tifc'),'Value')==1
-        vsdprops.im = imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2));
+        im = imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2));
+        vsdprops.im = repmat(im,1,1,3/size(im,3));
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"loaded");
     elseif get(findobj('Tag','tifc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"not found",'ForegroundColor','r');
@@ -223,7 +225,7 @@ end
 if ~strcmp(get(findobj(hObject.Parent,'Tag','detp'),'String'),'loaded')
     if fex(vsdprops.files(:,1)=="detfns") && get(findobj('Tag','detc'),'Value')==1
         [vsdprops.det,vsdprops.pixels,vsdprops.kern_center,kernel_size,vsdprops.kernpos] = ...
-            readdet(vsdprops.files(vsdprops.files(:,1)=="detfns",2),size(vsdprops.im,2),size(vsdprops.im,1));
+            readdet(vsdprops.files(vsdprops.files(:,1)=="detfns",2),size(vsdprops.im,2));
         set(findobj(hObject.Parent,'Tag','detp'),'String',"loaded");
     elseif get(findobj('Tag','detc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','detp'),'String',"not found",'ForegroundColor','r');
@@ -399,8 +401,9 @@ if intch && vsdch
             props.im = vsdprops.matprops.im;
             props.det = vsdprops.matprops.det;
             props.kern_center = vsdprops.matprops.kern_center;
-            props.pixels = vsdprops.matprops.pixels;
             props.kernpos = vsdprops.matprops.kernpos;
+            vsdprops.intan = vsdprops.matprops.intan;
+            vsdprops.vsd = vsdprops.matprops.vsd;
         end
     end
     props.files = vsdprops.files;
@@ -575,13 +578,18 @@ props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','n
               'Callback',@note,'String',props.notes.note3,'Horizontal','left');
 props.info(9,2) = text(1030,115,'Press enter to apply','Parent',it,'Horizontal','left','Tag','info');
 
-axes('Units','pixels','Position', [1270 550 300 300],'Tag','frameim','YTick',[],'XTick',[],'Box','on')
-if length(size(props.im))==3
-    props.imsh = imshow(props.im);
-else
-    props.im = repmat(props.im,1,1,3);
-    props.imsh = imshow(props.im);
+
+if ~isfield(props,'imsh')
+    if length(size(props.im))==3
+        props.imsh = image(props.im);
+    else
+        props.im = repmat(props.im,1,1,3);
+        props.imsh = image(props.im);
+    end
 end
+
+sz = size(props.im);
+set(props.imsh.Parent,'Units','pixels','Position', [1270 550 300 300*sz(1)/sz(2)],'YTick',[],'XTick',[],'Box','on')
 
 
 set(findobj('Tag','savem'),'Enable','on');
@@ -597,10 +605,10 @@ set(findobj('Tag','filter'),'Enable','on')
 guidata(hObject,props)
 updataroi(hObject)
 set(allbut(isvalid(allbut)),'Enable','on')
-plotdata
+plotdata(hObject)
 
-function plotdata
-props = guidata(gcf);
+function plotdata(hObject)
+props = guidata(hObject);
 % if isfield(props,'ax')
 % %     delete(props.ax)
 %     delete(props.txt)
@@ -613,6 +621,7 @@ set(allbut,'Enable','off')
 it = findobj('Tag','grid');
 buf = text(500,875,'Plotting...','FontSize',15,'Parent',it);
 pause(0.1)
+
 
 f = gcf;
 data = props.data;
@@ -627,18 +636,26 @@ posy = linspace(gsize - gsize/nch,0,nch) + 50;
 
 if ~isfield(props,'plt')
     props.plt = gobjects(nch,1);
+    props.ax = gobjects(nch,1);
+    props.chk = gobjects(nch,1);
+    props.txt = gobjects(nch,1);
 end
-lengthplt = length(props.plt);
 
 if length(props.plt)>nch
     delete(props.plt(nch+1:end))
-elseif length(props.plt)<nch
-    props.plt(end+1:nch) = gobjects(1,nch-length(props.plt));
-end
+    delete(props.ax(nch+1:end))
+    props.plt(~isvalid(props.plt)) = [];
+    props.ax(~isvalid(props.ax)) = [];
     
-for c = nch+1:lengthplt
-    delete(findobj(hObject.Parent,'Tag',['c' num2str(c)]))
-    delete(findobj(hObject.Parent,'Tag',['t' num2str(c)]))
+    delete(props.chk(nch+1:end))
+    delete(props.txt(nch+1:end))
+    props.chk(~isvalid(props.chk)) = [];
+    props.txt(~isvalid(props.txt)) = [];
+elseif length(props.plt)<nch
+    props.plt = [props.plt ; gobjects(nch-length(props.plt),1)];
+    props.ax =  [props.ax ; gobjects(nch-length(props.plt),1)];
+    props.chk = [props.chk; gobjects(nch-length(props.plt),1)];
+    props.txt = [props.txt; gobjects(nch-length(props.plt),1)];
 end
 
 
@@ -646,37 +663,33 @@ ax = gobjects(nch,1);
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 5;
     if ~isgraphics(props.plt(d))
-        ax(d) = axes('Units','pixels','Position',[85   posy(d)   880   gsize/nch]);
+        props.ax(d) = axes('Units','pixels','Position',[85   posy(d)   880   gsize/nch]);
         props.plt(d) = plot(tm,data(idx(d),:));
-        uicontrol('Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
+        props.chk(d) = uicontrol('Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
             'Value',false,'Visible','off','Tag',['c' num2str(d)]);
-        uicontrol('Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
+        props.txt(d) = uicontrol('Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
     else
-        ax(d) = props.plt(d).Parent;
+        props.ax(d) = props.plt(d).Parent;
         set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch],'Tag','paxis')
         set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
-        set(findobj(hObject.Parent,'Tag',['c' num2str(c)]),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
-        set(findobj(hObject.Parent,'Tag',['t' num2str(c)]),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
+        set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
+        set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
     end
-%     chpos = posy(d) + gsize/nch/2 - 5;
-%     set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off','Tag',['c' num2str(d)]);
-%     set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
-%     txt(d) = text(30,posy(d) + gsize/nch/2, props.showlist{d}  ,'Parent',it,'Horizontal','center');
     
     if d~=nch
         props.plt(d).Parent.XTick = [];
     end
 end
-set(ax,'YTick',[],'XLim',[0 max(tm)])
-linkaxes(ax,'x')
+set(props.ax,'YTick',[],'XLim',[0 max(tm)])
+linkaxes(props.ax,'x')
 set(findobj('Tag','adjust'),'Enable','on')
 set(findobj('Tag','showsort'),'Enable','on')
-set([props.chk;props.txt],'Visible','on')
+set(findobj(hObject.Parent,'Visible','off'),'Visible','on')
 
 
 delete(buf)
 guidata(gcf,props)
-set(allbut,'Enable','on')
+set(allbut(isvalid(allbut)),'Enable','on')
 
 function decimateit(hObject,eventdata)
 props = guidata(hObject);
@@ -737,10 +750,6 @@ if ~isempty(noart)
     msgbox(sprintf(join(["No artifact detected for channels:"  string(noart')],'\n')))
 end
 guidata(hObject,props)
-
-function toworkspace(hObject,eventdata)
-props = guidata(hObject);
-assignin('base', 'out', props);
 
 function sortlist(hObject,eventdata)
 props = guidata(hObject);
@@ -844,7 +853,7 @@ else
     props.hideidx(choose) = [];
 end
 guidata(hObject,props)
-plotdata
+plotdata(hObject)
 
 function selection(hObject,eventdata)
 props = guidata(hObject);
@@ -858,11 +867,10 @@ guidata(hObject,props)
 function yaxis(hObject,eventdata)% turns on/off the y-axis
 props = guidata(hObject);
 tag = hObject.Tag;
-chk = findobj(hObject.Parent,'Tag',tag);
 if hObject.Value
-    set(chk,'YTickMode','auto')
+    set(props.plt(str2double(tag(2:end))).Parent,'YTickMode','auto')
 else
-    set(chk,'YTick',[])
+    set(props.plt(str2double(tag(2:end))).Parent,'YTick',[])
 end
 
 %% filtering methods
@@ -883,11 +891,11 @@ str = join(str,'');
 meth = {'butter';'cheby1';'cheby2';'ellip'};
 
 % default filter properties
-filterp.fr = 40;
+filterp.meth = 'ellip';
+filterp.fr = 2;
 filterp.fatt = [60,60];
-filterp.fpass = [0.1,100];
-filterp.fstop = [0.01,500];
-filterp.meth = 'butter';
+filterp.fpass = [15,50];
+filterp.fstop = [0.1,100];
 
 
 uicontrol('Position',[400 565 100 20],'Style','text','String','Select channel');
@@ -898,7 +906,7 @@ uicontrol('Position',[400 10 100 20],'Style','pushbutton','String','Apply Filter
 uicontrol('Position',[20  575 60 20],'Style','text','String','Properties','HorizontalAlignment','left');
 uicontrol('Position',[20  552 100 20],'Style','text','String','Filter type','HorizontalAlignment','right');
 uicontrol('Position',[125 555 100 20],'Style','popupmenu','String',meth,'Tag','ftype','Callback',@fvalidate,...
-          'Tag','fmeth','Value',find(ismember(meth,'butter')));
+          'Tag','fmeth','Value',find(ismember(meth,filterp.meth)));
 
 bg = uibuttongroup('Visible','off','Units','Pixels','Position',[60 510 200 40],'SelectionChangedFcn',@bpass,'Tag','fband');
 
@@ -1052,8 +1060,10 @@ filterp.fstop = fstop;
 filterp.meth = meth{midx};
 filterp.idx = idx;
 
-    
-props.databackup = props.data;
+props.bmin = min(props.data,[],2);
+props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
+
 
 for d=idx
     disp(num2str(d))
@@ -1068,7 +1078,7 @@ end
 
 guidata(findobj('Tag',props.intan_tag),props)
 close(hObject.Parent)
-plotdata
+plotdata(findobj('Tag',props.intan_tag))
 
 function preview(hObject,eventdata)% get a preview of the data to optimize filtering parameters
 
@@ -1145,23 +1155,39 @@ set(obj,'ForegroundColor','k','TooltipString','')
 preview(hObject)
 
 %% vsd frame image and ROI methods
+
 function updataroi(hObject,eventdata)
 props = guidata(hObject);
-props.color = [1    0.5   0.5;...
-               0.5    1   0.5;...
-               0.5  0.5   1;...
-               1    0.7   0.7;...
-               0.7  1     0.7;...
-               0.7  0.7   1;...
-               1    0.85  0.7;...
-               0.85	 1     0.7;...
-               0.85  0.7   1;...
-               1    0.7   0.85;...
-               0.7  1      0.85;...
-               0.7  0.85    1];
+a = 0.7;
+b = 0.85;
+c = 0.95;
+props.color = [1    a   a;...
+               a    1   a;...
+               a    a   1;...
+               1    b   b;...
+               b    1   b;...
+               b    b   1;...
+               1    c   b;...
+               c	1   b;...
+               c    b   1;...
+               1    b   c;...
+               b    1   c;...
+               b    c   1];
 
-im = props.imsh.CData;
-% im = imrotate(im,90);
+
+if ~isfield(props,'roi')
+    props.roi = gobjects(length(props.kernpos),1);
+end
+  
+nroi = length(props.kernpos);
+if length(props.roi)>nroi
+    delete(props.roi(nroi+1:end))
+elseif length(props.roi)<nroi
+    props.roi(end+1:nroi) = gobjects(1,nroi-length(props.roi));
+end
+    
+
+im = props.im;
 R = im(:,:,1)';
 G = im(:,:,2)';
 B = im(:,:,3)';
@@ -1180,8 +1206,19 @@ for r=1:length(props.kernpos)
     G(pix) = G(pix).*props.color(cnt,2); 
     B(pix) = B(pix).*props.color(cnt,3); 
     cnt = cnt+1;
+    
 end
 props.imsh.CData = cat(3,R',G',B');
+
+for r=1:length(props.kernpos)
+    if ~isgraphics(props.roi(r))
+        props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), num2str(r),'Color','k','HorizontalAlignment','center');
+    else
+        set(props.roi(r),'Position',[props.kern_center(r,1), props.kern_center(r,2)],'String',num2str(r),'Color','k'); 
+    end
+
+end
+guidata(hObject,props)
 
 %% misc methods
 function note(hObject,eventdata)
@@ -1214,17 +1251,20 @@ if ~isfield(props,'hidelist')
     props.hidelist = get(findobj('Tag','hidegraph'),'String');
 end
 
+fields = ["plt","txt","chk","ax"];
+for f=1:length(fields)
+    if isfield(props,fields{f})
+        props = rmfield(props,fields{f});
+    end
+end
 
-props = rmfield(props,'plt');
-props = rmfield(props,'txt');
-props = rmfield(props,'chk');
 props.min = min(props.data,[],2);
 props.d2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
 props.data = convert_uint(props.data, props.d2uint, props.min, 'uint16');
 
-props.bmin = min(props.databackup,[],2);
-props.bd2uint = repelem(2^16,size(props.databackup,1),1)./range(props.databackup,2);
-props.databackup = convert_uint(props.databackup, props.d2uint, props.min, 'uint16');
+if isfield(props,'databackup')
+    props.databackup = convert_uint(props.databackup, props.bd2uint, props.bmin, 'uint16');
+end
 
 save(fullfile(path,file),'props')
 disp(['Saved ' fullfile(path,file)])
@@ -1240,3 +1280,7 @@ else
     msgbox('help_readme.txt file not found')
 end
 
+function toworkspace(hObject,eventdata)
+props = guidata(hObject);
+assignin('base', 'out', props);
+disp('sent to workplace as ''out''')

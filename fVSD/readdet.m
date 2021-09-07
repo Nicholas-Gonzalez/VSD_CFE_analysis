@@ -1,10 +1,9 @@
-function [det,pixels,kern_center,kernel_size,kernpos]=readdet(fpath,xsize,ysize)
+function [det,pixels,kern_center,kernel_size,kernpos]=readdet(fpath,xsize)
 % Function for reading kernel coordinates from .det file
 % xsize and ysize added because camera can aquire in different dimensions
 
 if nargin<2
     xsize = 256;
-    ysize = 256;
 end
 
 % pixSz = 256; % Size of the acquired image on which kernels were drawn. Currently assumes X and Y dimensions are the same.
@@ -18,7 +17,7 @@ det = [0; det];
 fclose(fid_det);
 
 pixels = mod(det,xsize);
-pixels(:,2) = ceil(det/ysize);
+pixels(:,2) = ceil(det/xsize);
 pixels(pixels(:,1)==0,1) = xsize;
 
 kernpos = find(~det);
