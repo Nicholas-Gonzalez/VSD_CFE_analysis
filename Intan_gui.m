@@ -1,7 +1,7 @@
 function Intan_gui % main app
 
 intan_tag = ['intan_tag' num2str(randi(1e4,1))];
-f = figure('Position',[100 50 1600 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
+f = figure('Position',[100 50 1700 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 
 it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
           'Visible','on','XLim',[0 f.Position(3)],'YLim',[0 f.Position(4)],...
@@ -82,7 +82,10 @@ uicontrol('Position',[1110 50 100 40],'Style','pushbutton','Tag','plotagain',...
           
 text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
-axes('Units','pixels','Position', [1270 550 300 300],'YTick',[],'XTick',[],'Box','on');
+% VSD widgets
+axes('Units','pixels','Position', [1270 450 400 400],'YTick',[],'XTick',[],'Box','on');% adjust position also in loadplotwidgets function
+uicontrol('Position', [1270 430 40 20],'Style','togglebutton','Value',1,'Tag','fillroi',...
+            'Callback',@updateroi,'String','fill roi','Enable','off','Visible','off')
 
 %% loading methods
 % This is the app that loads that data into the guidata
@@ -589,21 +592,23 @@ if ~isfield(props,'imsh')
 end
 
 sz = size(props.im);
-set(props.imsh.Parent,'Units','pixels','Position', [1270 550 300 300*sz(1)/sz(2)],'YTick',[],'XTick',[],'Box','on')
+set(props.imsh.Parent,'Units','pixels','Position', [1270 450 400 400*sz(1)/sz(2)],'YTick',[],'XTick',[],'Box','on')
 
-
-set(findobj('Tag','savem'),'Enable','on');
-set(findobj('Tag','showgraph'),'Enable','on');
-set(findobj('Tag','hidegraph'),'Enable','on');
-if isfield(props,'yaxis')
-    set(props.yaxis,'Parent',gcf,'Enable','on')
+if isfield(props,'im')
+    set(findobj(hObject.Parent,'Tag','fillroi'),'Enable','on','Visible','on')
 end
-set(findobj('Tag','adjust'),'Enable','on')
-set(findobj('Tag','showsort'),'Enable','on')
-set(findobj('Tag','filter'),'Enable','on')
+set(findobj(hObject.Parent,'Tag','savem'),'Enable','on');
+set(findobj(hObject.Parent,'Tag','showgraph'),'Enable','on');
+set(findobj(hObject.Parent,'Tag','hidegraph'),'Enable','on');
+if isfield(props,'yaxis')
+    set(props.yaxis,'Parent',hObject.Parent,'Enable','on')
+end
+set(findobj(hObject.Parent,'Tag','adjust'),'Enable','on')
+set(findobj(hObject.Parent,'Tag','showsort'),'Enable','on')
+set(findobj(hObject.Parent,'Tag','filter'),'Enable','on')
 
 guidata(hObject,props)
-updataroi(hObject)
+updateroi(hObject)
 set(allbut(isvalid(allbut)),'Enable','on')
 plotdata(hObject)
 
@@ -661,7 +666,7 @@ end
 
 ax = gobjects(nch,1);
 for d=1:nch
-    chpos = posy(d) + gsize/nch/2 - 5;
+    chpos = posy(d) + gsize/nch/2 - 8;
     if ~isgraphics(props.plt(d))
         props.ax(d) = axes('Units','pixels','Position',[85   posy(d)   880   gsize/nch]);
         props.plt(d) = plot(tm,data(idx(d),:));
@@ -808,7 +813,7 @@ end
 set(allbut,'Enable','on')
 delete(buf)
 
-function modtxt(hObject,eventdata)
+function modtxt(hObject,eventdata)% should sort list but doesn't
 props = guidata(hObject);
 tags = ["showgraph","hidegraph"];
 if hObject.String==char(8594)
@@ -854,6 +859,7 @@ else
 end
 guidata(hObject,props)
 plotdata(hObject)
+updateroi(hObject)
 
 function selection(hObject,eventdata)
 props = guidata(hObject);
@@ -1156,7 +1162,14 @@ preview(hObject)
 
 %% vsd frame image and ROI methods
 
-function updataroi(hObject,eventdata)
+function updateroi(hObject,eventdata)
+fillr = get(findobj(hObject.Parent,'Tag','fillroi'),'Value');
+if fillr
+    set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
+else
+   set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor','k');
+end
+
 props = guidata(hObject);
 a = 0.7;
 b = 0.85;
@@ -1185,38 +1198,48 @@ if length(props.roi)>nroi
 elseif length(props.roi)<nroi
     props.roi(end+1:nroi) = gobjects(1,nroi-length(props.roi));
 end
-    
+ 
+roidx = props.showlist(contains(props.showlist,'V-'));
+roidx = str2double(replace(roidx,'V-',''));
 
-im = props.im;
-R = im(:,:,1)';
-G = im(:,:,2)';
-B = im(:,:,3)';
-cnt = 1;
-for r=1:length(props.kernpos)
-    if r<length(props.kernpos)
-        pix = props.det(props.kernpos(r):props.kernpos(r+1)-1);
-    else
-        pix = props.det(props.kernpos(r):length(props.det));
+if get(findobj(hObject.Parent,'Tag','fillroi'),'Value')
+    im = props.im;
+    R = im(:,:,1)';
+    G = im(:,:,2)';
+    B = im(:,:,3)';
+    cnt = 1;
+    for r = roidx'
+        if r<length(props.kernpos)
+            pix = props.det(props.kernpos(r):props.kernpos(r+1)-1);
+        else
+            pix = props.det(props.kernpos(r):length(props.det));
+        end
+        pix(pix==0) = [];
+
+
+        cnt(cnt>size(props.color,1)) = 1; %#ok<AGROW>
+        R(pix) = R(pix).*props.color(cnt,1); 
+        G(pix) = G(pix).*props.color(cnt,2); 
+        B(pix) = B(pix).*props.color(cnt,3); 
+        cnt = cnt+1;
+
     end
-    pix(pix==0) = [];
-
-    
-    cnt(cnt>size(props.color,1)) = 1; %#ok<AGROW>
-    R(pix) = R(pix).*props.color(cnt,1); 
-    G(pix) = G(pix).*props.color(cnt,2); 
-    B(pix) = B(pix).*props.color(cnt,3); 
-    cnt = cnt+1;
-    
+    props.imsh.CData = cat(3,R',G',B');
+else
+    props.imsh.CData = props.im;
 end
-props.imsh.CData = cat(3,R',G',B');
-
+props.imsh.Parent.XLim = [0 size(props.im,2)];
 for r=1:length(props.kernpos)
-    if ~isgraphics(props.roi(r))
-        props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), num2str(r),'Color','k','HorizontalAlignment','center');
+    if any(roidx==r)
+        if ~isgraphics(props.roi(r))
+            props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), num2str(r),'Color','k','HorizontalAlignment','center');
+        else
+            set(props.roi(r),'Position',[props.kern_center(r,1), props.kern_center(r,2)],'String',num2str(r),'Color','k'); 
+        end
     else
-        set(props.roi(r),'Position',[props.kern_center(r,1), props.kern_center(r,2)],'String',num2str(r),'Color','k'); 
+        delete(props.roi(r))
+        props.roi(r) = gobjects(1);
     end
-
 end
 guidata(hObject,props)
 
