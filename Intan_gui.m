@@ -415,7 +415,8 @@ if intch && vsdch
 end
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
-props.vsdprops = vsdprops; 
+props.vsdprops = vsdprops;
+props.newim = true;
 if isfield(vsdprops,'im')
     props.im = vsdprops.im;
     props.det = vsdprops.det;
@@ -584,17 +585,19 @@ props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','n
 props.info(9,2) = uicontrol('Style','text','Position',[1000,95,120,20],'String','Press enter to apply','Horizontal','left','Tag','info');
 
 
-if ~isfield(props,'imsh')
+if props.newim
     if length(size(props.im))==3
         props.imsh = image(props.im);
     else
         props.im = repmat(props.im,1,1,3);
         props.imsh = image(props.im);
     end
+    sz = size(props.im);
+    set(props.imsh.Parent,'Units','pixels','Position', [1270 450 400 400*sz(1)/sz(2)],'YTick',[],'XTick',[],'Box','on')
+    props.newim = false;
 end
 
-sz = size(props.im);
-set(props.imsh.Parent,'Units','pixels','Position', [1270 450 400 400*sz(1)/sz(2)],'YTick',[],'XTick',[],'Box','on')
+
 
 if isfield(props,'im')
     set(findobj(hObject.Parent,'Tag','fillroi'),'Enable','on','Visible','on')
@@ -1230,13 +1233,14 @@ if get(findobj(hObject.Parent,'Tag','fillroi'),'Value')
 else
     props.imsh.CData = props.im;
 end
-props.imsh.Parent.XLim = [0 size(props.im,2)];
+% props.imsh.Parent.XLim = [0 size(props.im,2)];
 for r=1:length(props.kernpos)
     if any(roidx==r)
         if ~isgraphics(props.roi(r))
-            props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), num2str(r),'Color','k','HorizontalAlignment','center');
+            props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), ...
+                num2str(r),'Color','k','HorizontalAlignment','center','Clipping','on');
         else
-            set(props.roi(r),'Position',[props.kern_center(r,1), props.kern_center(r,2)],'String',num2str(r),'Color','k'); 
+            set(props.roi(r),'Position',[props.kern_center(r,1), props.kern_center(r,2)],'String',num2str(r),'Color','k','Clipping','on'); 
         end
     else
         delete(props.roi(r))
