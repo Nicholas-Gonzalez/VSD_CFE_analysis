@@ -3,10 +3,10 @@ function Intan_gui % main app
 intan_tag = ['intan_tag' num2str(randi(1e4,1))];
 f = figure('Position',[100 50 1700 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 
-it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
-          'Visible','on','XLim',[0 f.Position(3)],'YLim',[0 f.Position(4)],...
-          'XGrid','off','YGrid','off','Tag','grid','HitTest','off','YTick',[],'XTick',[]);
-it.Toolbar.Visible = 'off';
+% it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
+%           'Visible','on','XLim',[0 f.Position(3)],'YLim',[0 f.Position(4)],...
+%           'XGrid','off','YGrid','off','Tag','grid','HitTest','off','YTick',[],'XTick',[]);
+% it.Toolbar.Visible = 'off';
 
 
 appfile = fullfile(fileparts(which('Intan_gui.m')),'Intan_gui_appdata.txt');
@@ -38,13 +38,15 @@ mi(4) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
 guidata(f,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
                  'intan_tag',intan_tag))
 
-text(1000,860,'Show','Parent',it)
+% text(1000,860,'Show','Parent',it)
+uicontrol('Position',[1000 845 40 20],'Style','text','String','Show')
 uicontrol('Position',[1000 380 100 470],'Style','listbox','Max',1,'Min',1,...
               'Callback',@selection,'String',"",'Tag','showgraph');
 uicontrol('Position',[1060 850 40 20],'Style','pushbutton','Tag','showsort',...
               'Callback',@sortlist,'String',[char(8595) 'sort'],'Enable','off');
 
-text(1150,860,'Hide','Parent',it)
+% text(1150,860,'Hide','Parent',it)
+uicontrol('Position',[1150 845 40 20],'Style','text','String','Hide')
 uicontrol('Position',[1150 380 100 470],'Style','listbox','Max',1,'Min',1,...
               'Callback',@selection,'String',"",'Tag','hidegraph');
 
@@ -79,8 +81,8 @@ uicontrol('Position',[1110 50 100 40],'Style','pushbutton','Tag','plotagain',...
               'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
               'Tag','filter','TooltipString','Plots the data again');
 
-          
-text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
+uicontrol('Position',[2 860 40 40],'Style','text','String','show y-axis','Tag','yaxis_label')        
+% text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
 % VSD widgets
 axes('Units','pixels','Position', [1270 450 400 400],'YTick',[],'XTick',[],'Box','on');% adjust position also in loadplotwidgets function
@@ -551,35 +553,35 @@ if isfield(props,'info')
 end
 
 
-it = findobj('Tag','grid');
+% it = findobj('Tag','grid');
 delete(findobj('Tag','info'))
-props.info(1,1) = text(1020,250,'File:','Parent',it,'Horizontal','right','Tag','info');
-props.info(1,2) = text(1030,250,props.finfo.file,'Parent',it,'Interpreter','none','Tag','info');
+props.info(1,1) = uicontrol('Style','text','Position',[970,225, 50,20],'String','File:','Horizontal','right','Tag','info');
+props.info(1,2) = uicontrol('Style','text','Position',[1030,225,220,20],'String',props.finfo.file,'Horizontal','left','Tag','info');
 
-props.info(2,1) = text(1020,235,'Folder:','Parent',it,'Horizontal','right','Tag','info');
-props.info(2,2) = text(1030,235,props.finfo.path,'Parent',it,'Interpreter','none','Tag','info');
+props.info(2,1) = uicontrol('Style','text','Position',[970,210, 50,20],'String','Folder:','Horizontal','right','Tag','info');
+props.info(2,2) = uicontrol('Style','text','Position',[1030,210, 220,20],'String',props.finfo.path,'Horizontal','left','Tag','info');
 
-props.info(3,1) = text(1020,220,'Duration:','Parent',it,'Horizontal','right','Tag','info');
-props.info(3,2) = text(1030,220,[num2str(props.finfo.duration) ' seconds'],'Parent',it,'Tag','info');
+props.info(3,1) = uicontrol('Style','text','Position',[970,195, 50,20],'String','Duration:','Horizontal','right','Tag','info');
+props.info(3,2) = uicontrol('Style','text','Position',[1030,195, 220,20],'String',[num2str(props.finfo.duration) ' seconds'],'Horizontal','left','Tag','info');
 
 % props.info(4,1) = text(1020,205,'# of Files:','Parent',it,'Horizontal','right','Tag','info');
 % props.info(4,2) = text(1030,205,num2str(props.finfo.numfiles),'Parent',it,'Tag','info');
 
-props.info(5,1) = text(1020,190,'Date:','Parent',it,'Horizontal','right','Tag','info');
-props.info(5,2) = text(1030,190,props.finfo.date,'Parent',it,'Tag','info');
+props.info(5,1) = uicontrol('Style','text','Position',[970,180, 50,20],'String','Date:','Horizontal','right','Tag','info');
+props.info(5,2) = uicontrol('Style','text','Position',[1030,180, 220,20],'String',props.finfo.date,'Horizontal','left','Tag','info');
 
-props.info(6,1) = text(1020,170,'Note 1:','Parent',it,'Horizontal','right','Tag','info');
+props.info(6,1) = uicontrol('Style','text','Position',[970,160, 50,20],'String','Note 1:','Horizontal','right','Tag','info');
 props.info(6,2) = uicontrol('Position',[1030 160 220 20],'Style','edit','Tag','note1',...
               'Callback',@note,'String',props.notes.note1,'Horizontal','left');
           
-props.info(7,1) = text(1020,150,'Note 2:','Parent',it,'Horizontal','right','Tag','info');
+props.info(7,1) = uicontrol('Style','text','Position',[970,140, 50,20],'String','Note 2:','Horizontal','right','Tag','info');
 props.info(7,2) = uicontrol('Position',[1030 140 220 20],'Style','edit','Tag','note2',...
               'Callback',@note,'String',props.notes.note2,'Horizontal','left');
           
-props.info(8,1) = text(1020,130,'Note 3:','Parent',it,'Horizontal','right','Tag','info');
+props.info(8,1) = uicontrol('Style','text','Position',[970,120, 50,20],'String','Note 3:','Horizontal','right','Tag','info');
 props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','note3',...
               'Callback',@note,'String',props.notes.note3,'Horizontal','left');
-props.info(9,2) = text(1030,115,'Press enter to apply','Parent',it,'Horizontal','left','Tag','info');
+props.info(9,2) = uicontrol('Style','text','Position',[1000,95,120,20],'String','Press enter to apply','Horizontal','left','Tag','info');
 
 
 if ~isfield(props,'imsh')
@@ -611,6 +613,7 @@ guidata(hObject,props)
 updateroi(hObject)
 set(allbut(isvalid(allbut)),'Enable','on')
 plotdata(hObject)
+set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
 
 function plotdata(hObject)
 props = guidata(hObject);
@@ -623,8 +626,7 @@ props = guidata(hObject);
 set(findobj('Tag','yaxis_label'),'Visible','on')
 allbut = findobj('Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
-it = findobj('Tag','grid');
-buf = text(500,875,'Plotting...','FontSize',15,'Parent',it);
+buf = uicontrol('Position',[500,800,200, 40],'Style','text','String','Plotting...','FontSize',15);
 pause(0.1)
 
 
