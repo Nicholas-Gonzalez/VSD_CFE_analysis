@@ -538,10 +538,10 @@ props = guidata(hObject);
 allbut = findobj('Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
 
-slistobj = findobj('Tag','showgraph');
+slistobj = findobj(hObject.Parent,'Tag','showgraph');
 slistobj.String = props.showlist;
 slistobj.Max = length(props.showlist);
-hlistobj = findobj('Tag','hidegraph');
+hlistobj = findobj(hObject.Parent,'Tag','hidegraph');
 hlistobj.String = props.hidelist;
 hlistobj.Max = length(props.hidelist);
 
@@ -555,7 +555,7 @@ end
 
 
 % it = findobj('Tag','grid');
-delete(findobj('Tag','info'))
+delete(findobj(hObject.Parent,'Tag','info'))
 props.info(1,1) = uicontrol('Style','text','Position',[970,225, 50,20],'String','File:','Horizontal','right','Tag','info');
 props.info(1,2) = uicontrol('Style','text','Position',[1030,225,220,20],'String',props.finfo.file,'Horizontal','left','Tag','info');
 
@@ -636,7 +636,7 @@ pause(0.1)
 f = gcf;
 data = props.data;
 
-showstr = get(findobj('Tag','showgraph'),'String');
+showstr = get(findobj(hObject.Parent,'Tag','showgraph'),'String');
 idx = cellfun(@(x) find(contains(props.ch,x)),showstr);
 nch = length(idx);
 
@@ -680,7 +680,7 @@ for d=1:nch
         props.txt(d) = uicontrol('Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
     else
         props.ax(d) = props.plt(d).Parent;
-        set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch],'Tag','paxis')
+        set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch])
         set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
         set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
         set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
@@ -688,9 +688,12 @@ for d=1:nch
     
     if d~=nch
         props.plt(d).Parent.XTick = [];
+    else
+        set(props.plt(d).Parent,'XTickMode','auto','XTickLabelMode', 'auto');
     end
-end
-set(props.ax,'YTick',[],'XLim',[0 max(tm)])
+end 
+
+set(props.ax,'YTick',[],'XLim',[0 max(tm)])% somehow is also modifying im, but only when loading new files
 linkaxes(props.ax,'x')
 set(findobj('Tag','adjust'),'Enable','on')
 set(findobj('Tag','showsort'),'Enable','on')
@@ -1028,7 +1031,7 @@ end
 
 ax.YLim(2) = round(fr+10);
 
-function applyfilter(hObject,eventdata)% apply filter to data and close filter app
+function applyfilter(hObject,eventdata)%<--- print out ignores lowpass highpass,   apply filter to data and close filter app
 props = guidata(hObject);
 hObject.String = 'Applying...';
 hObject.BackgroundColor = [0.6 1 0.6];
@@ -1247,6 +1250,7 @@ for r=1:length(props.kernpos)
         props.roi(r) = gobjects(1);
     end
 end
+
 guidata(hObject,props)
 
 %% misc methods
@@ -1257,7 +1261,6 @@ guidata(hObject,props)
 
 function saveit(hObject,eventdata)
 props = guidata(hObject);
-it = findobj('Tag','grid');
 fidx = find(props.files(:,2)~="",1,'first');
 nn = regexprep(props.files{fidx,2},'.(tif|mat|det|rhs|tsm|xlsx)','.mat');
 
@@ -1267,9 +1270,9 @@ if ~file
     return
 end
 
-buf = text(500,875,'Saving...','FontSize',15,'Parent',it);
 allbut = findobj('Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
+buf = uicontrol('Position',[500,800,200, 40],'Style','text','String','Saving...','FontSize',15);
 pause(0.01)
 
 if ~isfield(props,'showlist')
