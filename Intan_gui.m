@@ -85,9 +85,8 @@ uicontrol('Position',[2 860 40 40],'Style','text','String','show y-axis','Tag','
 % text(2, 860,["show","y-axis"],'Visible','off','Tag','yaxis_label')
 
 % VSD widgets
-axes('Units','pixels','Position', [1270 450 400 400],'YTick',[],'XTick',[],'Box','on');% adjust position also in loadplotwidgets function
 uicontrol('Position', [1270 430 40 20],'Style','togglebutton','Value',1,'Tag','fillroi',...
-            'Callback',@updateroi,'String','fill roi','Enable','off','Visible','off')
+            'Callback',@updateroi,'String','fill roi','Enable','off','Visible','off','ForegroundColor','w')
 
 %% loading methods
 % This is the app that loads that data into the guidata
@@ -584,8 +583,9 @@ props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','n
               'Callback',@note,'String',props.notes.note3,'Horizontal','left');
 props.info(9,2) = uicontrol('Style','text','Position',[1000,95,120,20],'String','Press enter to apply','Horizontal','left','Tag','info');
 
-
 if props.newim
+    delete(findobj(hObject.Parent,'Tag','roiax'))
+    axes('Units','pixels','Position', [1270 450 400 400],'YTick',[],'XTick',[],'Box','on','Tag','roiax');
     if length(size(props.im))==3
         props.imsh = image(props.im);
     else
@@ -593,10 +593,10 @@ if props.newim
         props.imsh = image(props.im);
     end
     sz = size(props.im);
-    set(props.imsh.Parent,'Units','pixels','Position', [1270 450 400 400*sz(1)/sz(2)],'YTick',[],'XTick',[],'Box','on')
+    set(props.imsh.Parent,'Units','pixels','Position', [1270 450 400 400*sz(1)/sz(2)],...
+        'YTick',[],'XTick',[],'Box','on','Tag','roiax')
     props.newim = false;
 end
-
 
 
 if isfield(props,'im')
@@ -616,7 +616,7 @@ guidata(hObject,props)
 updateroi(hObject)
 set(allbut(isvalid(allbut)),'Enable','on')
 plotdata(hObject)
-set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
+% set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
 
 function plotdata(hObject)
 props = guidata(hObject);
@@ -668,8 +668,6 @@ elseif length(props.plt)<nch
     props.txt = [props.txt; gobjects(nch-length(props.plt),1)];
 end
 
-
-ax = gobjects(nch,1);
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
     if ~isgraphics(props.plt(d))
@@ -1171,12 +1169,12 @@ preview(hObject)
 %% vsd frame image and ROI methods
 
 function updateroi(hObject,eventdata)
-fillr = get(findobj(hObject.Parent,'Tag','fillroi'),'Value');
-if fillr
-    set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
-else
-   set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor','k');
-end
+% fillr = get(findobj(hObject.Parent,'Tag','fillroi'),'Value');
+% if fillr
+%     set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
+% else
+%    set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor','k');
+% end
 
 props = guidata(hObject);
 a = 0.7;
@@ -1200,13 +1198,8 @@ if ~isfield(props,'roi')
     props.roi = gobjects(length(props.kernpos),1);
 end
   
-nroi = length(props.kernpos);
-if length(props.roi)>nroi
-    delete(props.roi(nroi+1:end))
-elseif length(props.roi)<nroi
-    props.roi(end+1:nroi) = gobjects(1,nroi-length(props.roi));
-end
- 
+delete(props.roi)
+
 roidx = props.showlist(contains(props.showlist,'V-'));
 roidx = str2double(replace(roidx,'V-',''));
 
@@ -1239,12 +1232,8 @@ end
 % props.imsh.Parent.XLim = [0 size(props.im,2)];
 for r=1:length(props.kernpos)
     if any(roidx==r)
-        if ~isgraphics(props.roi(r))
-            props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), ...
+       props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), ...
                 num2str(r),'Color','k','HorizontalAlignment','center','Clipping','on');
-        else
-            set(props.roi(r),'Position',[props.kern_center(r,1), props.kern_center(r,2)],'String',num2str(r),'Color','k','Clipping','on'); 
-        end
     else
         delete(props.roi(r))
         props.roi(r) = gobjects(1);
