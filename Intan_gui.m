@@ -255,12 +255,13 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
         else
             set(tsm_prog,'String',"loading...",'ForegroundColor','b');
             pause(0.1)
-            [data,tm] = extractTSM(tsm,det);
+            [data,tm,info] = extractTSM(tsm,det);
             data = data';
             vsdprops.vsd.min = min(data,[],2);
             vsdprops.vsd.d2uint = repelem(2^16,size(data,1),1)./range(data,2);
             vsdprops.vsd.data = convert_uint(data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'uint16');
             vsdprops.vsd.tm = tm;
+            vsdprops.vsd.info = info;
             set(tsm_prog,'String','saving...')
             save(replace(vsdprops.files(vsdprops.files(:,1)=="tsmfns",2),'.tsm','.mat'),'vsdprops')
             set(tsm_prog,'String','loaded','ForegroundColor','k')
@@ -373,7 +374,7 @@ if intch && vsdch
             posz = length(max(tm)+sr:sr:max(itm));
             vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
 
-            vsd = convert_uint(vsd, vsdprops.vsd.d2uint, vsdprops.vsd.mind,'double');
+            vsd = convert_uint(vsd, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');% removed d from vsdprops.vsd.mind
             vsd = interp1(vtm, vsd', itm);
             vsd = vsd';
             
@@ -411,6 +412,22 @@ if intch && vsdch
         end
     end
     props.files = vsdprops.files;
+elseif vsdch
+    nch = size(vsdprops.vsd.data,1);
+    props.ch = string([repelem('V-',nch,1) num2str((1:nch)','%03u')]);
+    
+    props.tm = vsdprops.vsd.tm;
+    props.showlist = props.ch;
+    props.showidx = 1:nch;
+    props.hidelist = [];
+    props.hideidx = [];
+    props.data = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
+    [path,filename ] = fileparts(vsdprops.vsd.info.Filename);
+    props.finfo.file = filename;
+    props.finfo.path = path;
+    props.finfo.duration = max(props.tm);
+    props.finfo.date = vsdprops.vsd.info.FileModDate;
+    props.notes = struct('note1',"",'note2',"",'note3',"");
 end
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
@@ -520,10 +537,11 @@ for s=1:size(strs,2)
             idx = contains(fnames,'.csv');
         end
         
-        
-        fns = dfolder(find(idx,1,'first')).name; 
-        fns = fullfile(fpath,fns);
-        set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',fns)
+        if any(idx)
+            fns = dfolder(find(idx,1,'first')).name; 
+            fns = fullfile(fpath,fns);
+            set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',fns)
+        end
     end
     vsdprops.files( vsdprops.files(:,1)==strs(1,s),:) = [strs(1,s)  string(get(findobj(hObject.Parent,'Tag',strs{1,s}),'String'))];
     validate(findobj(hObject.Parent,'Tag',strs(1,s)))
@@ -700,7 +718,7 @@ set(findobj(hObject.Parent,'Visible','off'),'Visible','on')
 
 delete(buf)
 guidata(gcf,props)
-set(allbut(isvalid(allbut)),'Enable','on')
+set(allbut(isvalid(allbut)),'Enable','on');
 
 function decimateit(hObject,eventdata)
 props = guidata(hObject);

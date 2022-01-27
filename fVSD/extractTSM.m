@@ -1,4 +1,4 @@
-function [data,tm] = extractTSM(fpath, detpath)
+function [data,tm,info] = extractTSM(fpath, detpath)
 
 if nargin==0
     [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
