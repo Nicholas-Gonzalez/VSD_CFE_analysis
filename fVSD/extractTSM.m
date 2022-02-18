@@ -1,7 +1,7 @@
 function data = extractTSM(folder,trial)
 
 %% Parameters
-chunkLength = 485;
+chunkLength = 500;
 shutterThr = 2; % Threshold for detection of initial shutter opening. (In times the mean dark frame intensity.)
 baselineFrames = 10; % Number of frames to average to get the baseline light intesity.
 shutterOpenDur = 40; % Number of frames during the duration it takes to open the shutter.
@@ -50,9 +50,9 @@ for A = 1:numChunks
     dataChunk = readTSM(info,chunkLength,A,false);
     dataChunk = dataChunk - darkFrame;
     
-    dataChunk = reshape(dataChunk,xsize*ysize,chunkLength); % Reshape in two dimensions to facilitate indexing.
+    dataChunk = reshape(dataChunk,prod(size(dataChunk,1,2)),size(dataChunk,3)); % Reshape in two dimensions to facilitate indexing.
     
-    chunkWin = 1+chunkLength*(A-1):chunkLength*A; % Index of the temporal window of the chunk.
+    chunkWin = 1+chunkLength*(A-1):chunkLength*(A-1)+size(dataChunk,2); % Index of the temporal window of the chunk.
     for B = 1:numKern
         kIdx = det(kernpos(B)+1:kernpos(B)+kernel_size(B)); % Index of current kernel.
         

@@ -3,10 +3,10 @@
 %% Define variables for other sections. Always run this section first.
 
 % Folder containing all, or any subset of, the experiments.
-masterFolder = 'Z:\_Lab Personnell_Summer Students\Rodrigo\VSD_Data\21-07-12\Turbo_data\Sheathed\Strong_stain';
+masterFolder = 'Z:\rcosta\Data\Cerebral En1 Priming\22-02-17';
 
 % List .tsm files in experiment folders.
-listf = dir(fullfile(masterFolder, '*VSD0*.tsm'));
+listf = dir(fullfile(masterFolder, '109.tsm'));
 
 %  % Temporary: ignore folders already extracted.
 %  listf_conv = dir(fullfile(masterFolder, '1*conv*.mat'));
@@ -48,15 +48,16 @@ for A = 1:length(listf)
             rawVSD = extractTSM(folder,trial);
             filteredVSD = vsd_ellipTSM(rawVSD);
             filteredVSD(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
+            filteredVSD(end-1000:end,:) = 0; % Zero out last second to remove artifact .
             filteredVSDZ = zscore(filteredVSD,[],1); % z-scores filtered data for plotting purposes
             denoisedVSD = pca_denoise(filteredVSD);
             
             % sets ROIs for specific plotter functions and calls stacked
             %   plotter function (can be disabled)
-            ROIsV2 = [1 2 3 4 6 10 11 12 13 14 17 18 19 21 23 26 39 40 41 43];
-            IntanSignals = [2 3 4 7];
-            IntanLabels = {'Bn2,1 (right)','Bn3 (right)','Rn (right)','Bn3 (left)'};
-            vsd_stacked_plotter_tsm(filteredVSDZ,ROIsV2,folder,trial,IntanSignals);
+%             ROIsV2 = [1 2 3 4 6 10 11 12 13 14 17 18 19 21 23 26 39 40 41 43];
+%             IntanSignals = [2 3 4 7];
+%             IntanLabels = {'Bn2,1 (right)','Bn3 (right)','Rn (right)','Bn3 (left)'};
+%             vsd_stacked_plotter_tsm(filteredVSDZ,ROIsV2,folder,trial,IntanSignals);
             
             % calls Rodrigo's plotter function that plots all data,
             %   including raw, filtered, and denoised side-by-side
