@@ -52,6 +52,7 @@ for A = 1:length(listf)
             filteredVSDZ = zscore(filteredVSD,[],1); % z-scores filtered data for plotting purposes
             denoisedVSD = pca_denoise(filteredVSD);
             
+            rawBNC = extractTBN(folder,trial);
             % sets ROIs for specific plotter functions and calls stacked
             %   plotter function (can be disabled)
 %             ROIsV2 = [1 2 3 4 6 10 11 12 13 14 17 18 19 21 23 26 39 40 41 43];
@@ -62,7 +63,7 @@ for A = 1:length(listf)
             % calls Rodrigo's plotter function that plots all data,
             %   including raw, filtered, and denoised side-by-side
             %   in each trial
-            vsd_all_plotter_tsm(rawVSD,filteredVSDZ,denoisedVSD);
+            % vsd_all_plotter_tsm(rawVSD,filteredVSDZ,denoisedVSD);
             
         catch
             display(['Failed to extract data.' newline 'Folder: ' folder newline 'Trial: ' trial])
