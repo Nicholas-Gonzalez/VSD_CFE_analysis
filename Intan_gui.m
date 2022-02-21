@@ -346,6 +346,9 @@ if intch && vsdch
         prsz = length(min(itm):sr:min(tm)-sr);
         posz = length(max(tm)+sr:sr:max(itm));
         vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
+        if length(vtm)>size(vsd,2)
+            vtm = vtm(1:size(vsd,2));
+        end
         vsd = interp1(vtm, vsd', itm);
         vsd = vsd';
         
