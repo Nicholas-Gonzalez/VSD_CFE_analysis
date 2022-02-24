@@ -420,6 +420,7 @@ if (data_present)
     board_dac_data = 312.5e-6 * (board_dac_data - 32768); % units = volts
 
     % Check for gaps in timestamps.
+    
     num_gaps = sum(diff(t) ~= 1);
     if (num_gaps == 0)
         fprintf(1, 'No missing timestamps in data.\n');

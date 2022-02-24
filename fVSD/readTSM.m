@@ -52,11 +52,12 @@ offset = info.PrimaryData.Offset + ... Header information takes 2880 bytes.
 fseek(fid,offset,'bof');
 
 % Read data.
-data = fread(fid,frameLength*chunkLength,'int16'); 
+data = fread(fid,frameLength*chunkLength,'int16=>single');% single saves about 25% processing time and requires half of memory 
 
 % Format data.
 data = reshape(data,[xsize ysize chunkLength]); 
 % Temporarily removed for compatibility with det file (20-08-19) data = permute(data,[2 1 3]); 
+% data = permute(data,[2 1 3]); 
 % Data needs to be transposed because MATLAB indexes rows first, whereas the TSM files store 'xsize' first.
 
 
