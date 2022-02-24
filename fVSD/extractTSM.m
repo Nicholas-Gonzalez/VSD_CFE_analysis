@@ -65,12 +65,12 @@ for a = 1:numChunks
         fprintf('|')
     end
     dataChunk = readTSM(info,chunkLength,a,false);
-    alength = size(dataChunk,3);
+    alength = size(dataChunk,3); % Note that only for the last chunk should it be possible for alength to be different from chunkLength.
     dataChunk = dataChunk - darkFrame;
     
     dataChunk = reshape(dataChunk,xsize*ysize,alength); % Reshape in two dimensions to facilitate indexing.
 
-    chunkWin = 1+alength*(a-1):alength*a; % Index of the temporal window of the chunk.
+    chunkWin = 1+chunkLength*(a-1):chunkLength*(a-1)+alength; % Index of the temporal window of the chunk.
     
     for b = 1:numKern
         kIdx = det(kernpos(b)+1:kernpos(b)+kernel_size(b)); % Index of current kernel.

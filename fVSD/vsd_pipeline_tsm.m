@@ -61,8 +61,11 @@ for a = 5%:length(listf)
             toc
             filteredVSD = vsd_ellipTSM(rawVSD);
             filteredVSD(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
+            filteredVSD(end-1000:end,:) = 0; % Zero out last second to remove artifact .
             filteredVSDZ = zscore(filteredVSD,[],1); % z-scores filtered data for plotting purposes
             denoisedVSD = pca_denoise(filteredVSD);
+            
+            rawBNC = extractTBN(folder,trial);
             
             notes = string(readcell(fullfile(fileparts(cfeconn{a,2}),'notes.xlsx')));
             IntanSignals = notes(2:end,notes(1,:)=="good channels");
