@@ -328,7 +328,7 @@ function stitchvsd(hObject)
 vsdprops = guidata(hObject);
 props = guidata(findobj('Tag',vsdprops.intan_tag));
 intch = isfield(vsdprops,'intan') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'intan'));
-vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd'));
+vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd')); 
 if intch && vsdch
     if isfield(vsdprops,'intan')
         intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
@@ -431,12 +431,29 @@ elseif vsdch
     props.finfo.duration = max(props.tm);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
+elseif intch % Assign values for the case where no VSD data is present. - Renan 03/03/22
+        intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
+        itm = vsdprops.intan.tm(1:2:end);
+        
+        props.data = intan;
+        props.ch = vsdprops.intan.ch;
+        props.tm = itm;
+        showidx = (1:size(intan,1)/2);
+        props.showlist = vsdprops.intan.ch(showidx);
+        props.showidx = showidx;
+        hideidx = size(intan,1)/2+1:size(intan,1);
+        props.hidelist = vsdprops.intan.ch(hideidx);
+        props.hideidx = hideidx;
+        props.Max = size(vsdprops.intan.data,1);
+        props.finfo = vsdprops.intan.finfo;
+        props.notes = vsdprops.intan.notes;
 end
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
 props.vsdprops = vsdprops;
-props.newim = true;
+props.newim = false;
 if isfield(vsdprops,'im')
+    props.newim = true;
     props.im = vsdprops.im;
     props.det = vsdprops.det;
     props.kern_center = vsdprops.kern_center;
@@ -496,7 +513,7 @@ end
 
 function getvsdfile(hObject,eventdata)
 vsdprops = guidata(hObject);
-[file, path, id] = uigetfile(['C:\Users\cneveu\Desktop\Data\*.' hObject.Tag(1:end-2)],'Select file');
+[file, path, id] = uigetfile(['Z:\rcosta\Data\Cerebral En1 Priming\*.' hObject.Tag(1:end-2)],'Select file');
 if ~file;return;end
 vsdprops.files(vsdprops.files(:,1)==string([hObject.Tag 's']),2) = fullfile(path,file);
 guidata(hObject,vsdprops);
@@ -634,7 +651,7 @@ set(findobj(hObject.Parent,'Tag','showsort'),'Enable','on')
 set(findobj(hObject.Parent,'Tag','filter'),'Enable','on')
 
 guidata(hObject,props)
-updateroi(hObject)
+if isfield(props,'im'); updateroi(hObject); end
 set(allbut(isvalid(allbut)),'Enable','on')
 plotdata(hObject)
 % set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
@@ -764,14 +781,14 @@ for c=1:length(idx)
 
     for a=1:length(sidx)
         if sidx(a)+window<length(data)
-            data(sidx(a):sidx(a)+window-1) = data(sidx(a):sidx(a)+window-1) - int16(madata);
-            data(sidx(a)-5:sidx(a)+35) = 0;
+            data(sidx(a):sidx(a)+window-1) = data(sidx(a):sidx(a)+window-1) - (madata);
+            data(sidx(a)-100:sidx(a)+1000) = 0;
             if a==1
                 data((-2:-1) + sidx(a)) = 0;
             end
         else
             idxx = sidx(a):length(data);
-            data(idxx) = data(idxx) - int16(madata(1:length(idxx)));
+            data(idxx) = data(idxx) - (madata(1:length(idxx)));
         end
     end
     props.data(ch(c),:) = data;
@@ -924,11 +941,11 @@ str = join(str,'');
 meth = {'butter';'cheby1';'cheby2';'ellip'};
 
 % default filter properties
-filterp.meth = 'ellip';
+filterp.meth = 'butter';
 filterp.fr = 2;
 filterp.fatt = [60,60];
-filterp.fpass = [15,50];
-filterp.fstop = [0.1,100];
+filterp.fpass = [200,1000];
+filterp.fstop = [0.1,5000];
 
 
 uicontrol('Position',[400 565 100 20],'Style','text','String','Select channel');
@@ -1198,6 +1215,9 @@ function updateroi(hObject,eventdata)
 % end
 
 props = guidata(hObject);
+if ~isfield(props,'im')
+    return
+end
 a = 0.7;
 b = 0.85;
 c = 0.95;
