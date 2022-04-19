@@ -102,31 +102,31 @@ frm = uicontrol('Position',[10 260 315 20],'Style','edit','String','','Tag','tif
 uicontrol('Position',[325 260 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','tiffn');
 uicontrol('Position',[385 260 60 20],'Style','pushbutton','String',"Generate",'Callback',@findkframe,'Tag','tiffn');
 uicontrol('Position',[445 260 60 20],'Style','text','String','','Tag','tifp');
-uicontrol('Position',[505 260 60 20],'Style','checkbox','Tag','tifc','Value',1);
+uicontrol('Position',[505 260 60 20],'Style','checkbox','Tag','tifc','Value',0);
 
 uicontrol('Position',[50 230 200 20],'Style','text','String',"Select ROI file (.det)");
 vsd = uicontrol('Position',[10 210 315 20],'Style','edit','String','','Tag','detfns','HorizontalAlignment','left','Callback',@setvsdfile);
 uicontrol('Position',[325 210 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','detfn');
 uicontrol('Position',[445 210 60 20],'Style','text','String','','Tag','detp');
-uicontrol('Position',[505 210 60 20],'Style','checkbox','Tag','detc','Value',1);
+uicontrol('Position',[505 210 60 20],'Style','checkbox','Tag','detc','Value',0);
 
 uicontrol('Position',[50 180 200 20],'Style','text','String',"Select VSD file (.tsm)");
 vsd = uicontrol('Position',[10 160 315 20],'Style','edit','String','','Tag','tsmfns','HorizontalAlignment','left','Callback',@setvsdfile);
 uicontrol('Position',[325 160 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','tsmfn');
 uicontrol('Position',[445 160 60 20],'Style','text','String','','Tag','tsmp');
-uicontrol('Position',[505 160 60 20],'Style','checkbox','Tag','tsmc','Value',1);
+uicontrol('Position',[505 160 60 20],'Style','checkbox','Tag','tsmc','Value',0);
 
 uicontrol('Position',[50 130 200 20],'Style','text','String',"Select CFE file (.rhs)");
 vsd = uicontrol('Position',[10 110 315 20],'Style','edit','String','','Tag','rhsfns','HorizontalAlignment','left','Callback',@setvsdfile);
 uicontrol('Position',[325 110 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','rhsfn');
 uicontrol('Position',[445 110 60 20],'Style','text','String','','Tag','rhsp');
-uicontrol('Position',[505 110 60 20],'Style','checkbox','Tag','rhsc','Value',1);
+uicontrol('Position',[505 110 60 20],'Style','checkbox','Tag','rhsc','Value',0);
 
 uicontrol('Position',[50 80 200 20],'Style','text','String',"Select notes file (.xlsx)");
 vsd = uicontrol('Position',[10 60 315 20],'Style','edit','String','','Tag','xlsxfns','HorizontalAlignment','left','Callback',@setvsdfile);
 uicontrol('Position',[325 60 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','xlsxfn');
 uicontrol('Position',[445 60 60 20],'Style','text','String','','Tag','xlsxp');
-uicontrol('Position',[505 60 60 20],'Style','checkbox','Tag','xlsxc','Value',1);
+uicontrol('Position',[505 60 60 20],'Style','checkbox','Tag','xlsxc','Value',0);
 
 uicontrol('Position',[480 10 60 20],'Style','pushbutton','String',"Open",'Callback',@loadall);
 uicontrol('Position',[420 10 60 20],'Style','pushbutton','String',"Cancel",'Callback',@cancelvsd);
@@ -151,7 +151,7 @@ guidata(f2,vsdprops)
 
 function loadmat(hObject,eventdata)
 vsdprops = guidata(hObject);
-[file, path, id] = uigetfile('C:\Users\cneveu\Desktop\Data\*.mat','Select frame file');
+[file, path, id] = uigetfile('Z:\rcosta\Data\Cerebral En1 Priming\*.mat','Select frame file');
 if ~file;return;end
 matprog = findobj('Tag','matprog');
 set(matprog,'String','loading...','ForeGroundColor','b')
@@ -452,12 +452,14 @@ try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
 props.vsdprops = vsdprops;
 props.newim = false;
-if isfield(vsdprops,'im')
+if isfield(vsdprops,'im') 
     props.newim = true;
     props.im = vsdprops.im;
     props.det = vsdprops.det;
     props.kern_center = vsdprops.kern_center;
     props.kernpos = vsdprops.kernpos;
+elseif isfield(props,'im')
+    props.newim = true;
 end
 set(vsdprops.allbut,'Enable','on')
 guidata(findobj('Tag',props.intan_tag),props)

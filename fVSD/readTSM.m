@@ -1,4 +1,4 @@
-function [data] = readTSM(info,chunkLength,chunkNumber,getDarkFrame)
+function [data] = readTSM(info,chunkLength,chunkNumber,getDarkFrame,offset)
 % Reads .tsm files, which are stored in FITS standard, but use
 % little-endian byte order instead of big-endian. .tsm also has an
 % additional dark frame at the end, which is currently ignored here,
@@ -21,13 +21,18 @@ elseif nargin==2
     chunkNumber = 1;
 end
 
+if nargin<5
+    offset = 0; % Number of frames to be ignored.
+end
+baseChunkLength = chunkLength; % To compute offset accurately for final chunk, in case Current chunk length < Base chunk length
+
 % Conditionally removes last frames, unless dark frame feature is
 %   activated
 if ~getDarkFrame
     
     % Trims off the last frames
-    if chunkLength * chunkNumber > info.PrimaryData.Size(3)
-        chunkLength = info.PrimaryData.Size(3) - chunkLength*(chunkNumber-1);
+    if chunkLength * chunkNumber + offset > info.PrimaryData.Size(3)
+        chunkLength = info.PrimaryData.Size(3) - baseChunkLength*(chunkNumber-1) - offset;
     end  
     
 end
@@ -42,9 +47,10 @@ ysize = info.PrimaryData.Size(1);
 frameLength = xsize*ysize; % Frame length is the product of X and Y axis lengths;
 
 % Compute offset to current chunk
-offset = info.PrimaryData.Offset + ... Header information takes 2880 bytes.
+offset = offset*frameLength*2 + ... 
+            info.PrimaryData.Offset + ... Header information takes 2880 bytes.
             (chunkNumber-1) * ... 
-            chunkLength * ... 
+            baseChunkLength * ... 
             frameLength * ...
             2; % Because each integer takes two bytes.
 

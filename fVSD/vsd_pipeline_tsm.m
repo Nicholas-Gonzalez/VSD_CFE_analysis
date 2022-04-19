@@ -6,7 +6,7 @@
 masterFolder = fileread('TSM_path_appdata.txt');
 
 % List .tsm files in experiment folders.
-listf = dir(fullfile(masterFolder, '*VSD*.tsm'));
+listf = dir(fullfile(masterFolder, '10*.tsm'));
 
 %  % Temporary: ignore folders already extracted.
 %  listf_conv = dir(fullfile(masterFolder, '1*conv*.mat'));
@@ -33,7 +33,7 @@ cfeconn = [fpath,  strings(length(fpath),1)];
 for f=3:length(dfolder)
     if ~contains(dfolder(f).name,'.')
         sfolder = dir(fullfile(dfolder(f).folder,dfolder(f).name));
-        rhsidx = contains({sfolder.name},'.rhs');
+        rhsidx = find(contains({sfolder.name},'.rhs'),1);
         timedif = double(string({dfolder.datenum}))-sfolder(rhsidx).datenum;
         if min(abs(timedif))<0.01
             [~,idx] = min(abs(timedif));
@@ -45,8 +45,8 @@ end
 
 
 % Extract data for each file.
-for a = 5%:length(listf)
-    detname = fullfile(replace(cfeconn{a,1}, '.tsm', '.det'));  
+for a = 3%:length(listf)
+    detname = fullfile(replace(cfeconn{a,1}, '.tsm', 'kernel.det'));  
     if ~exist(detname,'file') 
         disp([ detname ' not found.'])
         continue
@@ -57,7 +57,7 @@ for a = 5%:length(listf)
             
             % extracts VSD data and stores it raw, filtered, and denoised
             tic
-            rawVSD = extractTSM(cfeconn{a,1},detname);
+            %rawVSD = extractTSM(cfeconn{a,1},detname);
             toc
             filteredVSD = vsd_ellipTSM(rawVSD);
             filteredVSD(1:1000,:) = 0; % Zero out first second to remove artifact (shutter+bleaching+filtering).
@@ -65,16 +65,16 @@ for a = 5%:length(listf)
             filteredVSDZ = zscore(filteredVSD,[],1); % z-scores filtered data for plotting purposes
             denoisedVSD = pca_denoise(filteredVSD);
             
-            rawBNC = extractTBN(folder,trial);
+            rawBNC = extractTBN(fullfile(replace(cfeconn{a,1}, '.tsm', '.tbn')));
             
-            notes = string(readcell(fullfile(fileparts(cfeconn{a,2}),'notes.xlsx')));
-            IntanSignals = notes(2:end,notes(1,:)=="good channels");
+            %notes = string(readcell(fullfile(fileparts(cfeconn{a,2}),'notes.xlsx')));
+            %IntanSignals = notes(2:end,notes(1,:)=="good channels");
             
             [~,~,roixy]=readdet(detname);
             
             tiffnm = replace(cfeconn{a,1},'.tsm','_frame.tif');
             frameim = imread(tiffnm);
-            vsd_stacked_plotter_tsm(filteredVSDZ,1:size(rawVSD,2),cfeconn{a,2},frameim,IntanSignals,IntanSignals,roixy);
+            %vsd_stacked_plotter_tsm(filteredVSDZ,1:size(rawVSD,2),cfeconn{a,2},frameim,IntanSignals,IntanSignals,roixy);
             
             % calls Rodrigo's plotter function that plots all data,
             %   including raw, filtered, and denoised side-by-side
