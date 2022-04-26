@@ -1,5 +1,7 @@
-fpath = "E:\Renan\Cerebral AT Priming\22-04-07\106.tsm";
+folder = "E:\Renan\Cerebral AT Priming\22-04-14\";
+trial = '101';
 
+fpath = fullfile(folder,[trial '.tsm']);
 %% Parameters
 chunkLength = 500;
 shutterThr = 2; % Threshold for detection of initial shutter opening. (In times the mean dark frame intensity.)
@@ -82,8 +84,9 @@ data = -data +1;
 %%
 imData = uint8(data(:,:,:,100:250)*256);
 imData = cat(4,zeros(xsize,ysize,1,5),imData);
-v = VideoWriter("E:\Renan\Cerebral AT Priming\22-04-07\106.avi",'Indexed AVI');
+v = VideoWriter(fullfile(folder,trial),'Indexed AVI');
 v.Colormap = parula(256);
+v.FrameRate = 10;
 open(v);
 writeVideo(v,imData)
 close(v);
