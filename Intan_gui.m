@@ -217,37 +217,37 @@ iObject = findobj('Tag',vsdprops.intan_tag);
 
 fex = arrayfun(@exist,vsdprops.files(:,2));
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
-    if fex(vsdprops.files(:,1)=="tiffns") && get(findobj('Tag','tifc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="tiffns") && get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
         im = imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2));
         vsdprops.im = repmat(im,1,1,3/size(im,3));
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"loaded");
-    elseif get(findobj('Tag','tifc'),'Value')==1
+    elseif get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"not found",'ForegroundColor','r');
     end
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','detp'),'String'),'loaded')
-    if fex(vsdprops.files(:,1)=="detfns") && get(findobj('Tag','detc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="detfns") && get(findobj(hObject.Parent,'Tag','detc'),'Value')==1
         [vsdprops.det,vsdprops.pixels,vsdprops.kern_center,kernel_size,vsdprops.kernpos] = ...
             readdet(vsdprops.files(vsdprops.files(:,1)=="detfns",2),size(vsdprops.im,2));
         set(findobj(hObject.Parent,'Tag','detp'),'String',"loaded");
-    elseif get(findobj('Tag','detc'),'Value')==1
+    elseif get(findobj(hObject.Parent,'Tag','detc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','detp'),'String',"not found",'ForegroundColor','r');
     end
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','xlsxp'),'String'),'loaded')
-    if fex(vsdprops.files(:,1)=="xlsxfns") && get(findobj('Tag','xlsxc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="xlsxfns") && get(findobj(hObject.Parent,'Tag','xlsxc'),'Value')==1
         vsdprops.note = string(readcell(vsdprops.files(vsdprops.files(:,1)=="xlsxfns",2)));
         set(findobj(hObject.Parent,'Tag','xlsxp'),'String',"loaded");
-    elseif get(findobj('Tag','xlsxc'),'Value')==1
+    elseif get(findobj(hObject.Parent,'Tag','xlsxc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','xlsxp'),'String',"not found",'ForegroundColor','r');
     end
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
     tsm_prog = findobj(hObject.Parent,'Tag','tsmp');
-    if fex(vsdprops.files(:,1)=="tsmfns") && get(findobj('Tag','tsmc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="tsmfns") && get(findobj(hObject.Parent,'Tag','tsmc'),'Value')==1
         tsm = vsdprops.files(vsdprops.files(:,1)=="tsmfns",2);
         det = vsdprops.files(vsdprops.files(:,1)=="detfns",2);
         if ~fex(vsdprops.files(:,1)=="detfns")
@@ -273,7 +273,7 @@ end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
     rhs_prog = findobj(hObject.Parent,'Tag','rhsp');
-    if fex(vsdprops.files(:,1)=="rhsfns") && get(findobj('Tag','rhsc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="rhsfns") && get(findobj(hObject.Parent,'Tag','rhsc'),'Value')==1
         rfn = vsdprops.files{vsdprops.files(:,1)=="rhsfns",2};
         set(rhs_prog,'String',"loading...",'ForegroundColor','b');
         pause(0.1)
@@ -431,6 +431,18 @@ elseif vsdch
     props.finfo.duration = max(props.tm);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
+else
+    nch = length(vsdprops.intan.ch);
+    props.ch = vsdprops.intan.ch;
+    props.tm = vsdprops.intan.tm;
+    props.showlist = vsdprops.intan.ch;
+    props.showidx = 1:nch;
+    props.hidelist = [];
+    props.hideidx = [];
+    props.data = vsdprops.intan.data;
+    props.finfo = vsdprops.intan.finfo;
+    props.notes = struct('note1',"",'note2',"",'note3',"");
+    props.im = ones(512,512,3);
 end
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
@@ -658,7 +670,7 @@ f = gcf;
 data = props.data;
 
 showstr = get(findobj(hObject.Parent,'Tag','showgraph'),'String');
-idx = cellfun(@(x) find(contains(props.ch,x)),showstr);
+idx = cellfun(@(x) find(strcmp(props.ch,x)),showstr);
 nch = length(idx);
 
 tm = props.tm;
@@ -1216,10 +1228,16 @@ props.color = [1    a   a;...
 
 
 if ~isfield(props,'roi')
-    props.roi = gobjects(length(props.kernpos),1);
+    if isfield(props,'kernpos')
+        props.roi = gobjects(length(props.kernpos),1);% this seems unneccessary because of the delete statement below.
+    else
+        props.kernpos = [];
+    end
 end
-  
-delete(props.roi)
+
+if isfield(props,'roi')
+    delete(props.roi)
+end
 
 roidx = props.showlist(contains(props.showlist,'V-'));
 roidx = str2double(replace(roidx,'V-',''));

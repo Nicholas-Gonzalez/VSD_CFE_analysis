@@ -3,6 +3,9 @@ function [data,tm,info] = extractTSM(fpath, detpath)
 if nargin==0
     [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
     fpath = fullfile(path,file);
+end
+
+if nargin>2
     [dfile, dpath, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.det','Select det file');
     detpath = fullfile(dpath,dfile);
 end
