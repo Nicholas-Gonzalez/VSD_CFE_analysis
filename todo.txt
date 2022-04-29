@@ -1,0 +1,21 @@
+-Add event log to intan_GUI
+-add vsd name to info box on bottom left
+-add reduce sample feature
+-add raster overlay
+
+-ERROR after opening 004_filtered after opening 005_filtered
+Index exceeds the number of array elements. Index must not exceed 63.
+
+Error in Intan_gui>updateroi (line 1277)
+        delete(props.roi(r))
+
+Error in Intan_gui>loadplotwidgets (line 649)
+updateroi(hObject)
+
+Error in Intan_gui>loadall (line 323)
+    loadplotwidgets(iObject,eventdata)
+ 
+Error while evaluating DestroyedObject Callback.
+
+
+
