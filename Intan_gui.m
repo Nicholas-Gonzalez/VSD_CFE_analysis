@@ -76,6 +76,9 @@ uicontrol('Position',[1110 310 100 20],'Style','pushbutton','Tag','adjust_not_fi
 uicontrol('Position',[1110 290 100 20],'Style','pushbutton','Tag','filter',...
               'Callback',@filterit,'String','Filter','Enable','off',...
               'Tag','filter','TooltipString','Filters the data');
+uicontrol('Position',[1220 350 100 20],'Style','pushbutton','Tag','adjust',...
+              'Callback',@xcorrelation,'String','XCorr','Enable','off',...
+              'Tag','filter','TooltipString','Calculates the cross correlation');
      
 uicontrol('Position',[1110 50 100 40],'Style','pushbutton','Tag','plotagain',...
               'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
@@ -363,6 +366,7 @@ if intch && vsdch
         props.hideidx = hideidx;
         props.Max = size(props.data,1);
         props.finfo = vsdprops.intan.finfo;
+        props.finfo.files = vsdprops.files;
         props.notes = vsdprops.intan.notes;
     else
         if isfield(vsdprops,'vsd')
@@ -392,6 +396,7 @@ if intch && vsdch
             props.hideidx = hideidx;
             props.Max = size(props.data,1);
             props.finfo = vsdprops.matprops.intan.finfo;
+            props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.intan.notes;
         else
             props.d2uint = vsdprops.matprops.d2uint;
@@ -405,6 +410,7 @@ if intch && vsdch
             props.hideidx = vsdprops.matprops.hideidx;  
             props.Max = vsdprops.matprops.Max;
             props.finfo = vsdprops.matprops.finfo;
+            props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.notes;
             props.im = vsdprops.matprops.im;
             props.det = vsdprops.matprops.det;
@@ -427,6 +433,7 @@ elseif vsdch
     props.data = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
     [path,filename ] = fileparts(vsdprops.vsd.info.Filename);
     props.finfo.file = filename;
+    props.finfo.files = vsdprops.files;
     props.finfo.path = path;
     props.finfo.duration = max(props.tm);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
@@ -441,6 +448,7 @@ else
     props.hideidx = [];
     props.data = vsdprops.intan.data;
     props.finfo = vsdprops.intan.finfo;
+    props.finfo.files = vsdprops.files;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.im = ones(512,512,3);
 end
@@ -588,14 +596,19 @@ end
 
 % it = findobj('Tag','grid');
 delete(findobj(hObject.Parent,'Tag','info'))
-props.info(1,1) = uicontrol('Style','text','Position',[970,225, 50,20],'String','File:','Horizontal','right','Tag','info');
-props.info(1,2) = uicontrol('Style','text','Position',[1030,225,220,20],'String',props.finfo.file,'Horizontal','left','Tag','info');
+[~,name,ext] = fileparts(props.finfo.files{4,2});
+props.info(1,1) = uicontrol('Style','text','Position',[970,240, 50,20],'String','RHS File:','Horizontal','right','Tag','info');
+props.info(1,2) = uicontrol('Style','text','Position',[1030,240,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
 
-props.info(2,1) = uicontrol('Style','text','Position',[970,210, 50,20],'String','Folder:','Horizontal','right','Tag','info');
-props.info(2,2) = uicontrol('Style','text','Position',[1030,210, 220,20],'String',props.finfo.path,'Horizontal','left','Tag','info');
+[folder,name,ext] = fileparts(props.finfo.files{3,2});
+props.info(2,1) = uicontrol('Style','text','Position',[970,225, 50,20],'String','TSM File:','Horizontal','right','Tag','info');
+props.info(2,2) = uicontrol('Style','text','Position',[1030,225,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
 
-props.info(3,1) = uicontrol('Style','text','Position',[970,195, 50,20],'String','Duration:','Horizontal','right','Tag','info');
-props.info(3,2) = uicontrol('Style','text','Position',[1030,195, 220,20],'String',[num2str(props.finfo.duration) ' seconds'],'Horizontal','left','Tag','info');
+props.info(3,1) = uicontrol('Style','text','Position',[970,210, 50,20],'String','Folder:','Horizontal','right','Tag','info');
+props.info(3,2) = uicontrol('Style','text','Position',[1030,210, 220,20],'String',folder,'Horizontal','left','Tag','info');
+
+props.info(4,1) = uicontrol('Style','text','Position',[970,195, 50,20],'String','Duration:','Horizontal','right','Tag','info');
+props.info(4,2) = uicontrol('Style','text','Position',[1030,195, 220,20],'String',[num2str(props.finfo.duration) ' seconds'],'Horizontal','left','Tag','info');
 
 % props.info(4,1) = text(1020,205,'# of Files:','Parent',it,'Horizontal','right','Tag','info');
 % props.info(4,2) = text(1030,205,num2str(props.finfo.numfiles),'Parent',it,'Tag','info');
@@ -1198,6 +1211,44 @@ obj = findobj(hObject.Parent,'Tag','fripple','-or','Tag','fattlower','-or','Tag'
     '-or','Tag','fphigher','-or','Tag','fslower','-or','Tag','fshigher');
 set(obj,'ForegroundColor','k','TooltipString','')
 preview(hObject)
+%%
+function xcorrelation(hObject,eventdata)% calculates the cross correlation of the channels shown
+props = guidata(hObject);
+win = 100;% window for calculating the cross correlation
+nch = length(props.showidx);
+showidx = props.showidx;
+idx = nchoosek(1:nch,2);
+props.xcorr = nan(nch);
+props.xcorr_lag = nan(nch);
+props.xcorr_fulltrace = nan(length(idx),win*2+1);
+for i=1:length(idx)
+    r = xcorr(props.data(showidx(idx(i,1)),:),props.data(showidx(idx(i,2)),:),win,'normalized');
+    [val,id] = max(r);
+    props.xcorr(idx(i,2),idx(i,1)) = val;
+    props.xcorr_lag(idx(i,2),idx(i,1)) = id-win/2;
+    props.xcorr_fulltrace(i,:) = r;
+end
+
+figure('Position',[400 500 1300 400])
+ax(1) = subplot(1,2,1);
+imagesc(props.xcorr,'AlphaData', 1-isnan(props.xcorr))
+
+tcmap = [(0:0.02:2)', (0:0.01:1)' , (1:-0.01:0)'];
+tcmap(tcmap>1) = 1;
+lower = min(props.xcorr(:))/max(props.xcorr(:))*50;
+if lower>0
+    cmap = tcmap(50:end,:);
+else
+    cmap = tcmap(round(50-lower):end,:);
+end
+colormap(cmap)
+colorbar
+ax(2) = subplot(1,2,2);
+imagesc(props.xcorr_lag,'AlphaData', 1-isnan(props.xcorr_lag))
+colorbar
+set(ax,'YTickLabel',props.showlist,'XTickLabel',props.showlist)
+
+guidata(hObject,props)
 
 %% vsd frame image and ROI methods
 
