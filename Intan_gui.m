@@ -759,32 +759,40 @@ props = guidata(hObject);
 idx = listdlg('liststring',props.showlist);
 props.databackup = props.data;
 
+% Obtain stimulus indexes from stimulus channels.
+schidx = contains(props.ch,'stim'); % Index stimulus channels.
+sdata = props.data(schidx,:); 
+sidx = diff(abs(sdata),1,2)>1; % Find stimuli in each channel. Taking the absolute accounts for biphasic pulses and ensures only pulse onset is detected.
+sidx = any(sidx,1);
+sidx = find(sidx); % Convert to linear index.
+
 ch = props.showidx(idx);
 noart = [];
 for c=1:length(idx)
     data = props.data(ch(c),:);
-    sidx = find(data<-500);
+    %sidx = find(data<-500);
     if length(sidx)<2
         noart = [noart; props.showlist(idx(c))];
         continue
     end
-    sidx = [sidx(1) , sidx([false , diff(sidx)>10])];
-    window = max(diff(sidx));
+    %sidx = [sidx(1) , sidx([false , diff(sidx)>10])];
+    window = min(diff(sidx));
     adata = zeros(length(sidx),window);
     for a=1:length(sidx)
         if sidx(a)+window-1<length(data)
             adata(a,:) = data(sidx(a):sidx(a)+window-1);
         end
     end
+
     midx = adata>repmat(prctile(adata,25,1),size(adata,1),1) & adata<repmat(prctile(adata,75,1),size(adata,1),1);
-    madata = nan(size(adata));
+    madata = nan(size(adata)); 
     madata(midx) = adata(midx);
     madata = mean(madata,1,'omitnan');
 
     for a=1:length(sidx)
         if sidx(a)+window<length(data)
             data(sidx(a):sidx(a)+window-1) = data(sidx(a):sidx(a)+window-1) - (madata);
-            data(sidx(a)-100:sidx(a)+1000) = 0;
+            data(sidx(a):sidx(a)+200) = 0;
             if a==1
                 data((-2:-1) + sidx(a)) = 0;
             end
