@@ -597,37 +597,37 @@ end
 % it = findobj('Tag','grid');
 delete(findobj(hObject.Parent,'Tag','info'))
 [~,name,ext] = fileparts(props.finfo.files{4,2});
-props.info(1,1) = uicontrol('Style','text','Position',[970,240, 50,20],'String','RHS File:','Horizontal','right','Tag','info');
-props.info(1,2) = uicontrol('Style','text','Position',[1030,240,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
+props.info(1,1) = uicontrol('Style','text','Position',[990,240, 50,20],'String','RHS File:','Horizontal','right','Tag','info');
+props.info(1,2) = uicontrol('Style','text','Position',[1050,240,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
 
 [folder,name,ext] = fileparts(props.finfo.files{3,2});
-props.info(2,1) = uicontrol('Style','text','Position',[970,225, 50,20],'String','TSM File:','Horizontal','right','Tag','info');
-props.info(2,2) = uicontrol('Style','text','Position',[1030,225,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
+props.info(2,1) = uicontrol('Style','text','Position',[990,225, 50,20],'String','TSM File:','Horizontal','right','Tag','info');
+props.info(2,2) = uicontrol('Style','text','Position',[1050,225,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
 
-props.info(3,1) = uicontrol('Style','text','Position',[970,210, 50,20],'String','Folder:','Horizontal','right','Tag','info');
-props.info(3,2) = uicontrol('Style','text','Position',[1030,210, 220,20],'String',folder,'Horizontal','left','Tag','info');
+props.info(3,1) = uicontrol('Style','text','Position',[990,210, 50,20],'String','Folder:','Horizontal','right','Tag','info');
+props.info(3,2) = uicontrol('Style','text','Position',[1050,210, 220,20],'String',folder,'Horizontal','left','Tag','info');
 
-props.info(4,1) = uicontrol('Style','text','Position',[970,195, 50,20],'String','Duration:','Horizontal','right','Tag','info');
-props.info(4,2) = uicontrol('Style','text','Position',[1030,195, 220,20],'String',[num2str(props.finfo.duration) ' seconds'],'Horizontal','left','Tag','info');
+props.info(4,1) = uicontrol('Style','text','Position',[990,195, 50,20],'String','Duration:','Horizontal','right','Tag','info');
+props.info(4,2) = uicontrol('Style','text','Position',[1050,195, 220,20],'String',[num2str(props.finfo.duration) ' seconds'],'Horizontal','left','Tag','info');
 
 % props.info(4,1) = text(1020,205,'# of Files:','Parent',it,'Horizontal','right','Tag','info');
 % props.info(4,2) = text(1030,205,num2str(props.finfo.numfiles),'Parent',it,'Tag','info');
 
-props.info(5,1) = uicontrol('Style','text','Position',[970,180, 50,20],'String','Date:','Horizontal','right','Tag','info');
-props.info(5,2) = uicontrol('Style','text','Position',[1030,180, 220,20],'String',props.finfo.date,'Horizontal','left','Tag','info');
+props.info(5,1) = uicontrol('Style','text','Position',[990,180, 50,20],'String','Date:','Horizontal','right','Tag','info');
+props.info(5,2) = uicontrol('Style','text','Position',[1050,180, 220,20],'String',props.finfo.date,'Horizontal','left','Tag','info');
 
-props.info(6,1) = uicontrol('Style','text','Position',[970,160, 50,20],'String','Note 1:','Horizontal','right','Tag','info');
-props.info(6,2) = uicontrol('Position',[1030 160 220 20],'Style','edit','Tag','note1',...
+props.info(6,1) = uicontrol('Style','text','Position',[990,160, 50,20],'String','Note 1:','Horizontal','right','Tag','info');
+props.info(6,2) = uicontrol('Position',[1050 160 220 20],'Style','edit','Tag','note1',...
               'Callback',@note,'String',props.notes.note1,'Horizontal','left');
           
-props.info(7,1) = uicontrol('Style','text','Position',[970,140, 50,20],'String','Note 2:','Horizontal','right','Tag','info');
-props.info(7,2) = uicontrol('Position',[1030 140 220 20],'Style','edit','Tag','note2',...
+props.info(7,1) = uicontrol('Style','text','Position',[990,140, 50,20],'String','Note 2:','Horizontal','right','Tag','info');
+props.info(7,2) = uicontrol('Position',[1050 140 220 20],'Style','edit','Tag','note2',...
               'Callback',@note,'String',props.notes.note2,'Horizontal','left');
           
-props.info(8,1) = uicontrol('Style','text','Position',[970,120, 50,20],'String','Note 3:','Horizontal','right','Tag','info');
-props.info(8,2) = uicontrol('Position',[1030 120 220 20],'Style','edit','Tag','note3',...
+props.info(8,1) = uicontrol('Style','text','Position',[990,120, 50,20],'String','Note 3:','Horizontal','right','Tag','info');
+props.info(8,2) = uicontrol('Position',[1050 120 220 20],'Style','edit','Tag','note3',...
               'Callback',@note,'String',props.notes.note3,'Horizontal','left');
-props.info(9,2) = uicontrol('Style','text','Position',[1000,95,120,20],'String','Press enter to apply','Horizontal','left','Tag','info');
+props.info(9,2) = uicontrol('Style','text','Position',[1020,95,120,20],'String','Press enter to apply','Horizontal','left','Tag','info');
 
 if props.newim
     delete(findobj(hObject.Parent,'Tag','roiax'))
@@ -643,6 +643,7 @@ if props.newim
         'YTick',[],'XTick',[],'Box','on','Tag','roiax')
     props.newim = false;
 end
+
 
 
 if isfield(props,'im')
@@ -690,18 +691,32 @@ tm = props.tm;
 gsize = f.Position(4) - 100;
 posy = linspace(gsize - gsize/nch,0,nch) + 50;
 
+
 if ~isfield(props,'plt')
     props.plt = gobjects(nch,1);
     props.ax = gobjects(nch,1);
     props.chk = gobjects(nch,1);
     props.txt = gobjects(nch,1);
+    props.ylim.scplus = gobjects(nch,1);
+    props.ylim.scminus = gobjects(nch,1);
+    props.ylim.up = gobjects(nch,1);
+    props.ylim.dwn = gobjects(nch,1);
 end
 
 if length(props.plt)>nch
     delete(props.plt(nch+1:end))
     delete(props.ax(nch+1:end))
+    delete(props.ylim.scplus(nch+1:end))
+    delete(props.ylim.scminus(nch+1:end))
+    delete(props.ylim.up(nch+1:end))
+    delete(props.ylim.dwn(nch+1:end))
+
     props.plt(~isvalid(props.plt)) = [];
     props.ax(~isvalid(props.ax)) = [];
+    props.ylim.scplus(~isvalid(props.ylim.scplus)) = [];
+    props.ylim.scminus(~isvalid(props.ylim.scminus)) = [];
+    props.ylim.up(~isvalid(props.ylim.up)) = [];
+    props.ylim.dwn(~isvalid(props.ylim.dwn)) = [];
     
     delete(props.chk(nch+1:end))
     delete(props.txt(nch+1:end))
@@ -712,8 +727,13 @@ elseif length(props.plt)<nch
     props.ax =  [props.ax ; gobjects(nch-length(props.plt),1)];
     props.chk = [props.chk; gobjects(nch-length(props.plt),1)];
     props.txt = [props.txt; gobjects(nch-length(props.plt),1)];
-end
 
+    props.ylim.scplus = [props.ylim.scplus; gobjects(nch-length(props.plt),1)];
+    props.ylim.scminus = [props.ylim.scminus; gobjects(nch-length(props.plt),1)];
+    props.ylim.up = [props.ylim.up; gobjects(nch-length(props.plt),1)];
+    props.ylim.dwn = [props.ylim.dwn; gobjects(nch-length(props.plt),1)];
+end
+disp('plotting')
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
     if ~isgraphics(props.plt(d))
@@ -722,12 +742,31 @@ for d=1:nch
         props.chk(d) = uicontrol('Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
             'Value',false,'Visible','off','Tag',['c' num2str(d)]);
         props.txt(d) = uicontrol('Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
+        props.ylim.scplus(d) = uicontrol('Style','pushbutton','Position',[965 chpos+8  15 15],'String','+','Callback',@adjylim,'Visible','off','Tag',['p' num2str(d)],'TooltipString','increase yscale');
+        props.ylim.scminus(d) = uicontrol('Style','pushbutton','Position',[965 chpos-8  15 15],'String','-','Callback',@adjylim,'Visible','off','Tag',['m' num2str(d)],'TooltipString','decrease yscale');
+        props.ylim.up(d) = uicontrol('Style','pushbutton','Position',[980 chpos+8  15 15],'String',char(708),'Callback',@adjylim,'Visible','off','Tag',['u' num2str(d)],'TooltipString','shift y-range up');
+        props.ylim.dwn(d) = uicontrol('Style','pushbutton','Position',[980 chpos-8  15 15],'String',char(709),'Callback',@adjylim,'Visible','off','Tag',['d' num2str(d)],'TooltipString','shift y-range down');
     else
         props.ax(d) = props.plt(d).Parent;
         set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch])
         set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
         set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
         set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
+        set(props.ylim.scplus(d),'Position',[965 chpos+8  15 15],'Visible','off');% I don't think i need to set string here.  I am removing.
+        set(props.ylim.scminus(d),'Position',[965 chpos-8  15 15],'Visible','off');
+        set(props.ylim.up(d),'Position',[980 chpos+8  15 15],'Visible','off');
+        set(props.ylim.dwn(d),'Position',[980 chpos-8  15 15],'Visible','off');
+    end
+
+    
+    if props.showlist{d}(1)=='B'
+        outrange = abs(props.ax(d).YLim)>49;
+        if outrange(1)
+            props.ax(d).YLim(1) = -50;
+        end
+        if outrange(2)
+           props.ax(d).YLim(2) = 50;
+        end
     end
     
     if d~=nch
@@ -747,6 +786,24 @@ set(findobj(hObject.Parent,'Visible','off'),'Visible','on')
 delete(buf)
 guidata(gcf,props)
 set(allbut(isvalid(allbut)),'Enable','on');
+
+function adjylim(hObject,eventdata)
+props = guidata(hObject);
+tag = hObject.Tag;
+
+idx = str2double(tag(2:end));
+ylim = props.ax(idx).YLim;
+if tag(1)=='p'
+    nylim = [ylim(1) + range(ylim)*0.15 , ylim(2) - range(ylim)*0.15];
+elseif tag(1)=='m'
+    nylim = [ylim(1) - range(ylim)*0.25 , ylim(2) + range(ylim)*0.25];
+elseif tag(1)=='u'
+    nylim = [ylim(1) + range(ylim)*0.1 , ylim(2) + range(ylim)*0.1];
+elseif tag(1)=='d'
+    nylim = [ylim(1) - range(ylim)*0.1 , ylim(2) - range(ylim)*0.1];
+end
+set(props.plt(str2double(tag(2:end))).Parent,'YLim',nylim)
+guidata(gcf,props)
 
 function decimateit(hObject,eventdata)
 props = guidata(hObject);
@@ -1214,6 +1271,7 @@ preview(hObject)
 %%
 function xcorrelation(hObject,eventdata)% calculates the cross correlation of the channels shown
 props = guidata(hObject);
+
 win = 100;% window for calculating the cross correlation
 nch = length(props.showidx);
 showidx = props.showidx;
@@ -1221,8 +1279,21 @@ idx = nchoosek(1:nch,2);
 props.xcorr = nan(nch);
 props.xcorr_lag = nan(nch);
 props.xcorr_fulltrace = nan(length(idx),win*2+1);
+
+disp('running xcorr')
+disp(['          ' repelem('_',round(length(idx)/10))])
+fprintf('Progress: ')
+
 for i=1:length(idx)
-    r = xcorr(props.data(showidx(idx(i,1)),:),props.data(showidx(idx(i,2)),:),win,'normalized');
+%     disp([num2str(i) ' of ' num2str(length(idx)) '    ' num2str(idx(i,1)) 'x' num2str(idx(i,2))])
+    if mod(i,10)==0
+        fprintf('|')
+    end
+    x = props.data(showidx(idx(i,1)),:);
+    y = props.data(showidx(idx(i,2)),:);
+    x(isnan(x)) = 0;
+    y(isnan(y)) = 0;
+    r = xcorr(x,y,win,'normalized');
     [val,id] = max(r);
     props.xcorr(idx(i,2),idx(i,1)) = val;
     props.xcorr_lag(idx(i,2),idx(i,1)) = id-win/2;
@@ -1243,10 +1314,12 @@ else
 end
 colormap(cmap)
 colorbar
+ax(1).Title.String = 'Correlation';
 ax(2) = subplot(1,2,2);
 imagesc(props.xcorr_lag,'AlphaData', 1-isnan(props.xcorr_lag))
 colorbar
-set(ax,'YTickLabel',props.showlist,'XTickLabel',props.showlist)
+set(ax,'YTick',1:length(props.showlist),'YTickLabel',props.showlist,'XTick',1:length(props.showlist),'XTickLabel',props.showlist,'XTickLabelRotation',90)
+ax(2).Title.String = 'Time lag';
 
 guidata(hObject,props)
 

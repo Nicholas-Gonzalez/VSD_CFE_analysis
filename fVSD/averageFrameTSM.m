@@ -1,7 +1,7 @@
 function [data,tm,info] = averageFrameTSM(fpath)
 
 if nargin==0
-    [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
+    [file, path,~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
     fpath = fullfile(path,file);
 end
 
@@ -64,6 +64,10 @@ for a = 1:numChunks
     data(:,:,a) = mean(dataChunk,3);        
 end
 fprintf('\n')
+
+mimage = mean(data,3);
+mimage = mimage/max(mimage(:));
+imwrite( mimage,replace(fpath,'.tsm', '_average.tif'))
 
 if nargout==0
     assignin('base','out',data);
