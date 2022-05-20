@@ -9,7 +9,11 @@ if ischar(files)
 else
     for f=1:length(files)
         disp(['find_kframes   ',files{f}])
-        find_kframe(files{f},false);
+        try
+            find_kframe(files{f},false);
+        catch
+            warning(['could not execute for ' files{f}])
+        end
     end
 end
 
