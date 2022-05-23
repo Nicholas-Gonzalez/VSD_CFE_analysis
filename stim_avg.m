@@ -22,8 +22,10 @@ zsize = info.PrimaryData.Size(3); % Length of recording
 sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
 vtm = 0:sr:zsize*sr-sr;
 
-
+fid = fopen(info.Filename,'r');
+adata = zeros(ysize,0,dur);
 for S=1:length(stimulated)
+    
     stimtm = find(diff(st_data(stimulated(S),:)>0));
     stimtm = stimtm([true, diff(stimtm)>200]);
     
@@ -33,7 +35,7 @@ for S=1:length(stimulated)
     
     frameLength = xsize*ysize; % Frame length is the product of X and Y axis lengths;
     
-    fid = fopen(info.Filename,'r');
+    
     for s=1:length(sidx)
         offset = info.PrimaryData.Offset + ... Header information takes 2880 bytes.
                     (sidx(s)-1)*frameLength*2; % Because each integer takes two bytes.
@@ -51,7 +53,7 @@ for S=1:length(stimulated)
         % Format data.
         data = data + fdata;
     end
-    fclose(fid);
+    
     
     data = data/length(sidx);
     data0 = data(:,:,1)*double(int16(inf))/max(data(:,:,1),[],'all');% maximized to 16bit integer
@@ -59,15 +61,25 @@ for S=1:length(stimulated)
     data2 = (data(:,:,2:end) - data0rep)./data0rep;% need to normalize and then maximize to 16bit integer
     data2  = data2 * double(int16(inf))/max(abs(data2(:)));
     data2 = data2 - min(data2(:));
-    
+    adata = [adata, cat(3,data0,data2)];
+
     data = uint16(cat(3,data0,data2));
     
     % write image file
-    imwrite(data(:,:,1),fullfile(fpath,[fname '_' num2str(S) '.tif']))
+    imwrite(data(:,:,1),fullfile(fpath,[fname '_' num2str(stimulated(S)-7) '.tif']))
     for f=2:dur
-        imwrite(data(:,:,f),fullfile(fpath,[fname '_' num2str(S) '.tif']),'WriteMode','append')
+        imwrite(data(:,:,f),fullfile(fpath,[fname '_' num2str(stimulated(S)-7) '.tif']),'WriteMode','append')
     end
     
-    disp([fname '_' num2str(S) '.tif'])
+    disp([fname '_' num2str(stimulated(S)-7) '.tif'])
 end
+fclose(fid);
+
+adata = uint16(adata);
+imwrite(adata(:,:,1),fullfile(fpath,[fname '_all.tif']))
+for f=2:dur
+    imwrite(adata(:,:,f),fullfile(fpath,[fname '_all.tif']),'WriteMode','append')
+end
+
+
 end

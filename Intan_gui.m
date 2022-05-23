@@ -734,6 +734,7 @@ elseif length(props.plt)<nch
     props.ylim.dwn = [props.ylim.dwn; gobjects(nch-length(props.plt),1)];
 end
 disp('plotting')
+
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
     if ~isgraphics(props.plt(d))
@@ -750,6 +751,7 @@ for d=1:nch
         props.ax(d) = props.plt(d).Parent;
         set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch])
         set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
+        
         set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
         set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
         set(props.ylim.scplus(d),'Position',[965 chpos+8  15 15],'Visible','off');% I don't think i need to set string here.  I am removing.
@@ -757,7 +759,7 @@ for d=1:nch
         set(props.ylim.up(d),'Position',[980 chpos+8  15 15],'Visible','off');
         set(props.ylim.dwn(d),'Position',[980 chpos-8  15 15],'Visible','off');
     end
-
+    
     
     if props.showlist{d}(1)=='B'
         outrange = abs(props.ax(d).YLim)>49;
@@ -776,7 +778,7 @@ for d=1:nch
     end
 end 
 
-set(props.ax,'YTick',[],'XLim',[0 max(tm)])% somehow is also modifying im, but only when loading new files
+set(props.ax,'YTick',[],'XLim',[0 max(tm)])% somehow is also modifying im, but only when loading new files, 05-23-22: not sure if this comment is still applicable
 linkaxes(props.ax,'x')
 set(findobj('Tag','adjust'),'Enable','on')
 set(findobj('Tag','showsort'),'Enable','on')

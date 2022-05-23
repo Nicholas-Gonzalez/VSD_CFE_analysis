@@ -25,9 +25,12 @@ if nargin==0
         'Select an RHS2000 Data File', 'MultiSelect', 'off');
     fname = fullfile(path,file);
 end
+fname = char(fname);
 [path,file,ex] = fileparts(fname);
 
-if (file == 0)
+
+
+if ~isstring(file) && ~ischar(file) 
     return;
 end
 
@@ -38,6 +41,7 @@ end
 
 tic;
 filename = fullfile(path,[file ex]);disp(filename)
+
 fid = fopen(filename, 'r');
 
 s = dir(filename);
