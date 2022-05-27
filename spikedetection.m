@@ -95,6 +95,9 @@ uicontrol('Position',[280 255 20 20],'Style','text','String',' ','Tag','nspikes'
 
 uicontrol('Position',[300 300 90 30],'Style','pushbutton','String','Get Average','Tag','avgim','Callback',@avgim,'Enable','on');
 
+uicontrol('Units','normalized','Position',[0.78 0.9 0.2 0.05],'Style','text','String',' ','Tag','processing',...
+    'HorizontalAlignment','center','FontSize',15,'Enable','on');
+
 
 str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(ch),1);
 str(hideidx,2) = "gray";
@@ -118,23 +121,35 @@ splt = scatter(nan,nan,'x');
 ax.XLim = [min(tm),max(tm)];
 ax.XLabel.String = 'Time (s)';
 
+W = -300:500;
+W0 = round(min(W)*sf/sr); 
+idur = round(length(W)*sf/sr);
+slidepos = 30;
+
 sax = axes('Position',[0.08 0.1 0.13 0.4]);
-W = -200:400;
 aplt = plot(W*sf*1000,nan(size(W)));
 sax.XLabel.String = 'Time (ms)';
+
+saxover = axes('Position',[0.08 0.1 0.13 0.4]);
+pos = [(W(1) + length(W)*slidepos/idur)*sf*1000,  -1,   length(W)/idur*sf*1000,  2];
+frame = rectangle('Position',pos,'EdgeColor','none','FaceColor',[0 0 0 0.2]);
+set(saxover,'ytick',[],'xtick',[],'color','none','Ylim',[-0.5 0.5])
+
+linkaxes([sax, saxover],'x')
 sax.XLim = [min(W) max(W)]*sf*1000;
 
 aspike = repelem({zeros(2,length(W))},size(data,1));
 spikes = repelem({zeros(1,0)},size(data,1));
 
-iax = axes('Position', [0.78 0.1 0.2 0.2*ysize/xsize*fig.Position(3)/fig.Position(4)],'YTick',[],'XTick',[],'Box','on','Tag','roiax');
+iax = axes('Position', [0.75 0.1 0.2 0.2*ysize/xsize*fig.Position(3)/fig.Position(4)],'YTick',[],'XTick',[],'Box','on','Tag','roiax');
 img = imagesc(zeros(ysize,xsize));
 set(iax,'XTick',[],'YTick',[])
 
-W0 = round(min(W)*sf/sr); 
-idur = round(length(W0)*sr/sf);
+colorbar('Location','manual','Position',[0.95 0.1 0.01 0.75])
 
-uicontrol('Units','normalized','Position',[0.78 0.05 0.2 0.05],'Style','slider','Min',0,'Max',idur,'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+uicontrol('Units','normalized','Position',[0.75 0.05 0.2 0.05],'Style','slider','Value',slidepos,'Min',1,'Max',idur-1,'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+uicontrol('Units','normalized','Position',[0.75 0.9 0.05 0.05],'Style','pushbutton','String','Draw ROI','Tag','droi','Callback',@drawroi,'Enable','on');
+
 
 helps = ["To detect spikes the data value has to be above this threshold consecutively for as long as the minimum duration",...
          "To detect spikes the data value has to be below this threshold consecutively for as long as the minimum duration",...
@@ -147,15 +162,27 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'hideidx',hideidx,   'showidx',showidx,  'tm',tm,...
                    'str',str,           'ckup',true,        'ckdwn',false,...
                    'gidx',showidx(1),   'aspike',{aspike},  'spikes',{spikes},...
-                   'inc',inc,           'files',files,      'helps',helps))
+                   'inc',inc,           'files',files,      'frame',frame,...
+                   'helps',helps))
 
 detsp(fig)
+
+function drawroi(hObject,eventdata)
+props = guidata(hObject);
+roi = drawpolygon(props.iax,'MarkerSize',1);
+props.roi = roi;
+props.roimask = roipoly(props.imdata(:,:,2),roi.Position(:,1),roi.Position(:,2));
+assignin('base', 'roi', roi);
 
 function chframe(hObject,eventdata)
 props = guidata(hObject);
 frame = round(hObject.Value);
 set(hObject,'Value',frame)
 set(props.img,'CData',props.imdata(:,:,frame))
+idur = get(hObject,'Max');
+sf = diff(props.tm(1:2));
+pos = [(props.W(1) + length(props.W)*frame/idur)*sf*1000,  -1,   length(props.W)/idur*sf*1000,  2];
+set(props.frame,'Position',pos)
 
 function chval(hObject,eventdata)
 props = guidata(hObject);
@@ -219,6 +246,9 @@ set(hObject,'String',num2str(sr*round(dur/sr)*1000,2))
 detsp(hObject.Parent)
 
 function detsp(hObject,eventdata)
+allbut = findobj('Type','Uicontrol','Enable','on');
+set(allbut,'Enable','off')
+
 if nargin==2
     hObject = hObject.Parent;
 end
@@ -255,10 +285,17 @@ end
 props.spikes{idx} = spikes;
 guidata(hObject,props)
 
-set(findobj('Tag','nspikes','Parent',hObject),'String',num2str(length(spikes)))
+set(findobj('Tag','nspikes','Parent',hObject),'String',num2str(length(spikes)));
 plotdata(hObject)
+set(allbut,'Enable','on')
 
 function avgim(hObject,eventdata)
+set(findobj('Tag','processing','Parent',hObject.Parent),'String','Processing...')
+allbut = findobj('Type','Uicontrol','Enable','on');
+set(allbut,'Enable','off')
+pause(0.1)
+
+tic
 props = guidata(hObject);
 if isempty(props.files)
     return
@@ -280,11 +317,13 @@ spikes = props.spikes{idx};
 itm = props.tm;
 
 sidx = round(itm(spikes)/sr);
-sidx(sidx>zsize) = [];
+
 
 sf = diff(props.tm(1:2));
 W0 = round(min(props.W)*sf/sr); 
-dur = round(length(W0)*sr/sf);
+dur = round(length(props.W)*sf/sr);
+sidx = sidx + W0;
+sidx(sidx>zsize | sidx<1) = [];
 
 imdata = zeros(ysize,xsize,dur);
 frameLength = xsize*ysize; % Frame length is the product of X and Y axis lengths;
@@ -302,20 +341,26 @@ for s=1:length(sidx)
         break
     end
     fdata = reshape(fdata,[xsize ysize dur]);
+    f0 = repmat(fdata(:,:,1),1,1,size(fdata,3));
+    fdata = (fdata - f0)./f0;
     
     imdata = imdata + fdata;% Format data.
 end
 fclose(fid);
 
 imdata = imdata/length(sidx);
-f0 = repmat(imdata(:,:,1),1,1,size(imdata,3));
-imdata = (imdata - f0)./f0;
-imdata(:,1:6,:) = 0;
+imdata = permute(imdata,[2 1 3]);
+% f0 = repmat(imdata(:,:,1),1,1,size(imdata,3));
+% imdata = (imdata - f0)./f0;
+% imdata(1:6,:,:) = 0;
 props.imdata = imdata;
 
 frame = get(findobj('Tag','imslider','Parent',hObject.Parent) ,'Value')+1;
 set(props.img,'CData',imdata(:,:,frame))
 
+set(findobj('Tag','processing','Parent',hObject.Parent),'String',' ')
+toc
+set(allbut,'Enable','on')
 guidata(hObject,props)
 
     
