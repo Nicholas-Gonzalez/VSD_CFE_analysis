@@ -40,7 +40,7 @@ ra = 10;% re-arm, the minimal amount of time to detect a subsequent spike (shoul
 inc = 0.25;
 
 apptag = ['apptag' num2str(randi(1e4,1))];
-fig = figure('Position',[10 80 1900 500],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
+fig = figure('Position',[10 80 1900 600],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
 
 
 m = uimenu('Text','Spike Tools');
@@ -50,50 +50,54 @@ mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','on
 mi(4) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
 
 
-uicontrol('Position',[235 415 20 25],'Style','text','String','Thr','Enable','on');
-uicontrol('Position',[290 425 20 25],'Style','text','String','Min Dur','Enable','on');
+oppos = [120 327 40 20];
+panel = uipanel('Title','Controls','Units','pixels','FontSize',12,'Position',[2 2 380 132],'Tag','panel');%[0.005 0.78 0.20 0.22]
+
+uicontrol(panel,'Position',[55  88 80 25],'Style','text','String','Threshold','Enable','on');
+uicontrol(panel,'Position',[165 88 80 25],'Style','text','String','Min Duration','Enable','on');
+
+%threshold 1
+ckup = uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',true);
+uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','Upper','Tag','upstr','Callback',@threshold,'Enable','on');
+uicontrol(panel,'Position',[65  73  20 20],'Style','pushbutton','Tag','uppUPthr','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[85  73  20 20],'Style','pushbutton','Tag','uppDWNthr','String',char(709),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[110 73  30 20],'Style','edit','String',num2str(thr),'Tag','upthr','Callback',@detsp,'Enable','on');
+uicontrol(panel,'Position',[140 70  20 20],'Style','text','String','std','Tag','upunits','Enable','on');
+
+uicontrol(panel,'Position',[165 73  20 20],'Style','pushbutton','Tag','uppUPdur','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[185 73  20 20],'Style','pushbutton','Tag','uppDWNdur','String',char(709),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[210 73  30 20],'Style','edit','String',num2str(sf*dur*1000,2),'Tag','updur','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[240 70  20 20],'Style','text','String','ms','Enable','on');
+uicontrol(panel,'Position',[270 73  20 20],'Style','pushbutton','String','?','Tag','helps1','Callback',@helpf,'Enable','on');
 
 
-ckup = uicontrol('Position',[120  400 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',true);
-uicontrol('Position',[140  397 40 20],'Style','text','String','Upper','Tag','upstr','Callback',@threshold,'Enable','on');
-uicontrol('Position',[185  400 20 20],'Style','pushbutton','Tag','uppUPthr','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol('Position',[205 400 20 20],'Style','pushbutton','Tag','uppDWNthr','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol('Position',[230 400 30 20],'Style','edit','String',num2str(thr),'Tag','upthr','Callback',@detsp,'Enable','on');
-uicontrol('Position',[260 397 20 20],'Style','text','String','std','Tag','upunits','Enable','on');
+%threshold 2
+ckdwn = uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','off','Tooltip','have not coded this yet');
+uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','dwnstr','String','Lower','Enable','off');
+uicontrol(panel,'Position',[65  43 20 20],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[85  43 20 20],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[110  43 30 20],'Style','edit','String',num2str(thr),'Tag','dwnthr','Callback',@threshold,'Enable','off');
+uicontrol(panel,'Position',[140  40 20 20],'Style','text','String','std','Tag','dwnunits','Enable','off');
 
-%< ----- Need to activate duration buttons
-uicontrol('Position',[285  400 20 20],'Style','pushbutton','Tag','uppUPdur','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol('Position',[305 400 20 20],'Style','pushbutton','Tag','uppDWNdur','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol('Position',[330 400 30 20],'Style','edit','String',num2str(sf*dur*1000,2),'Tag','updur','Callback',@duration,'Enable','on');
-uicontrol('Position',[360 397 20 20],'Style','text','String','ms','Enable','on');
-uicontrol('Position',[390 400 20 20],'Style','pushbutton','String','?','Tag','helps1','Callback',@helpf,'Enable','on');
+uicontrol(panel,'Position',[165 43 20 20],'Style','pushbutton','Tag','dwnpUPdur','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[185 43 20 20],'Style','pushbutton','Tag','dwnpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[210 43 30 20],'Style','edit','String',num2str(sf*dur*1000,2),'Tag','dwndur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[240 40 20 20],'Style','text','String','ms','Enable','off');
+uicontrol(panel,'Position',[270 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
 
+%rearming
+uicontrol(panel,'Position',[1  1 40 20],'Style','text','String','re-arm','Enable','on');
+uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',num2str(ra),'Tag','rearm','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[70 1 20 20],'Style','text','String','ms','Enable','on');
+uicontrol(panel,'Position',[90 4 20 20],'Style','pushbutton','String','?','Tag','helps3','Callback',@helpf,'Enable','on');
 
-
-ckdwn = uicontrol('Position',[120  370 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','off','Tooltip','have not coded this yet');
-uicontrol('Position',[140  367 40 20],'Style','text','Tag','dwnstr','String','Lower','Enable','off');
-uicontrol('Position',[185  370 20 20],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol('Position',[205 370 20 20],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol('Position',[230 370 30 20],'Style','edit','String',num2str(thr),'Tag','dwnthr','Callback',@threshold,'Enable','off');
-uicontrol('Position',[260 367 20 20],'Style','text','String','std','Tag','dwnunits','Enable','off');
-
-uicontrol('Position',[285 370 20 20],'Style','pushbutton','Tag','dwnpUPdur','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol('Position',[305 370 20 20],'Style','pushbutton','Tag','dwnpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol('Position',[330 370 30 20],'Style','edit','String',num2str(sf*dur*1000,2),'Tag','dwndur','Callback',@duration,'Enable','off');
-uicontrol('Position',[360 367 20 20],'Style','text','String','ms','Enable','off');
-uicontrol('Position',[390 370 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
+uicontrol(panel,'Position',[285 1 90 30],'Style','pushbutton','String','Get Average','Tag','avgim','Callback',@avgim,'Enable','on');
 
 
+uicontrol('Position',[220 125 60 20],'Style','text','String','# spikes:','Enable','on');
+uicontrol('Position',[280 125 20 20],'Style','text','String',' ','Tag','nspikes','Enable','on');
 
-uicontrol('Position',[120 327 40 20],'Style','text','String','re-arm','Enable','on');
-uicontrol('Position',[160 330 30 20],'Style','edit','String',num2str(ra),'Tag','rearm','Callback',@duration,'Enable','on');
-uicontrol('Position',[190 327 20 20],'Style','text','String','ms','Enable','on');
-uicontrol('Position',[210 330 20 20],'Style','pushbutton','String','?','Tag','helps3','Callback',@helpf,'Enable','on');
 
-uicontrol('Position',[220 255 60 20],'Style','text','String','# spikes:','Enable','on');
-uicontrol('Position',[280 255 20 20],'Style','text','String',' ','Tag','nspikes','Enable','on');
-
-uicontrol('Position',[300 300 90 30],'Style','pushbutton','String','Get Average','Tag','avgim','Callback',@avgim,'Enable','on');
 
 uicontrol('Units','normalized','Position',[0.78 0.9 0.2 0.05],'Style','text','String',' ','Tag','processing',...
     'HorizontalAlignment','center','FontSize',15,'Enable','on');
@@ -104,8 +108,9 @@ str(hideidx,2) = "gray";
 str(:,4) = string(ch);
 str = join(str,'');
 
-uicontrol('Position',[5 440 100 20],'Style','text','String','Select channel');
-uicontrol('Position',[5 40 100 400],'Style','listbox','Max',length(ch),'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@detsp);
+uicontrol('Units','normalized','Position',[0.002 0.96 0.05 0.03],'Style','text','String','Select channel');
+uicontrol('Units','normalized','Position',[0.002 0.23 0.05 0.73],'Style','listbox','Max',length(ch),'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@detsp);
+%[5 440 100 20] [5 40 100 400]
 
 % initialize axes
 mdata = mean(data(showidx(1),:));
@@ -126,16 +131,21 @@ W0 = round(min(W)*sf/sr);
 idur = round(length(W)*sf/sr);
 slidepos = 30;
 
-sax = axes('Position',[0.08 0.1 0.13 0.4]);
+sax = axes('Position',[0.08 0.65 0.12 0.25]);
 aplt = plot(W*sf*1000,nan(size(W)));
-sax.XLabel.String = 'Time (ms)';
+sax.XTick = [];
 
-saxover = axes('Position',[0.08 0.1 0.13 0.4]);
+vax = axes('Position',sax.Position + [0 -0.3 0 0]);
+tempx = -20:34;
+vplt = plot(tempx,nan(size(tempx)));
+vax.XLabel.String = 'Time (ms)';
+
+saxover = axes('Position',vax.Position);% so that the rectangle always exceed ylimits
 pos = [(W(1) + length(W)*slidepos/idur)*sf*1000,  -1,   length(W)/idur*sf*1000,  2];
 frame = rectangle('Position',pos,'EdgeColor','none','FaceColor',[0 0 0 0.2]);
 set(saxover,'ytick',[],'xtick',[],'color','none','Ylim',[-0.5 0.5])
 
-linkaxes([sax, saxover],'x')
+linkaxes([sax, saxover,vax],'x')
 sax.XLim = [min(W) max(W)]*sf*1000;
 
 aspike = repelem({zeros(2,length(W))},size(data,1));
@@ -145,9 +155,9 @@ iax = axes('Position', [0.75 0.1 0.2 0.2*ysize/xsize*fig.Position(3)/fig.Positio
 img = imagesc(zeros(ysize,xsize));
 set(iax,'XTick',[],'YTick',[])
 
-colorbar('Location','manual','Position',[0.95 0.1 0.01 0.75])
+colorbar('Location','manual','Position',[sum(iax.Position([1 3])) 0.1 0.01 iax.Position(4)])
 
-uicontrol('Units','normalized','Position',[0.75 0.05 0.2 0.05],'Style','slider','Value',slidepos,'Min',1,'Max',idur-1,'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+uicontrol('Units','normalized','Position',[iax.Position(1) iax.Position(2)-0.05 iax.Position(3) 0.05],'Style','slider','Value',slidepos,'Min',1,'Max',idur-1,'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
 uicontrol('Units','normalized','Position',[0.75 0.9 0.05 0.05],'Style','pushbutton','String','Draw ROI','Tag','droi','Callback',@drawroi,'Enable','on');
 
 
@@ -163,16 +173,48 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'str',str,           'ckup',true,        'ckdwn',false,...
                    'gidx',showidx(1),   'aspike',{aspike},  'spikes',{spikes},...
                    'inc',inc,           'files',files,      'frame',frame,...
-                   'helps',helps))
+                   'helps',helps,       'panel',panel))
 
 detsp(fig)
 
 function drawroi(hObject,eventdata)
 props = guidata(hObject);
-roi = drawpolygon(props.iax,'MarkerSize',1);
+if isfield(props,'roi') && isvalid(props.roi)
+    delete(props.roi)
+    pause(0.01)
+end
+roi = drawfreehand(props.iax,'MarkerSize',1);%drawpolygon
 props.roi = roi;
-props.roimask = roipoly(props.imdata(:,:,2),roi.Position(:,1),roi.Position(:,2));
+%get pixels
+pos = unique(round(roi.Position),'rows');
+pixels = zeros(0,2,'uint16');
+for r = min(pos(:,2)):max(pos(:,2))
+    pix = pos(pos(:,2)==r,1);
+    cols = min(pix):max(pix);
+    tpix = [cols', repelem(r,length(cols))'];
+    pixels = [pixels; tpix];  
+end
+
+vdata = zeros(size(props.imdata,3),1);
+for f = 1:size(props.imdata,3)
+    imf = props.imdata(:,:,f);
+    pidx = sub2ind(size(imf),pixels(:,2),pixels(:,1));
+    vdata(f) = mean(imf(pidx),'all');
+end
+props.pixels = pixels;
+props.vdata = vdata;
+
+
+sf = diff(props.tm(1:2));% get exact timing of vsd frames 
+W0 = round(min(props.W)*sf/props.sr)/1.25; 
+dur = round(length(props.W)*sf/props.sr)/1.25;
+vx = linspace(W0,W0+dur,length(vdata));
+
+
+guidata(hObject,props)
 assignin('base', 'roi', roi);
+assignin('base', 'pixels', pixels);
+assignin('base', 'props', props);
 
 function chframe(hObject,eventdata)
 props = guidata(hObject);
@@ -222,7 +264,7 @@ idx = get(findobj('Tag','channels','Parent',hObject),'Value');
 set(props.plt,'YData', props.data(idx,:));
 
 stdata = std(props.data(idx,:));
-thr = str2double(get(findobj('Tag','upthr','Parent',hObject),'String'));
+thr = str2double(get(findobj('Tag','upthr','Parent',props.panel),'String'));
 spikes = props.spikes{idx};
 set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*stdata)
 
@@ -246,18 +288,19 @@ set(hObject,'String',num2str(sr*round(dur/sr)*1000,2))
 detsp(hObject.Parent)
 
 function detsp(hObject,eventdata)
-allbut = findobj('Type','Uicontrol','Enable','on');
-set(allbut,'Enable','off')
-
 if nargin==2
     hObject = hObject.Parent;
 end
 props = guidata(hObject);
 
+allbut = findobj(hObject,'Type','Uicontrol','Enable','on');
+allbut = [allbut; findobj(props.panel,'Type','Uicontrol','Enable','on')];
+set(allbut,'Enable','off')
+
 idx = get(findobj('Tag','channels','Parent',hObject),'Value');
-dur = str2double(get(findobj('Tag','updur','Parent',hObject),'String'));
-thr = str2double(get(findobj('Tag','upthr','Parent',hObject),'String'));
-ra = str2double(get(findobj('Tag','rearm','Parent',hObject),'String'));
+dur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
+thr = str2double(get(findobj('Tag','upthr','Parent',props.panel),'String'));
+ra = str2double(get(findobj('Tag','rearm','Parent',props.panel),'String'));
 
 data = props.data(idx,:);
 tm = props.tm;
@@ -290,17 +333,19 @@ plotdata(hObject)
 set(allbut,'Enable','on')
 
 function avgim(hObject,eventdata)
-set(findobj('Tag','processing','Parent',hObject.Parent),'String','Processing...')
-allbut = findobj('Type','Uicontrol','Enable','on');
+props = guidata(hObject);
+
+set(findobj('Tag','processing','Parent',hObject.Parent.Parent),'String','Processing...')
+allbut = findobj(hObject.Parent.Parent,'Type','Uicontrol','Enable','on');
+allbut = [allbut; findobj(props.panel,'Type','Uicontrol','Enable','on')];
 set(allbut,'Enable','off')
 pause(0.1)
 
 tic
-props = guidata(hObject);
 if isempty(props.files)
     return
 end
-idx = get(findobj('Tag','channels','Parent',hObject.Parent),'Value');
+idx = get(findobj('Tag','channels','Parent',hObject.Parent.Parent),'Value');
 
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
@@ -312,6 +357,7 @@ xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
 ysize = info.PrimaryData.Size(1);
 zsize = info.PrimaryData.Size(3); % Length of recording
 sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
+props.sr = sr;
 
 spikes = props.spikes{idx};
 itm = props.tm;
@@ -355,10 +401,10 @@ imdata = permute(imdata,[2 1 3]);
 % imdata(1:6,:,:) = 0;
 props.imdata = imdata;
 
-frame = get(findobj('Tag','imslider','Parent',hObject.Parent) ,'Value')+1;
+frame = get(findobj('Tag','imslider','Parent',hObject.Parent.Parent) ,'Value')+1;
 set(props.img,'CData',imdata(:,:,frame))
 
-set(findobj('Tag','processing','Parent',hObject.Parent),'String',' ')
+set(findobj('Tag','processing','Parent',hObject.Parent.Parent),'String',' ')
 toc
 set(allbut,'Enable','on')
 guidata(hObject,props)
