@@ -20,6 +20,7 @@ if isstruct(inputdata)
     xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
     ysize = info.PrimaryData.Size(1);
     sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
+    origim = inputdata.im;
 else
     data = inputdata;
     ch = 1:size(data,1);
@@ -91,7 +92,7 @@ uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',num2str(ra),'Tag
 uicontrol(panel,'Position',[70 1 20 20],'Style','text','String','ms','Enable','on');
 uicontrol(panel,'Position',[90 4 20 20],'Style','pushbutton','String','?','Tag','helps3','Callback',@helpf,'Enable','on');
 
-uicontrol(panel,'Position',[285 1 90 30],'Style','pushbutton','String','Get Average','Tag','avgim','Callback',@avgim,'Enable','on');
+uicontrol(panel,'Position',[255 1 120 30],'Style','pushbutton','String','Get Image Average','Tag','avgim','Callback',@avgim,'Enable','on');
 
 
 uicontrol('Position',[220 125 60 20],'Style','text','String','# spikes:','Enable','on');
@@ -126,6 +127,7 @@ splt = scatter(nan,nan,'x');
 ax.XLim = [min(tm),max(tm)];
 ax.XLabel.String = 'Time (s)';
 
+
 W = -300:500;
 W0 = round(min(W)*sf/sr); 
 idur = round(length(W)*sf/sr);
@@ -134,11 +136,12 @@ slidepos = 30;
 sax = axes('Position',[0.08 0.65 0.12 0.25]);
 aplt = plot(W*sf*1000,nan(size(W)));
 sax.XTick = [];
+sax.Title.String = 'Average detected spike';
 
 vax = axes('Position',sax.Position + [0 -0.3 0 0]);
 tempx = -20:34;
-vplt = plot(tempx,nan(size(tempx)));
 vax.XLabel.String = 'Time (ms)';
+vax.Title.String = 'ROI average';
 
 saxover = axes('Position',vax.Position);% so that the rectangle always exceed ylimits
 pos = [(W(1) + length(W)*slidepos/idur)*sf*1000,  -1,   length(W)/idur*sf*1000,  2];
@@ -158,12 +161,19 @@ set(iax,'XTick',[],'YTick',[])
 colorbar('Location','manual','Position',[sum(iax.Position([1 3])) 0.1 0.01 iax.Position(4)])
 
 uicontrol('Units','normalized','Position',[iax.Position(1) iax.Position(2)-0.05 iax.Position(3) 0.05],'Style','slider','Value',slidepos,'Min',1,'Max',idur-1,'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
-uicontrol('Units','normalized','Position',[0.75 0.9 0.05 0.05],'Style','pushbutton','String','Draw ROI','Tag','droi','Callback',@drawroi,'Enable','on');
+uicontrol('Units','normalized','Position',[0.75 0.9 0.03 0.05],'Style','pushbutton','String','+ ROI','Tag','droi','Callback',@drawroi,'Enable','on','TooltipString','Add an ROI to the image');
+uicontrol('Units','normalized','Position',[0.78 0.9 0.03 0.05],'Style','pushbutton','String','- ROI','Callback',@removelastroi,'Enable','on','TooltipString','Remove previously drawn ROI');
+uicontrol('Units','normalized','Position',[0.81 0.9 0.03 0.05],'Style','pushbutton','String','clear','Callback',@clearroi,'Enable','on','TooltipString','Remove all ROIs');
 
+
+uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw Image','Tag','raw','Callback',@rawimage)
 
 helps = ["To detect spikes the data value has to be above this threshold consecutively for as long as the minimum duration",...
          "To detect spikes the data value has to be below this threshold consecutively for as long as the minimum duration",...
          "The re-arm prevents the same spike from being detected twice.  The re-arm value is the minimal amount of time to detect a subsequent spike.  Should be a little longer than the concievable duration of a spike and shorter than the minimum concievable spike interval.  A neuron that fires at most 100Hz should have a re-arm duration less than 10 ms."];
+
+color = makecolor(-0.2);
+color(2,:) = color(2,:)*0.7;
 
 guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'tplt',tplt,         'splt',splt,        'sax',sax,...
@@ -173,20 +183,44 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'str',str,           'ckup',true,        'ckdwn',false,...
                    'gidx',showidx(1),   'aspike',{aspike},  'spikes',{spikes},...
                    'inc',inc,           'files',files,      'frame',frame,...
-                   'helps',helps,       'panel',panel))
+                   'helps',helps,       'vax',vax,        'panel',panel,...
+                   'rawim',false,       'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+10),...
+                   'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color))
 
 detsp(fig)
 
-function drawroi(hObject,eventdata)
+function clearroi(hObject,eventdata)
 props = guidata(hObject);
-if isfield(props,'roi') && isvalid(props.roi)
-    delete(props.roi)
-    pause(0.01)
+delete(props.roi)
+delete(props.roiln)
+props.roi = gobjects(0,1);
+props.roiln = gobjects(0,1);
+guidata(hObject,props)
+
+function removelastroi(hObject,eventdata)
+props = guidata(hObject);
+delete(props.roi(end))
+delete(props.roiln(end))
+props.roi(end) = [];
+props.roiln(end) = [];
+guidata(hObject,props)
+
+function rawimage(hObject,eventdata)
+props = guidata(hObject);
+rbutton = findobj(hObject,'Tag','raw');
+if props.rawim
+    props.rawim = false;
+    set(rbutton,'BackgroundColor',[0.94 0.94 0.94])
+    frame = get(findobj('Tag','imslider','Parent',hObject.Parent) ,'Value')+1;
+    set(props.img,'CData',props.imdata(:,:,frame))
+else
+    props.rawim = true;
+    set(rbutton,'BackgroundColor',[0.7 0.7 0.7])
+    set(props.img,'CData',props.origim(:,:,1))
 end
-roi = drawfreehand(props.iax,'MarkerSize',1);%drawpolygon
-props.roi = roi;
-%get pixels
-pos = unique(round(roi.Position),'rows');
+guidata(hObject,props)
+
+function [pixels, vdata] = roidata(pos,imdata)
 pixels = zeros(0,2,'uint16');
 for r = min(pos(:,2)):max(pos(:,2))
     pix = pos(pos(:,2)==r,1);
@@ -195,12 +229,38 @@ for r = min(pos(:,2)):max(pos(:,2))
     pixels = [pixels; tpix];  
 end
 
-vdata = zeros(size(props.imdata,3),1);
-for f = 1:size(props.imdata,3)
-    imf = props.imdata(:,:,f);
+vdata = zeros(size(imdata,3),1);
+for f = 1:size(imdata,3)
+    imf = imdata(:,:,f);
     pidx = sub2ind(size(imf),pixels(:,2),pixels(:,1));
     vdata(f) = mean(imf(pidx),'all');
 end
+
+function moveroi(hObject,eventdata)
+props = guidata(hObject.Parent.Parent);
+idx = regexp(hObject.Tag,'\d+','match');
+idx = str2double(idx{1});
+[pixels,vdata] = roidata(unique(round(hObject.Position),'rows'), props.imdata);
+set(props.roiln(idx),'YData',vdata)
+guidata(hObject,props)
+
+function drawroi(hObject,eventdata)
+props = guidata(hObject);
+
+set(findobj('Tag','processing','Parent',hObject.Parent),'String','Draw ROI')
+pause(0.1)
+allbut = findobj(findobj('Tag',props.apptag),'Type','Uicontrol','Enable','on');
+allbut = [allbut; findobj(props.panel,'Type','Uicontrol','Enable','on')];
+set(allbut,'Enable','off')
+pause(0.1)
+
+color = props.colors(size(props.roi,1)+1,:);
+roi = drawfreehand(props.iax,'MarkerSize',1,'Color',color,'Tag', ['roi', num2str(size(props.roi,1)+1)]);%drawpolygon
+addlistener(roi,'ROIMoved',@moveroi);
+props.roi = [props.roi; roi];
+
+[pixels,vdata] = roidata(unique(round(roi.Position),'rows'), props.imdata);
+
 props.pixels = pixels;
 props.vdata = vdata;
 
@@ -210,6 +270,13 @@ W0 = round(min(props.W)*sf/props.sr)/1.25;
 dur = round(length(props.W)*sf/props.sr)/1.25;
 vx = linspace(W0,W0+dur,length(vdata));
 
+ln = line(vx,vdata,'Parent',props.vax,'Color',color);
+props.roiln = [props.roiln; ln];
+
+
+set(findobj('Tag','processing','Parent',hObject.Parent),'String',' ')
+
+set(allbut,'Enable','on')
 
 guidata(hObject,props)
 assignin('base', 'roi', roi);
@@ -260,7 +327,7 @@ props = guidata(hObject);
 
 function plotdata(hObject)
 props = guidata(hObject);
-idx = get(findobj('Tag','channels','Parent',hObject),'Value');
+idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value');
 set(props.plt,'YData', props.data(idx,:));
 
 stdata = std(props.data(idx,:));
@@ -297,10 +364,11 @@ allbut = findobj(hObject,'Type','Uicontrol','Enable','on');
 allbut = [allbut; findobj(props.panel,'Type','Uicontrol','Enable','on')];
 set(allbut,'Enable','off')
 
-idx = get(findobj('Tag','channels','Parent',hObject),'Value');
+idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value');
 dur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
 thr = str2double(get(findobj('Tag','upthr','Parent',props.panel),'String'));
 ra = str2double(get(findobj('Tag','rearm','Parent',props.panel),'String'));
+
 
 data = props.data(idx,:);
 tm = props.tm;
@@ -328,7 +396,7 @@ end
 props.spikes{idx} = spikes;
 guidata(hObject,props)
 
-set(findobj('Tag','nspikes','Parent',hObject),'String',num2str(length(spikes)));
+set(findobj('Tag','nspikes','Parent',findobj('Tag',props.apptag)),'String',num2str(length(spikes)));
 plotdata(hObject)
 set(allbut,'Enable','on')
 
