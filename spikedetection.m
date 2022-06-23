@@ -35,10 +35,20 @@ end
 sf = diff(tm(1:2));
 
 % default parameters
-dur = 5;% default number of datapoints above threshold to detect spike.
-thr = 5;
-ra = 10;% re-arm, the minimal amount of time to detect a subsequent spike (should be just longer than the concievable duration of a spike)
-inc = 0.25;
+inc = 0.25;% increment increas for threshold
+
+default.ckup = true;% default whether upper threshold is used as criteria
+default.updur = 5;% default number of datapoints above threshold to detect spike.
+default.upthr = 5;
+default.ckdwn = false;% default whether lower threshold is used as criteria.
+default.dwndur = 5;
+default.dwnthr = 5;
+default.ra = 10;% re-arm, the minimal amount of time to detect a subsequent spike (should be just longer than the concievable duration of a spike)
+
+default.updur = sf*default.updur*1000;
+default.dwndur = sf*default.dwndur*1000;
+default.ra = sf*default.ra*1000;
+params = repmat(default,length(ch),1);%<-----just changed these values
 
 apptag = ['apptag' num2str(randi(1e4,1))];
 fig = figure('Position',[10 80 1900 600],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
@@ -57,38 +67,39 @@ panel = uipanel('Title','Controls','Units','pixels','FontSize',12,'Position',[2 
 uicontrol(panel,'Position',[55  88 80 25],'Style','text','String','Threshold','Enable','on');
 uicontrol(panel,'Position',[165 88 80 25],'Style','text','String','Min Duration','Enable','on');
 
+
 %threshold 1
-ckup = uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',true);
+ckup = uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',default.ckup);
 uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','Upper','Tag','upstr','Callback',@threshold,'Enable','on');
 uicontrol(panel,'Position',[65  73  20 20],'Style','pushbutton','Tag','uppUPthr','String',char(708),'Callback',@chval,'Enable','on');
 uicontrol(panel,'Position',[85  73  20 20],'Style','pushbutton','Tag','uppDWNthr','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[110 73  30 20],'Style','edit','String',num2str(thr),'Tag','upthr','Callback',@detsp,'Enable','on');
+uicontrol(panel,'Position',[110 73  30 20],'Style','edit','String',default.upthr,'Tag','upthr','Callback',@chparam,'Enable','on');
 uicontrol(panel,'Position',[140 70  20 20],'Style','text','String','std','Tag','upunits','Enable','on');
 
 uicontrol(panel,'Position',[165 73  20 20],'Style','pushbutton','Tag','uppUPdur','String',char(708),'Callback',@chval,'Enable','on');
 uicontrol(panel,'Position',[185 73  20 20],'Style','pushbutton','Tag','uppDWNdur','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[210 73  30 20],'Style','edit','String',num2str(sf*dur*1000,2),'Tag','updur','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[210 73  30 20],'Style','edit','String',num2str(default.updur,2),'Tag','updur','Callback',@duration,'Enable','on');
 uicontrol(panel,'Position',[240 70  20 20],'Style','text','String','ms','Enable','on');
 uicontrol(panel,'Position',[270 73  20 20],'Style','pushbutton','String','?','Tag','helps1','Callback',@helpf,'Enable','on');
 
 
 %threshold 2
-ckdwn = uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','off','Tooltip','have not coded this yet');
+ckdwn = uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','off','value',default.ckdwn,'Tooltip','have not coded this yet');
 uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','dwnstr','String','Lower','Enable','off');
 uicontrol(panel,'Position',[65  43 20 20],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[85  43 20 20],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[110  43 30 20],'Style','edit','String',num2str(thr),'Tag','dwnthr','Callback',@threshold,'Enable','off');
+uicontrol(panel,'Position',[110  43 30 20],'Style','edit','String',default.dwnthr,'Tag','dwnthr','Callback',@chparam,'Enable','off');
 uicontrol(panel,'Position',[140  40 20 20],'Style','text','String','std','Tag','dwnunits','Enable','off');
 
 uicontrol(panel,'Position',[165 43 20 20],'Style','pushbutton','Tag','dwnpUPdur','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[185 43 20 20],'Style','pushbutton','Tag','dwnpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[210 43 30 20],'Style','edit','String',num2str(sf*dur*1000,2),'Tag','dwndur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[210 43 30 20],'Style','edit','String',num2str(default.dwndur,2),'Tag','dwndur','Callback',@duration,'Enable','off');
 uicontrol(panel,'Position',[240 40 20 20],'Style','text','String','ms','Enable','off');
 uicontrol(panel,'Position',[270 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
 
 %rearming
 uicontrol(panel,'Position',[1  1 40 20],'Style','text','String','re-arm','Enable','on');
-uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',num2str(ra),'Tag','rearm','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',default.ra,'Tag','rearm','Callback',@duration,'Enable','on');
 uicontrol(panel,'Position',[70 1 20 20],'Style','text','String','ms','Enable','on');
 uicontrol(panel,'Position',[90 4 20 20],'Style','pushbutton','String','?','Tag','helps3','Callback',@helpf,'Enable','on');
 
@@ -120,7 +131,7 @@ stddata = std(data(showidx(1),:));
 ax = axes('Position',[0.23 0.1 0.5 0.85]);
 plt = plot(tm,data(showidx(1),:));hold on
 
-tplt(1) = plot([min(tm) max(tm)],[mdata, mdata]+stddata*thr);
+tplt(1) = plot([min(tm) max(tm)],[mdata, mdata]+stddata*default.upthr);hold on
 tplt(2) = plot([min(tm) max(tm)],nan(2,1));
 splt = scatter(nan,nan,'x');
 
@@ -185,7 +196,8 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'inc',inc,           'files',files,      'frame',frame,...
                    'helps',helps,       'vax',vax,        'panel',panel,...
                    'rawim',false,       'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+10),...
-                   'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color))
+                   'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color,...
+                   'params',params))
 
 detsp(fig)
 
@@ -256,10 +268,13 @@ pause(0.1)
 
 color = props.colors(size(props.roi,1)+1,:);
 roi = drawfreehand(props.iax,'MarkerSize',1,'Color',color,'Tag', ['roi', num2str(size(props.roi,1)+1)]);%drawpolygon
+assignin("base",'roi',roi)
 addlistener(roi,'ROIMoved',@moveroi);
 props.roi = [props.roi; roi];
 
-[pixels,vdata] = roidata(unique(round(roi.Position),'rows'), props.imdata);
+pos = unique(round(roi.Position),'rows');
+pos(pos==0) = 1;
+[pixels,vdata] = roidata(pos, props.imdata);
 
 props.pixels = pixels;
 props.vdata = vdata;
@@ -310,7 +325,7 @@ else
     vals = num2str(sr*round(val/sr)*1000,2);% ensure that duration is incriments of the sampling frequency
 end
 set(obj,'String',vals)
-detsp(hObject.Parent)
+chparam(hObject.Parent)
 
 function helpf(hObject,eventdata)
 props = guidata(hObject);
@@ -352,7 +367,21 @@ props = guidata(hObject);
 dur = str2double(hObject.String)/1000;
 sr = diff(props.tm(1:2));
 set(hObject,'String',num2str(sr*round(dur/sr)*1000,2))
-detsp(hObject.Parent)
+chparam(hObject.Parent)
+
+function chparam(hObject,eventdata)
+props = guidata(hObject);
+fig = findobj('Tag',props.apptag);
+idx = get(findobj('Tag','channels','Parent',fig),'Value');
+props.params(idx).ckup = get(findobj('Tag','ckup','Parent',fig),'Value');
+props.params(idx).ckdwn = get(findobj('Tag','ckdwn','Parent',fig),'Value');
+props.params(idx).updur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
+props.params(idx).upthr = str2double(get(findobj('Tag','upthr','Parent',props.panel),'String'));
+props.params(idx).dwndur = str2double(get(findobj('Tag','dwndur','Parent',props.panel),'String'));
+props.params(idx).dwnthr = str2double(get(findobj('Tag','dwnthr','Parent',props.panel),'String'));
+props.params(idx).ra = str2double(get(findobj('Tag','rearm','Parent',props.panel),'String'));
+guidata(hObject.Parent,props)
+detsp(hObject)
 
 function detsp(hObject,eventdata)
 if nargin==2
@@ -364,24 +393,21 @@ allbut = findobj(hObject,'Type','Uicontrol','Enable','on');
 allbut = [allbut; findobj(props.panel,'Type','Uicontrol','Enable','on')];
 set(allbut,'Enable','off')
 
-idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value');
-dur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
-thr = str2double(get(findobj('Tag','upthr','Parent',props.panel),'String'));
-ra = str2double(get(findobj('Tag','rearm','Parent',props.panel),'String'));
-
+fig = findobj('Tag',props.apptag);
+idx = get(findobj('Tag','channels','Parent',fig),'Value');
 
 data = props.data(idx,:);
 tm = props.tm;
 stdata = std(data);
 sf = diff(tm(1:2));
 
-set(props.tplt(1),'YData',[thr thr]*stdata)
+set(props.tplt(1),'YData',[1 1]*props.params(idx).upthr*stdata)
 
-dur = round(dur/1000/sf);% convert from time to # indices
-ra = round(ra/1000/sf);% convert from time to # indices
+updur = round(props.params(idx).updur/1000/sf);% convert from time to # indices
+ra = round(props.params(idx).ra/1000/sf);% convert from time to # indices
 
-Ldata = data>thr*stdata;% find all values > threshold
-spikes = strfind(Ldata,repelem(true,dur));% find consecutive values >= duration
+Ldata = data>props.params(idx).upthr*stdata;% find all values > threshold
+spikes = strfind(Ldata,repelem(true,updur));% find consecutive values >= duration
 if ~isempty(spikes)
     spikes = spikes([true, diff(spikes)>ra]);% remove values that are separated by < re-arm (prevents dection of same spike).  The value is idices;
 
