@@ -70,7 +70,7 @@ uicontrol(panel,'Position',[165 88 80 25],'Style','text','String','Min Duration'
 
 %threshold 1
 ckup = uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',default.ckup);
-uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','Upper','Tag','upstr','Callback',@threshold,'Enable','on');
+uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','Upper','Tag','upstr','Enable','on');
 uicontrol(panel,'Position',[65  73  20 20],'Style','pushbutton','Tag','uppUPthr','String',char(708),'Callback',@chval,'Enable','on');
 uicontrol(panel,'Position',[85  73  20 20],'Style','pushbutton','Tag','uppDWNthr','String',char(709),'Callback',@chval,'Enable','on');
 uicontrol(panel,'Position',[110 73  30 20],'Style','edit','String',default.upthr,'Tag','upthr','Callback',@chparam,'Enable','on');
@@ -84,7 +84,7 @@ uicontrol(panel,'Position',[270 73  20 20],'Style','pushbutton','String','?','Ta
 
 
 %threshold 2
-ckdwn = uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','off','value',default.ckdwn,'Tooltip','have not coded this yet');
+ckdwn = uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','on','value',default.ckdwn,'Tooltip','have not coded this yet');
 uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','dwnstr','String','Lower','Enable','off');
 uicontrol(panel,'Position',[65  43 20 20],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[85  43 20 20],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
@@ -358,8 +358,12 @@ props = guidata(hObject);
 props.(hObject.Tag) = hObject.Value;
 vstr = ["off","on"];
 substr = ["dwn","up"];
-substr = char(substr(contains(hObject.Tag,'up')+1));
+idx = contains(hObject.Tag,'up')+1;
+substr = char(substr(idx));
 set(findobj('-regexp','Tag',['^' substr]),'Enable',vstr(hObject.Value+1))
+thr = get(findobj('Tag',[substr 'thr'], 'Parent',hObject.Parent),'String');
+thr = str2double(thr);
+set(props.tplt(1),'YData',[1 1]*props.params(idx).upthr*stdata)
 guidata(hObject,props)
 
 function duration(hObject,eventdata)
