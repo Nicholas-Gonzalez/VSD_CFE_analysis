@@ -320,8 +320,15 @@ for e=1:size(strs,2)
         str = [str; string( ['file '  strs{3,e} ' not loaded'])];
     end
 end
+answer = 'Continue anyway';
 if ~isempty(str)
-    msgbox(["The following files are not loaded because not found.  Please change file name or unselect the file."; str])
+    answer = questdlg(["The following files are not loaded because not found.  Please change file name or unselect the file."; str],...
+        'Alert','Continue anyway','Cancel','Cancel');
+end
+
+if strcmp(answer,'Cancel')
+    set(allbut,'Enable','on')
+    pause(0.1)
 else
     guidata(hObject,vsdprops)
     stitchvsd(hObject)
@@ -423,7 +430,6 @@ if intch && vsdch
             vsdprops.vsd = vsdprops.matprops.vsd;
         end
     end
-    props.files = vsdprops.files;
 elseif vsdch
     nch = size(vsdprops.vsd.data,1);
     props.ch = string([repelem('V-',nch,1) num2str((1:nch)','%03u')]);
@@ -449,18 +455,23 @@ else
     props.showidx = 1:nch;
     props.hidelist = [];
     props.hideidx = [];
-    props.data = vsdprops.intan.data;
+    props.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'double');
     props.finfo = vsdprops.intan.finfo;
     props.finfo.files = vsdprops.files;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.im = ones(512,512,3);
 end
+props.files = vsdprops.files;
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
 
 props.vsdprops = vsdprops;
 props.newim = true;
+
 if isfield(vsdprops,'im')
     props.im = vsdprops.im;
+end
+
+if isfield(vsdprops,'det')
     props.det = vsdprops.det;
     props.kern_center = vsdprops.kern_center;
     props.kernpos = vsdprops.kernpos;

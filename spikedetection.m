@@ -134,6 +134,7 @@ uicontrol('Units','normalized','Position',[0.002 0.23 0.05 0.73],'Style','listbo
 %[5 440 100 20] [5 40 100 400]
 
 % initialize axes
+
 mdata = mean(data(showidx(1),:));
 stddata = std(data(showidx(1),:));
 
@@ -345,6 +346,7 @@ function chchannel(hObject,eventdata)
 props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
+enable = ["off","on"];
 set(findobj('Tag','ckup','Parent',props.panel),'Value',props.params(idx).ckup)
 set(findobj('Tag','ckdwn','Parent',props.panel),'Value',props.params(idx).ckdwn)
 set(findobj('Tag','updur','Parent',props.panel),'String',num2str(props.params(idx).updur,2));
@@ -353,6 +355,14 @@ set(findobj('Tag','dwndur','Parent',props.panel),'String',num2str(props.params(i
 set(findobj('Tag','dwnthr','Parent',props.panel),'String',props.params(idx).dwnthr);
 set(findobj('Tag','gapdur','Parent',props.panel),'String',num2str(props.params(idx).gapdur,2));
 set(findobj('Tag','rearm','Parent',props.panel),'String',num2str(props.params(idx).ra,2));
+
+set(findobj('-regexp','Tag','^up','Parent',props.panel),'Enable',enable(props.params(idx).ckup+1))
+set(findobj('-regexp','Tag','^dwn','Parent',props.panel),'Enable',enable(props.params(idx).ckdwn+1))
+if props.params(idx).ckup && props.params(idx).ckdwn
+    set(findobj('-regexp','Tag','^gap','Parent',props.panel),'Enable','on')
+else
+    set(findobj('-regexp','Tag','^gap','Parent',props.panel),'Enable','off')
+end
 detsp(hObject)
 
 function helpf(hObject,eventdata)
@@ -473,7 +483,7 @@ else
 end
 
 if props.params(idx).ckup && props.params(idx).ckdwn
-    eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '"'])
+    eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '";'])
 end
 spikes = strfind(sdata,pattern);
 if ~isempty(spikes)
