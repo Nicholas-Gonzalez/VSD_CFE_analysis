@@ -40,9 +40,13 @@ inc = 0.25;% increment increas for threshold
 default.ckup = true;% default whether upper threshold is used as criteria
 default.updur = 5;% default number of datapoints above threshold to detect spike.
 default.upthr = 5;
+default.ckuprej = false;% default whether to reject spikes above a value
+default.uprej = 10;% default value for rejection.  If data is above this then it rejects the spike.
 default.ckdwn = false;% default whether lower threshold is used as criteria.
 default.dwndur = 5;
 default.dwnthr = -1.75;
+default.ckdwnrej = false;
+default.dwnrej = -4;
 default.gapdur = 15;
 default.ra = 20;% re-arm, the minimal amount of time to detect a subsequent spike (should be just longer than the concievable duration of a spike)
 
@@ -64,47 +68,62 @@ mi(4) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help'
 
 
 oppos = [120 327 40 20];
-panel = uipanel('Title','Controls','Units','pixels','FontSize',12,'Position',[2 2 380 132],'Tag','panel');%[0.005 0.78 0.20 0.22]
+panel = uipanel('Title','Controls','Units','pixels','FontSize',12,'Position',[2 2 420 132],'Tag','panel');%[0.005 0.78 0.20 0.22]
 
 uicontrol(panel,'Position',[55  88 80 25],'Style','text','String','Threshold','Enable','on');
-uicontrol(panel,'Position',[165 88 80 25],'Style','text','String','Min Duration','Enable','on');
-uicontrol(panel,'Position',[265 88 80 25],'Style','text','String','Gap','Enable','on');
+uicontrol(panel,'Position',[135 88 80 25],'Style','text','String','Min Duration','Enable','on');
+uicontrol(panel,'Position',[215 88 80 25],'Style','text','String','Gap','Enable','on');
+uicontrol(panel,'Position',[295 88 80 25],'Style','text','String','Reject','Enable','on');
 
 
 %threshold 1
-ckup = uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',default.ckup);
+uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',default.ckup);
 uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','Upper','Tag','upstr','Enable','on');
-uicontrol(panel,'Position',[65  73  20 20],'Style','pushbutton','Tag','uppUPthr','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[85  73  20 20],'Style','pushbutton','Tag','uppDWNthr','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[110 73  30 20],'Style','edit','String',default.upthr,'Tag','upthr','Callback',@chparam,'Enable','on');
-uicontrol(panel,'Position',[140 70  20 20],'Style','text','String','std','Tag','upunits','Enable','on');
+uicontrol(panel,'Position',[65  82  20 14],'Style','pushbutton','Tag','uppUPthr','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[65  69  20 14],'Style','pushbutton','Tag','uppDWNthr','String',char(709),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[85 73  30 20],'Style','edit','String',default.upthr,'Tag','upthr','Callback',@chparam,'Enable','on');
+uicontrol(panel,'Position',[115 70  20 20],'Style','text','String','std','Tag','upunits','Enable','on');
 
-uicontrol(panel,'Position',[165 73  20 20],'Style','pushbutton','Tag','uppUPdur','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[185 73  20 20],'Style','pushbutton','Tag','uppDWNdur','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[210 73  30 20],'Style','edit','String',num2str(default.updur,2),'Tag','updur','Callback',@duration,'Enable','on');
-uicontrol(panel,'Position',[240 70  20 20],'Style','text','String','ms','Tag','upunits','Enable','on');
-uicontrol(panel,'Position',[355 73  20 20],'Style','pushbutton','String','?','Tag','helps1','Callback',@helpf,'Enable','on');
+uicontrol(panel,'Position',[145 82  20 14],'Style','pushbutton','Tag','uppUPdur','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[145 69  20 14],'Style','pushbutton','Tag','uppDWNdur','String',char(709),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[165 73  30 20],'Style','edit','String',num2str(default.updur,2),'Tag','updur','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[195 70  20 20],'Style','text','String','ms','Tag','upunits','Enable','on');
+
+uicontrol(panel,'Position',[300 73 20 20],'Style','checkbox','Tag','ckuprej','Callback',@activatethr,'Enable','on','Value',default.ckuprej);
+uicontrol(panel,'Position',[320 82  20 14],'Style','pushbutton','Tag','uppUPrej','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[320 69  20 14],'Style','pushbutton','Tag','uppDWNrej','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[340 73  30 20],'Style','edit','String',num2str(default.uprej,2),'Tag','uprej','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[370 70  20 20],'Style','text','String','ms','Tag','upunitsrej','Enable','off');
+
+uicontrol(panel,'Position',[395 73  20 20],'Style','pushbutton','String','?','Tag','helps1','Callback',@helpf,'Enable','on');
 
 
 %threshold 2
-ckdwn = uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','on','value',default.ckdwn,'Tooltip','have not coded this yet');
+uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','on','value',default.ckdwn,'Tooltip','have not coded this yet');
 uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','dwnstr','String','Lower','Enable','off');
-uicontrol(panel,'Position',[65  43 20 20],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[85  43 20 20],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[110  43 30 20],'Style','edit','String',default.dwnthr,'Tag','dwnthr','Callback',@chparam,'Enable','off');
-uicontrol(panel,'Position',[140  40 20 20],'Style','text','String','std','Tag','dwnunits','Enable','off');
+uicontrol(panel,'Position',[65  52 20 14],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[65  39 20 14],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[85  43 30 20],'Style','edit','String',default.dwnthr,'Tag','dwnthr','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[115  40 20 20],'Style','text','String','std','Tag','dwnunits','Enable','off');
 
-uicontrol(panel,'Position',[165 43 20 20],'Style','pushbutton','Tag','dwnpUPdur','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[185 43 20 20],'Style','pushbutton','Tag','dwnpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[210 43 30 20],'Style','edit','String',num2str(default.dwndur,2),'Tag','dwndur','Callback',@duration,'Enable','off');
-uicontrol(panel,'Position',[240 40 20 20],'Style','text','String','ms','Tag','dwnunits','Enable','off');
-uicontrol(panel,'Position',[355 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
+uicontrol(panel,'Position',[145 52 20 14],'Style','pushbutton','Tag','dwnpUPdur','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[145 39 20 14],'Style','pushbutton','Tag','dwnpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[165 43 30 20],'Style','edit','String',num2str(default.dwndur,2),'Tag','dwndur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[195 40 20 20],'Style','text','String','ms','Tag','dwnunits','Enable','off');
+
+uicontrol(panel,'Position',[300 43 20 20],'Style','checkbox','Tag','ckdwnrej','Callback',@activatethr,'Enable','on','Value',default.ckdwnrej);
+uicontrol(panel,'Position',[320 52  20 14],'Style','pushbutton','Tag','dwnpUPrej','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[320 39  20 14],'Style','pushbutton','Tag','dwnpDWNrej','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[340 43  30 20],'Style','edit','String',num2str(default.dwnrej,2),'Tag','dwnrej','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[370 40  20 20],'Style','text','String','ms','Tag','dwnunitsrej','Enable','off');
+
+uicontrol(panel,'Position',[395 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
 
 %gap
-uicontrol(panel,'Position',[260 43 20 20],'Style','pushbutton','Tag','gappUPdur','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[280 43 20 20],'Style','pushbutton','Tag','gappDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[305 43 30 20],'Style','edit','String',num2str(default.gapdur,2),'Tag','gapdur','Callback',@duration,'Enable','off');
-uicontrol(panel,'Position',[335 40 20 20],'Style','text','String','ms','Tag','gapunits','Enable','off');
+uicontrol(panel,'Position',[225 52 20 14],'Style','pushbutton','Tag','gappUPdur','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[225 39 20 14],'Style','pushbutton','Tag','gappDWNdur','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[245 43 30 20],'Style','edit','String',num2str(default.gapdur,2),'Tag','gapdur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[275 40 20 20],'Style','text','String','ms','Tag','gapunits','Enable','off');
 
 %rearming
 uicontrol(panel,'Position',[1  1 40 20],'Style','text','String','re-arm','Enable','on');
@@ -189,8 +208,8 @@ uicontrol('Units','normalized','Position',[0.81 0.9 0.03 0.05],'Style','pushbutt
 
 uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw Image','Tag','raw','Callback',@rawimage)
 
-helps = ["To detect spikes the data value has to be above this threshold consecutively for as long as the minimum duration",...
-         "To detect spikes the data value has to be below this threshold consecutively for as long as the minimum duration",...
+helps = ["To detect spikes the data value has to be above this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
+         "To detect spikes the data value has to be below this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
          "The re-arm prevents the same spike from being detected twice.  The re-arm value is the minimal amount of time to detect a subsequent spike.  Should be a little longer than the concievable duration of a spike and shorter than the minimum concievable spike interval.  A neuron that fires at most 100Hz should have a re-arm duration less than 10 ms."];
 
 color = makecolor(-0.2);
@@ -402,6 +421,8 @@ vstr = ["off","on"];
 substr = ["up","dwn"];
 tidx = contains(hObject.Tag,'dwn')+1;
 sstr = char(substr(tidx));
+%  findobj('-regexp','Tag',['^' 'up\w*rej$'])  <--- Add this within an
+%  if statement.
 set(findobj('-regexp','Tag',['^' sstr],'Parent',props.panel),'Enable',vstr(hObject.Value+1))
 ischecked = string(get(findobj('-regexp','Tag','ck(up|dwn)'),'Value'))=="1";
 if all(ischecked)
