@@ -61,8 +61,8 @@ fig = figure('Position',[10 80 1900 600],'Name','Intan_Gui','NumberTitle','off',
 
 
 m = uimenu('Text','Spike Tools');
-mi(1) = uimenu(m,'Text','Open','Callback',@threshold,'Enable','off');
-mi(3) = uimenu(m,'Text','Save','Callback',@threshold,'Enable','off','Tag','savem');
+mi(1) = uimenu(m,'Text','Open Parameters','Callback',@opensaveparams,'Enable','on','Tag','open');
+mi(3) = uimenu(m,'Text','Save Parameters','Callback',@opensaveparams,'Enable','on','Tag','save');
 mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','on','Tag','savem');
 mi(4) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
 
@@ -244,6 +244,39 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'params',params,     'Lplt',Lplt))
 
 detsp(fig)
+
+function opensaveparams(hObject,eventdata)
+props = guidata(hObject);
+params = props.params;
+if ~isempty(props.files)
+    folder = [];
+    t=1;
+    while t>0
+        if ~isempty(props.files{t,2})
+            folder = fileparts(props.files{t,2});
+            t = -1;
+        else
+            t = t+1;
+        end
+        if t>size(props.files,1)
+            t = -1;
+        end
+    end
+end
+fname = fullfile(folder,'spike_parameters.mat');
+if strcmp(hObject.Tag,'open')
+    [file,path] = uigetfile(fname,'Select spike_parameter file');
+    filedata = load(fullfile(path,file));
+    assignin('base','filedata',filedata)
+    props.params = filedata.params;
+else
+    [file,path] = uiputfile(fname);
+    save(fullfile(path,file),'params')
+end
+disp('File saved as :')
+disp(fname)
+guidata(hObject,props)
+chchannel(hObject)
 
 function copyparam(hObject,eventdata)
 props = guidata(hObject);
