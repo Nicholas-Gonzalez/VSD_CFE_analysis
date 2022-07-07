@@ -221,7 +221,11 @@ uicontrol('Units','normalized','Position',[0.78 0.9 0.03 0.05],'Style','pushbutt
 uicontrol('Units','normalized','Position',[0.81 0.9 0.03 0.05],'Style','pushbutton','String','clear','Callback',@clearroi,'Enable','on','TooltipString','Remove all ROIs');
 
 
-uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw Image','Tag','raw','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw Image','Tag','raw1','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+0.04 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw','Tag','raw2','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+0.04*2 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Filtered','Tag','raw3','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+0.04*3 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Filt + BL subtr','Tag','raw4','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+0.04*4+0.01 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','montage','Tag','montage','Callback',@montagef)
 
 helps = ["To detect spikes the data value has to be above this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
          "To detect spikes the data value has to be below this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
@@ -239,7 +243,7 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'gidx',showidx(1),   'aspike',{aspike},  'spikes',{spikes},...
                    'inc',inc,           'files',files,      'frame',frame,...
                    'helps',helps,       'vax',vax,        'panel',panel,...
-                   'rawim',false,       'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+10),...
+                   'rawim',2,       'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+10),...
                    'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color,...
                    'params',params,     'Lplt',Lplt))
 
@@ -311,18 +315,26 @@ guidata(hObject,props)
 
 function rawimage(hObject,eventdata)
 props = guidata(hObject);
-rbutton = findobj(hObject,'Tag','raw');
-if props.rawim
-    props.rawim = false;
-    set(rbutton,'BackgroundColor',[0.94 0.94 0.94])
-    frame = get(findobj('Tag','imslider','Parent',hObject.Parent) ,'Value')+1;
-    set(props.img,'CData',props.imdata(:,:,frame))
-else
-    props.rawim = true;
-    set(rbutton,'BackgroundColor',[0.7 0.7 0.7])
+set(findobj(hObject.Parent,'-regexp','Tag','raw(1|2|3|4)'),'BackgroundColor',[0.94 0.94 0.94]);
+set(hObject,'BackgroundColor',[0.7 0.7 0.7])
+idx = double(string(regexp(hObject.Tag,'\d','match')));
+props.rawim = idx;
+frame = get(findobj('Tag','imslider','Parent',hObject.Parent) ,'Value')+1;
+if idx==1
     set(props.img,'CData',props.origim(:,:,1))
+else
+    set(props.img,'CData',props.imdata(:,:,frame,idx-1))
 end
 guidata(hObject,props)
+
+function montagef(hObject,eventdata)
+props = guidata(hObject);
+figure
+im = props.imdata(:,:,:,props.rawim);
+im = im - min(im(:));
+im = im/max(im(:));
+montage(im)
+colormap(parula)
 
 function [pixels, vdata] = roidata(pos,imdata)
 pixels = zeros(0,2,'uint16');
@@ -394,7 +406,9 @@ function chframe(hObject,eventdata)
 props = guidata(hObject);
 frame = round(hObject.Value);
 set(hObject,'Value',frame)
-set(props.img,'CData',props.imdata(:,:,frame))
+if props.rawim>1
+    set(props.img,'CData',props.imdata(:,:,frame,props.rawim-1))
+end
 idur = get(hObject,'Max');
 sf = diff(props.tm(1:2));
 pos = [(props.W(1) + length(props.W)*frame/idur)*sf*1000,  -1,   length(props.W)/idur*sf*1000,  2];
@@ -705,7 +719,9 @@ imdata = permute(imdata,[2 1 3]);
 % f0 = repmat(imdata(:,:,1),1,1,size(imdata,3));
 % imdata = (imdata - f0)./f0;
 % imdata(1:6,:,:) = 0;
-props.imdata = imdata;
+imdataf = imgaussfilt3(imdata);
+props.imdata = cat(4,imdata,imdataf,imdataf - repmat(median(imdataf,2),1,size(imdataf,2),1));
+
 
 frame = get(findobj('Tag','imslider','Parent',hObject.Parent.Parent) ,'Value')+1;
 set(props.img,'CData',imdata(:,:,frame))
