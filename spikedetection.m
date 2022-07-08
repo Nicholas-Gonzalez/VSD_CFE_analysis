@@ -170,7 +170,7 @@ splt = scatter(nan,nan,'x');hold on
 ax.XLabel.String = 'Time (s)';
 
 ax2 = axes('Position',[0.23 0.9 0.5 0.07]);
-Lplt = plot(tm,zeros(length(tm),1));
+Lplt = plot(tm,int8(zeros(length(tm),1)));
 
 linkaxes([ax, ax2],'x')
 
@@ -213,6 +213,9 @@ iax = axes('Position', [0.75 0.1 0.2 0.2*ysize/xsize*fig.Position(3)/fig.Positio
 img = imagesc(zeros(ysize,xsize));
 set(iax,'XTick',[],'YTick',[])
 
+txtframe = text(xsize-85,10,sprintf('Frame: %i',slidepos),'FontSize',15);
+txttm = text(xsize-85,25,sprintf('Time: %0.1f ms',(W(1) + length(W)*slidepos/idur)*sf*1000),'FontSize',15);
+
 colorbar('Location','manual','Position',[sum(iax.Position([1 3])) 0.1 0.01 iax.Position(4)])
 
 uicontrol('Units','normalized','Position',[iax.Position(1) iax.Position(2)-0.05 iax.Position(3) 0.05],'Style','slider','Value',slidepos,'Min',1,'Max',idur-1,'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
@@ -220,6 +223,11 @@ uicontrol('Units','normalized','Position',[0.75 0.9 0.03 0.05],'Style','pushbutt
 uicontrol('Units','normalized','Position',[0.78 0.9 0.03 0.05],'Style','pushbutton','String','- ROI','Callback',@removelastroi,'Enable','on','TooltipString','Remove previously drawn ROI');
 uicontrol('Units','normalized','Position',[0.81 0.9 0.03 0.05],'Style','pushbutton','String','clear','Callback',@clearroi,'Enable','on','TooltipString','Remove all ROIs');
 
+cpanel = uipanel('Title','Compare Images','Units','normalized','FontSize',12,'Position',[0.85 0.8 0.13 0.2],'Tag','cpanel');
+uicontrol(cpanel,'Units','pixels','Position',[5 75 40 20],'Style','pushbutton','String','add','Callback',@addframe,'Enable','on','TooltipString','Add displayed frame to comparison figure');
+uicontrol(cpanel,'Units','pixels','Position',[45 75 40 20],'Style','pushbutton','String','show','Callback',@showcompare,'Enable','on','TooltipString','Show comparison figure');
+uicontrol(cpanel,'Units','pixels','Position',[85 0 80 20],'Style','pushbutton','String','Remove','Callback',@removeframe,'Enable','on','TooltipString','Remove selected image');
+uicontrol(cpanel,'Units','pixels','Position',[85 20 80 75],'Style','listbox','Tag','compare')
 
 uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw Image','Tag','raw1','Callback',@rawimage)
 uicontrol('Units','normalized','Position',[iax.Position(1)+0.04 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw','Tag','raw2','Callback',@rawimage)
@@ -242,12 +250,22 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'str',str,           'ckup',true,        'ckdwn',false,...
                    'gidx',showidx(1),   'aspike',{aspike},  'spikes',{spikes},...
                    'inc',inc,           'files',files,      'frame',frame,...
-                   'helps',helps,       'vax',vax,        'panel',panel,...
-                   'rawim',2,       'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+10),...
+                   'helps',helps,       'vax',vax,          'panel',panel,...
+                   'rawim',2,           'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+40),...
                    'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color,...
-                   'params',params,     'Lplt',Lplt))
+                   'params',params,     'Lplt',Lplt,        'txtframe',txtframe,...
+                   'txttm',txttm,       'cpanel',cpanel))
 
 detsp(fig)
+
+function addframe(hObject,eventdata)
+props = guidata(hObject);
+list = findobj('Parent',props.cpanel,'Tag','compare');
+fig = findobj('Tag',props.apptag);
+idx = get(findobj('Tag','channels','Parent',fig),'Value');
+list.String = [list.String, props.ch(idx)];
+guidata(hObject,props)
+
 
 function opensaveparams(hObject,eventdata)
 props = guidata(hObject);
@@ -412,7 +430,10 @@ end
 idur = get(hObject,'Max');
 sf = diff(props.tm(1:2));
 pos = [(props.W(1) + length(props.W)*frame/idur)*sf*1000,  -1,   length(props.W)/idur*sf*1000,  2];
+props.txtframe.String = sprintf('Frame: %i',frame);
+props.txttm.String = sprintf('Time: %0.1f ms',(props.W(1) + length(props.W)*frame/idur)*sf*1000);
 set(props.frame,'Position',pos)
+guidata(hObject,props)
 
 function chval(hObject,eventdata)
 props = guidata(hObject);
@@ -588,7 +609,7 @@ gapdur = round(props.params(idx).gapdur/1000/sf);% convert from time to # indice
 ra = round(props.params(idx).ra/1000/sf);% convert from time to # indices
 
 sdata = repelem('n',length(data));
-logic = zeros(length(data),1);
+logic = int8(zeros(length(data),1));
 if props.params(idx).ckup
     sidx = data>props.params(idx).upthr*stdata;% find all values > threshold
     sdata(sidx) = 'u';
