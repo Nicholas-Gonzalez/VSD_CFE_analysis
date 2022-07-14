@@ -35,6 +35,7 @@ end
 sf = diff(tm(1:2));
 
 % default parameters
+slidepos = 27;% default frame for image
 inc = 0.25;% increment increas for threshold
 
 default.ckup = true;% default whether upper threshold is used as criteria
@@ -186,7 +187,7 @@ ax2.XLim = [min(tm),max(tm)];
 W = -300:500;
 W0 = round(min(W)*sf/sr); 
 idur = round(length(W)*sf/sr);
-slidepos = 30;
+
 
 sax = axes('Position',[0.08 0.65 0.12 0.25]);
 aplt = plot(W*sf*1000,nan(size(W)));
@@ -223,17 +224,18 @@ uicontrol('Units','normalized','Position',[0.75 0.9 0.03 0.05],'Style','pushbutt
 uicontrol('Units','normalized','Position',[0.78 0.9 0.03 0.05],'Style','pushbutton','String','- ROI','Callback',@removelastroi,'Enable','on','TooltipString','Remove previously drawn ROI');
 uicontrol('Units','normalized','Position',[0.81 0.9 0.03 0.05],'Style','pushbutton','String','clear','Callback',@clearroi,'Enable','on','TooltipString','Remove all ROIs');
 
-cpanel = uipanel('Title','Compare Images','Units','normalized','FontSize',12,'Position',[0.85 0.8 0.13 0.2],'Tag','cpanel');
+cpanel = uipanel('Title','Compare Images','Units','normalized','FontSize',12,'Position',[0.85 0.8 0.09 0.2],'Tag','cpanel');
 uicontrol(cpanel,'Units','pixels','Position',[5 75 40 20],'Style','pushbutton','String','add','Callback',@addframe,'Enable','on','TooltipString','Add displayed frame to comparison figure');
-uicontrol(cpanel,'Units','pixels','Position',[45 75 40 20],'Style','pushbutton','String','show','Callback',@showcompare,'Enable','on','TooltipString','Show comparison figure');
-uicontrol(cpanel,'Units','pixels','Position',[85 0 80 20],'Style','pushbutton','String','Remove','Callback',@removeframe,'Enable','on','TooltipString','Remove selected image');
-uicontrol(cpanel,'Units','pixels','Position',[85 20 80 75],'Style','listbox','Tag','compare')
+uicontrol(cpanel,'Units','pixels','Position',[5 55 40 20],'Style','pushbutton','String','show','Callback',@showcompare,'Enable','on','TooltipString','Show comparison figure');
+uicontrol(cpanel,'Units','pixels','Position',[45 0 100 20],'Style','pushbutton','String','Remove','Callback',@removeframe,'Enable','on','TooltipString','Remove selected image');
+uicontrol(cpanel,'Units','pixels','Position',[45 20 100 75],'Style','listbox','Tag','compare','Max',inf)
 
-uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw Image','Tag','raw1','Callback',@rawimage)
-uicontrol('Units','normalized','Position',[iax.Position(1)+0.04 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Raw','Tag','raw2','Callback',@rawimage)
-uicontrol('Units','normalized','Position',[iax.Position(1)+0.04*2 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Filtered','Tag','raw3','Callback',@rawimage)
-uicontrol('Units','normalized','Position',[iax.Position(1)+0.04*3 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','Filt + BL subtr','Tag','raw4','Callback',@rawimage)
-uicontrol('Units','normalized','Position',[iax.Position(1)+0.04*4+0.01 sum(iax.Position([2 4])) 0.04 0.05],'Style','pushbutton','String','montage','Tag','montage','Callback',@montagef)
+bw = 0.03;
+uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Raw','Tag','raw1','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Unfiltered','Tag','raw2','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw*2 sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Filtered','Tag','raw3','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw*3 sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Filt - BL','Tag','raw4','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4]))+0.05 bw 0.05],'Style','pushbutton','String','montage','Tag','montage','Callback',@montagef)
 
 helps = ["To detect spikes the data value has to be above this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
          "To detect spikes the data value has to be below this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
@@ -254,22 +256,53 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'rawim',2,           'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+40),...
                    'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color,...
                    'params',params,     'Lplt',Lplt,        'txtframe',txtframe,...
-                   'txttm',txttm,       'cpanel',cpanel))
+                   'txttm',txttm,       'cpanel',cpanel,    'cdata',{cell(0,3)}))
 
 detsp(fig)
+
+function showcompare(hObject,eventdata)
+props = guidata(hObject);
+compareim(props.cdata(:,1),props.cdata(:,3));
+% nim = size(props.cdata,1);
+% figure;
+% for f=1:nim
+%     ax = subplot(1,nim,f);
+%     imagesc(props.cdata{f,1});
+%     ax.Title.String = props.cdata{f,3};
+%     ax.XGrid = 'on';
+%     ax.YGrid = 'on';
+%     pbaspect([1 1 1])
+% end
+
+function removeframe(hObject,eventdata)
+props = guidata(hObject);
+list = findobj('Parent',props.cpanel,'Tag','compare');
+if length(list.Value)==length(list.String)
+    list.String = '';
+end
+list.String(list.Value) = [];
+props.cdata(list.Value,:) = [];
+set(list,'Value',1)
+guidata(hObject,props)
 
 function addframe(hObject,eventdata)
 props = guidata(hObject);
 list = findobj('Parent',props.cpanel,'Tag','compare');
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
-list.String = [list.String, props.ch(idx)];
+frame = get(findobj('Tag','imslider','Parent',fig),'Value');
+props.cdata = [props.cdata; {props.img.CData, [idx frame], [props.ch{idx} '  (' num2str(frame) ')']}];
+if isempty(list.String)
+    list.String = {[props.ch{idx} '  (' num2str(frame) ')']};
+else
+    list.String = [list.String; [props.ch{idx} '  (' num2str(frame) ')']];
+end
 guidata(hObject,props)
-
 
 function opensaveparams(hObject,eventdata)
 props = guidata(hObject);
 params = props.params;
+cdata = props.cdata;
 if ~isempty(props.files)
     folder = [];
     t=1;
@@ -291,11 +324,17 @@ if strcmp(hObject.Tag,'open')
     filedata = load(fullfile(path,file));
     assignin('base','filedata',filedata)
     props.params = filedata.params;
+    props.cdata = filedata.cdata;
+    if ~isempty(props.cdata)
+        set(findobj('Parent',props.cpanel,'Tag','compare'),'String',string(filedata.cdata(:,3)));
+    end
+    str = 'loaded';
 else
     [file,path] = uiputfile(fname);
-    save(fullfile(path,file),'params')
+    save(fullfile(path,file),'params','cdata')
+    str = 'saved';
 end
-disp('File saved as :')
+disp(['File ' str ' :'])
 disp(fname)
 guidata(hObject,props)
 chchannel(hObject)
@@ -558,7 +597,7 @@ sr = diff(props.tm(1:2));
 nval = num2str(sr*round(dur/sr)*1000,2);
 set(hObject,'String',nval)
 updur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
-if contains(hObject.Tag,'gap') && st2double(nval)<=updur+sr
+if contains(hObject.Tag,'gap') && str2double(nval)<=updur+sr
     replval = updur + sr*2;
     set(hObject,'String',num2str(replval,2))
 end
