@@ -706,47 +706,26 @@ gsize = f.Position(4) - 100;
 posy = linspace(gsize - gsize/nch,0,nch) + 50;
 
 
-if ~isfield(props,'plt')
-    props.plt = gobjects(nch,1);
-    props.ax = gobjects(nch,1);
-    props.chk = gobjects(nch,1);
-    props.txt = gobjects(nch,1);
-    props.ylim.scplus = gobjects(nch,1);
-    props.ylim.scminus = gobjects(nch,1);
-    props.ylim.up = gobjects(nch,1);
-    props.ylim.dwn = gobjects(nch,1);
+if isfield(props,'plt')
+    delete(props.plt)
+    delete(props.ax)
+    delete(props.ylim.scplus)
+    delete(props.ylim.scminus)
+    delete(props.ylim.up)
+    delete(props.ylim.dwn)
+    delete(props.chk)
+    delete(props.txt)
 end
 
-if length(props.plt)>nch
-    delete(props.plt(nch+1:end))
-    delete(props.ax(nch+1:end))
-    delete(props.ylim.scplus(nch+1:end))
-    delete(props.ylim.scminus(nch+1:end))
-    delete(props.ylim.up(nch+1:end))
-    delete(props.ylim.dwn(nch+1:end))
+props.plt = gobjects(nch,1);
+props.ax = gobjects(nch,1);
+props.chk = gobjects(nch,1);
+props.txt = gobjects(nch,1);
+props.ylim.scplus = gobjects(nch,1);
+props.ylim.scminus = gobjects(nch,1);
+props.ylim.up = gobjects(nch,1);
+props.ylim.dwn = gobjects(nch,1);
 
-    props.plt(~isvalid(props.plt)) = [];
-    props.ax(~isvalid(props.ax)) = [];
-    props.ylim.scplus(~isvalid(props.ylim.scplus)) = [];
-    props.ylim.scminus(~isvalid(props.ylim.scminus)) = [];
-    props.ylim.up(~isvalid(props.ylim.up)) = [];
-    props.ylim.dwn(~isvalid(props.ylim.dwn)) = [];
-    
-    delete(props.chk(nch+1:end))
-    delete(props.txt(nch+1:end))
-    props.chk(~isvalid(props.chk)) = [];
-    props.txt(~isvalid(props.txt)) = [];
-elseif length(props.plt)<nch
-    props.plt = [props.plt ; gobjects(nch-length(props.plt),1)];
-    props.ax =  [props.ax ; gobjects(nch-length(props.plt),1)];
-    props.chk = [props.chk; gobjects(nch-length(props.plt),1)];
-    props.txt = [props.txt; gobjects(nch-length(props.plt),1)];
-
-    props.ylim.scplus = [props.ylim.scplus; gobjects(nch-length(props.plt),1)];
-    props.ylim.scminus = [props.ylim.scminus; gobjects(nch-length(props.plt),1)];
-    props.ylim.up = [props.ylim.up; gobjects(nch-length(props.plt),1)];
-    props.ylim.dwn = [props.ylim.dwn; gobjects(nch-length(props.plt),1)];
-end
 disp('plotting')
 
 for d=1:nch
