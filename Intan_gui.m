@@ -1291,13 +1291,28 @@ for i=1:length(idx)
     r = xcorr(x,y,win,'normalized');
     [val,id] = max(r);
     props.xcorr(idx(i,2),idx(i,1)) = val;
+    props.xcorr(idx(i,1),idx(i,2)) = val;
     props.xcorr_lag(idx(i,2),idx(i,1)) = id-win/2;
+    props.xcorr_lag(idx(i,1),idx(i,2)) = id-win/2;
     props.xcorr_fulltrace(i,:) = r;
 end
+fprintf(newline)
 
-figure('Position',[400 500 1300 400])
-ax(1) = subplot(1,2,1);
-imagesc(props.xcorr,'AlphaData', 1-isnan(props.xcorr))
+props.xcorr(find(eye(size(props.xcorr,1)))) = 1;
+Z = linkage(props.xcorr);
+
+figure('Position',[100 100 1108 782])
+
+ax(2) = subplot(2,2,3);
+
+ax(1) = axes('Position',[ax(2).Position(1) 0.45 0.28 0.2]);
+[~,~,didx] = dendrogram(Z);
+ax(1).Title.String = 'Correlation';
+ax(1).XLim = [0.5 size(props.xcorr,1)+0.5];
+ax(1).Color = 'none';
+
+axes(ax(2))
+imagesc(props.xcorr(didx,didx),'AlphaData', 1-isnan(props.xcorr))
 
 tcmap = [(0:0.02:2)', (0:0.01:1)' , (1:-0.01:0)'];
 tcmap(tcmap>1) = 1;
@@ -1309,12 +1324,14 @@ else
 end
 colormap(cmap)
 colorbar
-ax(1).Title.String = 'Correlation';
-ax(2) = subplot(1,2,2);
+
+ax(3) = subplot(2,2,4);
 imagesc(props.xcorr_lag,'AlphaData', 1-isnan(props.xcorr_lag))
 colorbar
-set(ax,'YTick',1:length(props.showlist),'YTickLabel',props.showlist,'XTick',1:length(props.showlist),'XTickLabel',props.showlist,'XTickLabelRotation',90)
-ax(2).Title.String = 'Time lag';
+set(ax,'YTick',1:length(props.showlist),'YTickLabel',props.showlist(didx),'XTick',1:length(props.showlist),'XTickLabel',props.showlist(didx),'XTickLabelRotation',90)
+ax(1).XTick = [];
+ax(1).YTick = [];
+ax(3).Title.String = 'Time lag';
 
 guidata(hObject,props)
 

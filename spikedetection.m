@@ -696,8 +696,8 @@ end
 spikes = strfind(sdata,pattern);
 if ~isempty(spikes)
     spikes = spikes([true, diff(spikes)>ra]);% remove values that are separated by < re-arm (prevents dection of same spike).  The value is idices;
-
     W = props.W;
+    spikes(spikes+W(1)<0 | spikes+W(end)>length(data)) = [];
     aspike = zeros(length(spikes),length(W));
     for i = 1:length(spikes)
         aspike(i,:) = data(W+spikes(i));

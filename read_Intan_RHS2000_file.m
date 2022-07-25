@@ -1,4 +1,4 @@
-function [amplifier_data, t, stim_data,stim_parameters,notes,amplifier_channels, board_adc_channels, board_adc_data] = read_Intan_RHS2000_file(fname)
+function [amplifier_data, t, stim_data,stim_parameters,notes,amplifier_channels, board_adc_channels, board_adc_data,frequency_parameters] = read_Intan_RHS2000_file(fname,filter)
 
 % read_Intan_RHS2000_file
 %
@@ -9,6 +9,8 @@ function [amplifier_data, t, stim_data,stim_parameters,notes,amplifier_channels,
 % variables that appear in the base MATLAB workspace.  Therefore, it is
 % recommended to execute a 'clear' command before running this program to
 % clear all other variables from the base workspace.
+%
+%filter is optional input.  logical of whether you want to apply the notch filter
 %
 % Example:
 % >> clear
@@ -28,7 +30,9 @@ end
 fname = char(fname);
 [path,file,ex] = fileparts(fname);
 
-
+if nargin<2
+    filter = false;
+end
 
 if ~isstring(file) && ~ischar(file) 
     return;
@@ -438,13 +442,13 @@ if (data_present)
 
     % If the software notch filter was selected during the recording, apply the
     % same notch filter to amplifier data here.
-    if (notch_filter_frequency > 0)
+    if notch_filter_frequency > 0 && filter
         fprintf(1, 'Applying notch filter...\n');
 
         print_increment = 10;
         percent_done = print_increment;
         for i=1:num_amplifier_channels
-            amplifier_data(i,:) = ...
+            amplifier_data(i,:) = ...     
                 notch_filter(amplifier_data(i,:), sample_rate, notch_filter_frequency, 10);
 
             fraction_done = 100 * (i / num_amplifier_channels);
