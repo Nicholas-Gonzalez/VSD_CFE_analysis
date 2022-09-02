@@ -98,7 +98,7 @@ uicontrol('Position', [1270 430 40 20],'Style','togglebutton','Value',1,'Tag','f
 % This is the app that loads that data into the guidata
 function loadapp(hObject,eventdata)
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
-f2.Position(3:4) = [540 300];
+f2.Position = [200 200 540 300];
 
 
 uicontrol('Position',[480 280 60 20],'Style','text','String','Include');
