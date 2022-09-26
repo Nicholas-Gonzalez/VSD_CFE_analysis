@@ -1002,10 +1002,10 @@ meth = {'butter';'cheby1';'cheby2';'ellip'};
 
 % default filter properties
 filterp.meth = 'ellip';
-filterp.fr = 2;
-filterp.fatt = [60,60];
-filterp.fpass = [15,50];
-filterp.fstop = [0.1,100];
+filterp.fr = 0.1;
+filterp.fatt = [40,40];
+filterp.fpass = [5,50];
+filterp.fstop = [0.1,1000];
 
 
 uicontrol('Position',[400 565 100 20],'Style','text','String','Select channel');
