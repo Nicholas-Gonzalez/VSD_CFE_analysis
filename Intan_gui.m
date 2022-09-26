@@ -1147,12 +1147,12 @@ midx =   get(findobj(hObject.Parent,'Tag','fmeth'),'Value');
 hband = get(findobj(hObject.Parent,'Tag','fband'),'SelectedObject');
 switch hband.Tag
     case 'lowpass'
-        h = fdesign.lowpass('Fp,Fst,Ap,Ast', fpass(2), fstop(2), fr, fatt(2), diff(props.tm(1:2))^-1);
+        h = fdesign.lowpass('N,Fp,Fst,Ap,Ast', 2, fpass(2), fstop(2), fr, fatt(2), diff(props.tm(1:2))^-1);
     case 'bandpass'      
-        h = fdesign.bandpass('Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2', fstop(1), fpass(1), ...
+        h = fdesign.bandpass('N,Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2', 2, fstop(1), fpass(1), ...
             fpass(2), fstop(2), fatt(1), fr, fatt(2), diff(props.tm(1:2))^-1);
     case 'highpass'
-        h = fdesign.highpass('Fst,Fp,Ast,Ap', fstop(1), fpass(1), fatt(1), fr, diff(props.tm(1:2))^-1);
+        h = fdesign.highpass('N,Fst,Fp,Ast,Ap',2, fstop(1), fpass(1), fatt(1), fr, diff(props.tm(1:2))^-1);
 end
 Hd = design(h, meth{midx}, 'MatchExactly', 'passband', 'SOSScaleNorm', 'Linf');
 
