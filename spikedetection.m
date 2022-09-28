@@ -691,7 +691,11 @@ set(props.Lplt,'YData',logic)
 
 
 if props.params(idx).ckup && props.params(idx).ckdwn
-    eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '";'])
+    if gapdur>=0
+        eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '";'])
+    else
+        eval(['pattern = "' repelem('d',dwndur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-dwndur) ' + "' repelem('u',updur) '";'])
+    end
 end
 spikes = strfind(sdata,pattern);
 if ~isempty(spikes)
