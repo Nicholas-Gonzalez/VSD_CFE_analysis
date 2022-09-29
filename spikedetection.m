@@ -121,9 +121,9 @@ uicontrol(panel,'Position',[370 40  20 20],'Style','text','String','std','Tag','
 uicontrol(panel,'Position',[395 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
 
 %gap
-uicontrol(panel,'Position',[225 52 20 14],'Style','pushbutton','Tag','gappUPdur','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[225 39 20 14],'Style','pushbutton','Tag','gappDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[245 43 30 20],'Style','edit','String',num2str(default.gapdur,2),'Tag','gapdur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[220 52 20 14],'Style','pushbutton','Tag','gappUPdur','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[220 39 20 14],'Style','pushbutton','Tag','gappDWNdur','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[240 43 35 20],'Style','edit','String',num2str(default.gapdur,2),'Tag','gapdur','Callback',@duration,'Enable','off');
 uicontrol(panel,'Position',[275 40 20 20],'Style','text','String','ms','Tag','gapunits','Enable','off');
 
 %rearming
@@ -485,18 +485,30 @@ if contains(tag,'thr') || contains(tag,'rej')
     val = val + dir*props.inc;% increment of change 
     vals = num2str(val);
 else
-    val = val/1000;
     sr = diff(props.tm(1:2));
-    val = val + dir*sr;
-    val(val<sr) = sr;
-    vals = num2str(sr*round(val/sr)*1000,2);% ensure that duration is incriments of the sampling frequency
-    updur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
-    if contains(hObject.Tag,'gap') && str2double(vals)<updur+2*sr*1000
-        vals = num2str(updur + sr*2*1000,2);
+    val = val/1000/sr;
+    val = val + dir;
+    if contains(tag,'gap')
+        val = correctgap(props,val);
     end
+    val = sr*val*1000;
+    vals = num2str(val,2);% ensure that duration is incriments of the sampling frequency
 end
 set(obj,'String',vals)
 chparam(hObject.Parent)
+
+function val = correctgap(props,val)
+% must be in units of samples (idx) 
+sr = diff(props.tm(1:2));
+if val>=0
+    updur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'))/1000/sr;
+    updur = updur+2;
+    val(val<updur) = updur;
+else
+    dwndur = str2double(get(findobj('Tag','dwndur','Parent',props.panel),'String'))/1000/sr;
+    dwndur = -(dwndur+2);
+    val(val>dwndur) = dwndur;
+end
 
 function chchannel(hObject,eventdata)
 props = guidata(hObject);
@@ -552,10 +564,14 @@ set(props.plt,'YData', props.data(idx,:));
 
 stdata = std(props.data(idx,:));
 if props.params(idx).ckup
-    thr = str2double(get(findobj('Tag','upthr','Parent',props.panel),'String'));
+    tag = 'upthr';
+    if props.params(idx).ckdwn && str2double(get(findobj('Tag','gapdur','Parent',props.panel),'String'))<0
+        tag = 'dwnthr';
+    end
 else
-    thr = str2double(get(findobj('Tag','dwnthr','Parent',props.panel),'String'));
+    tag = 'dwnthr';
 end
+thr = str2double(get(findobj('Tag',tag,'Parent',props.panel),'String'));
 spikes = props.spikes{idx};
 set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*stdata)
 
@@ -596,11 +612,9 @@ dur = str2double(hObject.String)/1000;
 sr = diff(props.tm(1:2));
 nval = num2str(sr*round(dur/sr)*1000,2);
 set(hObject,'String',nval)
-updur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
-if contains(hObject.Tag,'gap') && str2double(nval)<=updur+sr
-    replval = updur + sr*2;
-    set(hObject,'String',num2str(replval,2))
-end
+gapobj = findobj('Tag','gapdur','Parent',props.panel);
+gapdur = str2double(get(gapobj,'String'))/1000/sr;
+set(gapobj,'String',num2str(correctgap(props,gapdur)*1000*sr,2));
 chparam(hObject.Parent)
 
 function chparam(hObject,eventdata)
@@ -694,7 +708,7 @@ if props.params(idx).ckup && props.params(idx).ckdwn
     if gapdur>=0
         eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '";'])
     else
-        eval(['pattern = "' repelem('d',dwndur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-dwndur) ' + "' repelem('u',updur) '";'])
+        eval(['pattern = "' repelem('d',dwndur) '"' repmat(' + ("u"|"d"|"n")',1,abs(gapdur-dwndur)) ' + "' repelem('u',updur) '";'])
     end
 end
 spikes = strfind(sdata,pattern);
