@@ -184,6 +184,12 @@ vsdprops.matprops.im = matprops.props.im;
 vsdprops.matprops.det = matprops.props.det;
 vsdprops.matprops.kern_center = matprops.props.kern_center;
 vsdprops.matprops.kernpos = matprops.props.kernpos;
+if isfield(matprops.props,'filter')
+    vsdprops.matprops.filter = matprops.props.filter;
+end
+if isfield(matprops.props,'databackup')
+    vsdprops.matprops.databackup = matprops.props.databackup;
+end
 vsdprops.files = matprops.props.files;
 
 
@@ -426,6 +432,12 @@ if intch && vsdch
             props.det = vsdprops.matprops.det;
             props.kern_center = vsdprops.matprops.kern_center;
             props.kernpos = vsdprops.matprops.kernpos;
+            if isfield(vsdprops.matprops,'filter')
+                props.filter = vsdprops.matprops.filter;
+            end
+            if isfield(vsdprops.matprops,'backup')
+                props.backup = vsdprops.matprops.backup;
+            end
             vsdprops.intan = vsdprops.matprops.intan;
             vsdprops.vsd = vsdprops.matprops.vsd;
         end
@@ -806,7 +818,7 @@ guidata(hObject,props)
 
 function edit_undo(hObject,eventdata)
 props = guidata(hObject);
-props.data = props.databackup;
+props.data = convert_uint(props.databackup, props.bd2uint, props.bmin, 'double');
 for c=1:length(props.showidx)
     props.ax(c).Children.YData = props.data(props.showidx(c),:);pause(0.01)
 end
