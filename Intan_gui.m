@@ -1016,7 +1016,7 @@ meth = {'butter';'cheby1';'cheby2';'ellip'};
 filterp.meth = 'ellip';
 filterp.fr = 0.1;
 filterp.fatt = [40,40];
-filterp.fpass = [5,50];
+filterp.fpass = [1,50];
 filterp.fstop = [0.1,1000];
 
 
