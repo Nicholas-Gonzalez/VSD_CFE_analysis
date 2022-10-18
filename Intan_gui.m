@@ -1,7 +1,7 @@
 function Intan_gui % main app
 
 intan_tag = ['intan_tag' num2str(randi(1e4,1))];
-f = figure('Position',[100 50 1700 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
+f = figure('Position',[100 0 1700 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 
 % it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
 %           'Visible','on','XLim',[0 f.Position(3)],'YLim',[0 f.Position(4)],...
@@ -1347,7 +1347,7 @@ ax(3).Title.String = 'Time lag';
 
 guidata(hObject,props)
 
-function spiked(hObject,eventdata)
+function spiked(hObject,eventdata)% spike detection 
 props = guidata(hObject);
 spikedetection(props)
 
