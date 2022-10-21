@@ -1,6 +1,14 @@
-function Intan_gui % main app
+function Intan_gui(monitor) % main app
+% Input:
+% monitor = which monitor you would like to use for the GUI, default is largest. 
+
 
 intan_tag = ['intan_tag' num2str(randi(1e4,1))];
+mpos = get(0,'MonitorPositions');
+if nargin==0
+    [~,monitor] = max(prod(mpos(:,3:end),2));% gets the larger monitor
+end
+% f = figure('OuterPosition',mpos(monitor,:),'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 f = figure('Position',[100 0 1700 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 
 % it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
