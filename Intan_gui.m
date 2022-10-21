@@ -8,8 +8,8 @@ mpos = get(0,'MonitorPositions');
 if nargin==0
     [~,monitor] = max(prod(mpos(:,3:end),2));% gets the larger monitor
 end
-amonsz= mpos(monitor,:);
-f = figure('OuterPosition',amonsz,'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
+figsize = mpos(monitor,:);
+f = figure('OuterPosition',figsize,'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 % f = figure('Position',[100 0 1700 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 
 % it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
@@ -47,22 +47,22 @@ mi(4) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
 % ---- formatting parameters --------
 fontsz = 10;
 
-csz = [nan 300 amonsz(3)*0.25];% size of ROI and channels
+csz = [nan 300 figsize(3)*0.25];% size of ROI and channels
 menusz = 90;
 insz = 250;
 % ----------------------------------
-axpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[0                       0     amonsz(3)-sum(csz(2:3)) amonsz(4)-menusz ],'Title','Graph','Tag','axpanel');
-chpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[amonsz(3)-sum(csz(2:3)) insz   csz(2)                 amonsz(4)-insz-menusz],'Title','channels','Tag','chpanel');
-cmpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[amonsz(3)-sum(csz(2:3)) 0     sum(csz(2:3))-300       insz],'Title','Controls','Tag','cmpanel');
-inpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[amonsz(3)-300           0     300                     insz],'Title','File information','Tag','inpanel');
-ropanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[amonsz(3)-csz(3)        insz   csz(3)                  amonsz(4)-insz-menusz],'Title','ROI','Tag','ropanel');
+axpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[0                       0     figsize(3)-sum(csz(2:3)) figsize(4)-menusz ],'Title','Graph','Tag','axpanel');
+chpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) insz   csz(2)                 figsize(4)-insz-menusz],'Title','channels','Tag','chpanel');
+cmpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) 0     sum(csz(2:3))-300       insz],'Title','Controls','Tag','cmpanel');
+inpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-300           0     300                     insz],'Title','File information','Tag','inpanel');
+ropanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-csz(3)        insz   csz(3)                  figsize(4)-insz-menusz],'Title','ROI','Tag','ropanel');
 
 
 guidata(f,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
-                 'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel))
+                 'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
 
 % text(1000,860,'Show','Parent',it)
-uicontrol(axpanel,'Units','normalized','Position',[0 0.95 0.03 0.05],'Style','text','FontSize',fontsz,'String',["Show","Y-axis"])
+uicontrol(axpanel,'Units','pixels','Position',[0 axpanel.Position(4)-40 50 40],'Style','text','FontSize',fontsz,'String',["Show","Y-axis"])
 
 % ======== channel panel ==========
 uicontrol(chpanel,'Units','normalized','Position',[0 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Show')
@@ -82,7 +82,7 @@ uicontrol(chpanel,'Units','normalized','Position',[0.45 0.45 0.1 0.04],'Style','
 
 % --------------------------
   
-% ======== information panel ==========
+% ======== control panel ==========
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@autoscale,'String','autoscale xy all','Enable','off');
@@ -119,14 +119,15 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.2 0.3 0.1],'Style','pus
 
 
 % ======== ROI panel ==========
-uicontrol('Position', [1270 430 40 20],'Style','togglebutton','Value',1,'Tag','fillroi',...
-            'Callback',@updateroi,'String','fill roi','Enable','off','Visible','off','ForegroundColor','w')
+uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton','Value',1,'Tag','fillroi',...
+            'Callback',@updateroi,'String','fill ROI','Enable','off','Visible','on','ForegroundColor','w')
 
 %% loading methods
 % This is the app that loads that data into the guidata
 function loadapp(hObject,eventdata)
+props = guidata(hObject);
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
-f2.Position = [200 200 540 300];
+f2.Position = [props.figsize(1:2)+props.figsize(3:4)/2 540 300];
 
 
 uicontrol('Position',[480 280 60 20],'Style','text','String','Include');
@@ -632,10 +633,10 @@ props = guidata(hObject);
 allbut = findobj('Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
 
-slistobj = findobj(hObject.Parent,'Tag','showgraph');
+slistobj = findobj(props.chpanel,'Tag','showgraph');
 slistobj.String = props.showlist;
 slistobj.Max = length(props.showlist);
-hlistobj = findobj(hObject.Parent,'Tag','hidegraph');
+hlistobj = findobj(props.chpanel,'Tag','hidegraph');
 hlistobj.String = props.hidelist;
 hlistobj.Max = length(props.hidelist);
 
@@ -649,51 +650,53 @@ end
 
 
 % it = findobj('Tag','grid');
-delete(findobj(hObject.Parent,'Tag','info'))
+delete(findobj(props.inpanel,'Tag','info'))
 [~,name,ext] = fileparts(props.finfo.files{4,2});
-props.info(1,1) = uicontrol('Style','text','Position',[990,240, 50,20],'String','RHS File:','Horizontal','right','Tag','info');
-props.info(1,2) = uicontrol('Style','text','Position',[1050,240,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
+inpos = props.inpanel.Position;
+props.info(1,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-40, 50,20],'String','RHS File:','Horizontal','right','Tag','info');
+props.info(1,2) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[60, inpos(4)-40, inpos(3)-60, 20],'String',[name,ext],'Horizontal','left','Tag','info');
 
 [folder,name,ext] = fileparts(props.finfo.files{3,2});
-props.info(2,1) = uicontrol('Style','text','Position',[990,225, 50,20],'String','TSM File:','Horizontal','right','Tag','info');
-props.info(2,2) = uicontrol('Style','text','Position',[1050,225,220,20],'String',[name,ext],'Horizontal','left','Tag','info');
+props.info(2,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-55, 50,20],'String','TSM File:','Horizontal','right','Tag','info');
+props.info(2,2) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[60, inpos(4)-55, inpos(3)-60, 20],'String',[name,ext],'Horizontal','left','Tag','info');
 
-props.info(3,1) = uicontrol('Style','text','Position',[990,210, 50,20],'String','Folder:','Horizontal','right','Tag','info');
-props.info(3,2) = uicontrol('Style','text','Position',[1050,210, 220,20],'String',folder,'Horizontal','left','Tag','info');
+props.info(3,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-70, 50,20],'String','Folder:','Horizontal','right','Tag','info');
+props.info(3,2) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[60, inpos(4)-70, inpos(3)-60, 20],'String',folder,'Horizontal','left','Tag','info');
 
-props.info(4,1) = uicontrol('Style','text','Position',[990,195, 50,20],'String','Duration:','Horizontal','right','Tag','info');
-props.info(4,2) = uicontrol('Style','text','Position',[1050,195, 220,20],'String',[num2str(props.finfo.duration) ' seconds'],'Horizontal','left','Tag','info');
+props.info(4,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-85, 50,20],'String','Duration:','Horizontal','right','Tag','info');
+props.info(4,2) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[60, inpos(4)-85, inpos(3)-60, 20],'String',[num2str(props.finfo.duration) ' seconds'],'Horizontal','left','Tag','info');
 
 % props.info(4,1) = text(1020,205,'# of Files:','Parent',it,'Horizontal','right','Tag','info');
 % props.info(4,2) = text(1030,205,num2str(props.finfo.numfiles),'Parent',it,'Tag','info');
 
-props.info(5,1) = uicontrol('Style','text','Position',[990,180, 50,20],'String','Date:','Horizontal','right','Tag','info');
-props.info(5,2) = uicontrol('Style','text','Position',[1050,180, 220,20],'String',props.finfo.date,'Horizontal','left','Tag','info');
+props.info(5,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-100, 50,20],'String','Date:','Horizontal','right','Tag','info');
+props.info(5,2) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[60, inpos(4)-100, inpos(3)-60, 20],'String',props.finfo.date,'Horizontal','left','Tag','info');
 
-props.info(6,1) = uicontrol('Style','text','Position',[990,160, 50,20],'String','Note 1:','Horizontal','right','Tag','info');
-props.info(6,2) = uicontrol('Position',[1050 160 220 20],'Style','edit','Tag','note1',...
+props.info(6,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-115, 50,20],'String','Note 1:','Horizontal','right','Tag','info');
+props.info(6,2) = uicontrol(props.inpanel,'Units','pixels','Position',[60, inpos(4)-115, inpos(3)-60, 20],'Style','edit','Tag','note1',...
               'Callback',@note,'String',props.notes.note1,'Horizontal','left');
           
-props.info(7,1) = uicontrol('Style','text','Position',[990,140, 50,20],'String','Note 2:','Horizontal','right','Tag','info');
-props.info(7,2) = uicontrol('Position',[1050 140 220 20],'Style','edit','Tag','note2',...
+props.info(7,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-130, 50,20],'String','Note 2:','Horizontal','right','Tag','info');
+props.info(7,2) = uicontrol(props.inpanel,'Units','pixels','Position',[60, inpos(4)-130, inpos(3)-60, 20],'Style','edit','Tag','note2',...
               'Callback',@note,'String',props.notes.note2,'Horizontal','left');
           
-props.info(8,1) = uicontrol('Style','text','Position',[990,120, 50,20],'String','Note 3:','Horizontal','right','Tag','info');
-props.info(8,2) = uicontrol('Position',[1050 120 220 20],'Style','edit','Tag','note3',...
+props.info(8,1) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-145, 50,20],'String','Note 3:','Horizontal','right','Tag','info');
+props.info(8,2) = uicontrol(props.inpanel,'Units','pixels','Position',[60, inpos(4)-145, inpos(3)-60, 20],'Style','edit','Tag','note3',...
               'Callback',@note,'String',props.notes.note3,'Horizontal','left');
-props.info(9,2) = uicontrol('Style','text','Position',[1020,95,120,20],'String','Press enter to apply','Horizontal','left','Tag','info');
+props.info(9,2) = uicontrol(props.inpanel,'Units','pixels','Style','text','Position',[0, inpos(4)-165, 100,20],'String','Press enter to apply','Horizontal','left','Tag','info');
 
 if props.newim
-    delete(findobj(hObject.Parent,'Tag','roiax'))
-    axes('Units','pixels','Position', [1270 450 400 400],'YTick',[],'XTick',[],'Box','on','Tag','roiax');
+    delete(findobj(props.ropanel,'Tag','roiax'))
+    axes(props.ropanel,'Units','pixels','Position', [0 450 100 100],'YTick',[],'XTick',[],'Box','on','Tag','roiax');
     if length(size(props.im))==3
         props.imsh = image(props.im);
     else
         props.im = repmat(props.im,1,1,3);
         props.imsh = image(props.im);
     end
-    sz = size(props.im);
-    set(props.imsh.Parent,'Units','pixels','Position', [1270 450 400 400*sz(1)/sz(2)],...
+    sz = size(props.im);  
+    panelsz = props.ropanel.Position;
+    set(props.imsh.Parent,'Units','pixels','Position', [0   panelsz(4)-panelsz(3)*sz(1)/sz(2)   panelsz(3)   panelsz(3)*sz(1)/sz(2)],...
         'YTick',[],'XTick',[],'Box','on','Tag','roiax')
     props.newim = false;
 end
@@ -701,17 +704,18 @@ end
 
 
 if isfield(props,'im')
-    set(findobj(hObject.Parent,'Tag','fillroi'),'Enable','on','Visible','on')
+    set(findobj(props.ropanel,'Tag','fillroi'),'Enable','on','Visible','on')
 end
 set(findobj(hObject.Parent,'Tag','savem'),'Enable','on');
-set(findobj(hObject.Parent,'Tag','showgraph'),'Enable','on');
-set(findobj(hObject.Parent,'Tag','hidegraph'),'Enable','on');
+set(findobj(props.chpanel,'Tag','showgraph'),'Enable','on');
+set(findobj(props.chpanel,'Tag','hidegraph'),'Enable','on');
 if isfield(props,'yaxis')
     set(props.yaxis,'Parent',hObject.Parent,'Enable','on')
 end
-set(findobj(hObject.Parent,'Tag','adjust'),'Enable','on')
-set(findobj(hObject.Parent,'Tag','showsort'),'Enable','on')
-set(findobj(hObject.Parent,'Tag','filter'),'Enable','on')
+
+set(findobj(props.chpanel,'Tag','showsort'),'Enable','on')
+set(findobj(props.cmpanel,'Tag','adjust'),'Enable','on')
+set(findobj(props.cmpanel,'Tag','filter'),'Enable','on')
 
 guidata(hObject,props)
 updateroi(hObject)
@@ -721,28 +725,21 @@ plotdata(hObject)
 
 function plotdata(hObject)
 props = guidata(hObject);
-% if isfield(props,'ax')
-% %     delete(props.ax)
-%     delete(props.txt)
-%     delete(props.yaxis)
-% end
 
 set(findobj('Tag','yaxis_label'),'Visible','on')
 allbut = findobj('Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
-buf = uicontrol('Position',[500,800,200, 40],'Style','text','String','Plotting...','FontSize',15);
+buf = uicontrol(props.axpanel,'Units','pixels','Position',[props.axpanel.Position(3)/2, props.axpanel.Position(4)-60,200, 40],'Style','text','String','Plotting...','FontSize',15);
 pause(0.1)
 
-
-f = gcf;
 data = props.data;
 
-showstr = get(findobj(hObject.Parent,'Tag','showgraph'),'String');
+showstr = get(findobj(props.chpanel,'Tag','showgraph'),'String');
 idx = cellfun(@(x) find(strcmp(props.ch,x)),showstr);
 nch = length(idx);
 
 tm = props.tm;
-gsize = f.Position(4) - 100;
+gsize = props.axpanel.Position(4) - 100;
 posy = linspace(gsize - gsize/nch,0,nch) + 50;
 
 
@@ -771,26 +768,26 @@ disp('plotting')
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
     if ~isgraphics(props.plt(d))
-        props.ax(d) = axes('Units','pixels','Position',[85   posy(d)   880   gsize/nch]);
+        props.ax(d) = axes(props.axpanel,'Units','pixels','Position',[85   posy(d)   props.axpanel.Position(3)-115   gsize/nch]);
         props.plt(d) = plot(tm,data(idx(d),:));
-        props.chk(d) = uicontrol('Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
+        props.chk(d) = uicontrol(props.axpanel,'Units','pixels','Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
             'Value',false,'Visible','off','Tag',['c' num2str(d)]);
-        props.txt(d) = uicontrol('Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
-        props.ylim.scplus(d) = uicontrol('Style','pushbutton','Position',[965 chpos+8  15 15],'String','+','Callback',@adjylim,'Visible','off','Tag',['p' num2str(d)],'TooltipString','increase yscale');
-        props.ylim.scminus(d) = uicontrol('Style','pushbutton','Position',[965 chpos-8  15 15],'String','-','Callback',@adjylim,'Visible','off','Tag',['m' num2str(d)],'TooltipString','decrease yscale');
-        props.ylim.up(d) = uicontrol('Style','pushbutton','Position',[980 chpos+8  15 15],'String',char(708),'Callback',@adjylim,'Visible','off','Tag',['u' num2str(d)],'TooltipString','shift y-range up');
-        props.ylim.dwn(d) = uicontrol('Style','pushbutton','Position',[980 chpos-8  15 15],'String',char(709),'Callback',@adjylim,'Visible','off','Tag',['d' num2str(d)],'TooltipString','shift y-range down');
+        props.txt(d) = uicontrol(props.axpanel,'Units','pixels','Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
+        props.ylim.scplus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[ props.axpanel.Position(3)-30 chpos+8  15 15],'String','+','Callback',@adjylim,'Visible','off','Tag',['p' num2str(d)],'TooltipString','increase yscale');
+        props.ylim.scminus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-30 chpos-8  15 15],'String','-','Callback',@adjylim,'Visible','off','Tag',['m' num2str(d)],'TooltipString','decrease yscale');
+        props.ylim.up(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-15 chpos+8  15 15],'String',char(708),'Callback',@adjylim,'Visible','off','Tag',['u' num2str(d)],'TooltipString','shift y-range up');
+        props.ylim.dwn(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-15 chpos-8  15 15],'String',char(709),'Callback',@adjylim,'Visible','off','Tag',['d' num2str(d)],'TooltipString','shift y-range down');
     else
         props.ax(d) = props.plt(d).Parent;
-        set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   880   gsize/nch])
+        set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   props.axpanel.Position(3)-115   gsize/nch])
         set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
         
         set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
         set(props.txt(d),'Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off');
-        set(props.ylim.scplus(d),'Position',[965 chpos+8  15 15],'Visible','off');% I don't think i need to set string here.  I am removing.
-        set(props.ylim.scminus(d),'Position',[965 chpos-8  15 15],'Visible','off');
-        set(props.ylim.up(d),'Position',[980 chpos+8  15 15],'Visible','off');
-        set(props.ylim.dwn(d),'Position',[980 chpos-8  15 15],'Visible','off');
+        set(props.ylim.scplus(d),'Position',[props.axpanel.Position(3)-30 chpos+8  15 15],'Visible','off');% I don't think i need to set string here.  I am removing.
+        set(props.ylim.scminus(d),'Position',[props.axpanel.Position(3)-30 chpos-8  15 15],'Visible','off');
+        set(props.ylim.up(d),'Position',[props.axpanel.Position(3)-15 chpos+8  15 15],'Visible','off');
+        set(props.ylim.dwn(d),'Position',[props.axpanel.Position(3)-15 chpos-8  15 15],'Visible','off');
     end
     
     
@@ -813,9 +810,9 @@ end
 
 set(props.ax,'YTick',[],'XLim',[0 max(tm)])% somehow is also modifying im, but only when loading new files, 05-23-22: not sure if this comment is still applicable
 linkaxes(props.ax,'x')
-set(findobj('Tag','adjust'),'Enable','on')
-set(findobj('Tag','showsort'),'Enable','on')
-set(findobj(hObject.Parent,'Visible','off'),'Visible','on')
+set(findobj(props.chpanel,'Tag','adjust'),'Enable','on')
+set(findobj(props.chpanel,'Tag','showsort'),'Enable','on')
+set(findobj(props.axpanel,'Visible','off'),'Visible','on')
 
 
 delete(buf)
@@ -967,8 +964,8 @@ else
     choose = props.show;
 end
 
-olistobj = findobj('Tag',tags{2});
-listobj = findobj('Tag',tags{1});
+olistobj = findobj(props.chpanel,'Tag',tags{2});
+listobj = findobj(props.chpanel,'Tag',tags{1});
 
 listobj.String = listobj.String;
 
@@ -992,8 +989,8 @@ listobj.String(choose) = [];
 % hstring = get(findobj('Tag','hidegraph'),'String');
 % [~,sidx] = sort(double(string(hstring)));
 % set(findobj('Tag','hidegraph'),'String',hstring(sidx));
-props.showlist = get(findobj('Tag','showgraph'),'String');
-props.hidelist = get(findobj('Tag','hidegraph'),'String');
+props.showlist = get(findobj(props.chpanel,'Tag','showgraph'),'String');
+props.hidelist = get(findobj(props.chpanel,'Tag','hidegraph'),'String');
 if strcmp(listobj.Tag,'showgraph')
     props.hideidx = [props.hideidx   props.showidx(choose)];
     props.showidx(choose) = [];
@@ -1382,12 +1379,6 @@ spikedetection(props)
 %% vsd frame image and ROI methods
 
 function updateroi(hObject,eventdata)
-% fillr = get(findobj(hObject.Parent,'Tag','fillroi'),'Value');
-% if fillr
-%     set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.2 0.2 0.2],'ForegroundColor',[1 1 1]);
-% else
-%    set(findobj(hObject.Parent,'Tag','fillroi'),'BackgroundColor',[0.8 0.8 0.8],'ForegroundColor','k');
-% end
 
 props = guidata(hObject);
 a = 0.7;
@@ -1422,7 +1413,7 @@ end
 roidx = props.showlist(contains(props.showlist,'V-'));
 roidx = str2double(replace(roidx,'V-',''));
 
-if get(findobj(hObject.Parent,'Tag','fillroi'),'Value')
+if get(findobj(props.ropanel,'Tag','fillroi'),'Value')
     im = props.im;
     R = im(:,:,1)';
     G = im(:,:,2)';

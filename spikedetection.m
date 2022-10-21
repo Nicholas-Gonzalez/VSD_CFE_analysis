@@ -10,6 +10,7 @@ if isstruct(inputdata)
     showidx = inputdata.showidx;
     tm = inputdata.tm;
     files = inputdata.files;
+    ofigsize = inputdata.figsize;
 
     vsd = files(contains(files(:,2),'tsm'),2);
 
@@ -30,6 +31,11 @@ else
         tm = 1:size(data,2);
     end
     files = [];
+    mpos = get(0,'MonitorPositions');
+    if nargin==0
+        [~,monitor] = max(prod(mpos(:,3:end),2));% gets the larger monitor
+    end
+    ofigsize = mpos(monitor,:);
 end
 
 sf = diff(tm(1:2));
@@ -58,7 +64,8 @@ default.ra = sf*default.ra*1000;
 params = repmat(default,length(ch),1);%<-----just changed these values
 
 apptag = ['apptag' num2str(randi(1e4,1))];
-fig = figure('Position',[10 80 1900 600],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
+% fig = figure('Position',[10 80 1900 600],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
+fig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3) ofigsize(4)*0.8-ofigsize(2)],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
 
 
 m = uimenu('Text','Spike Tools');
