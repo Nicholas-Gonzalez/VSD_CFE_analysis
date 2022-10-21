@@ -144,7 +144,8 @@ uicontrol(panel,'Position',[170 1 120 30],'Style','pushbutton','String','Copy Pa
 
 
 uicontrol('Position',[220 125 60 20],'Style','text','String','# spikes:','Enable','on');
-uicontrol('Position',[280 125 20 20],'Style','text','String',' ','Tag','nspikes','Enable','on');
+uicontrol('Position',[280 125 40 20],'Style','text','String',' ','Tag','nspikes','Enable','on');
+uicontrol('Position',[340 125 40 20],'Style','text','String',' ','Tag','sprogress','Enable','on');
 
 
 
@@ -651,6 +652,8 @@ if nargin==2
 end
 props = guidata(hObject);
 
+set(findobj(hObject.Parent.Parent,'Tag','sprogress'),'String','   ')
+
 allbut = findobj(hObject,'Type','Uicontrol','Enable','on');
 allbut = [allbut; findobj(props.panel,'Type','Uicontrol','Enable','on')];
 set(allbut,'Enable','off')
@@ -747,6 +750,7 @@ set(findobj('Tag','processing','Parent',hObject.Parent.Parent),'String','Process
 allbut = findobj(hObject.Parent.Parent,'Type','Uicontrol','Enable','on');
 allbut = [allbut; findobj(props.panel,'Type','Uicontrol','Enable','on')];
 set(allbut,'Enable','off')
+set(findobj(hObject.Parent.Parent,'Tag','sprogress'),'Enable','on')
 pause(0.1)
 
 tic
@@ -799,6 +803,10 @@ for s=1:length(sidx)
     fdata = (fdata - f0)./f0;
     
     imdata = imdata + fdata;% Format data.
+    if mod(s,10)==0
+        set(findobj(hObject.Parent.Parent,'Tag','sprogress'),'String',num2str(s))
+        pause(0.1)
+    end
 end
 fclose(fid);
 
