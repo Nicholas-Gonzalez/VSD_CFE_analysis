@@ -318,7 +318,18 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         rfn = vsdprops.files{vsdprops.files(:,1)=="rhsfns",2};
         set(rhs_prog,'String',"loading...",'ForegroundColor','b');
         pause(0.1)
-        [data, vsdprops.intan.tm, stim, ~, notes, amplifier_channels] = read_Intan_RHS2000_file(rfn);
+        rfn = split(rfn,';  ');
+        for r=1:length(rfn)
+            if r==1
+                [data, tm, stim, ~, notes, amplifier_channels] = read_Intan_RHS2000_file(rfn{r});
+            else
+                [datap, tmp, stimp] = read_Intan_RHS2000_file(rfn{r});
+                data = [data, datap];
+                tm = [tm, tmp];
+                stimp = [stim, stimp];
+            end
+        end
+        vsdprops.intan.tm = tm;
 
         vsdprops.intan.data = [data;stim];
         
@@ -571,11 +582,26 @@ end
 
 function getvsdfile(hObject,eventdata)
 vsdprops = guidata(hObject);
-[file, path, id] = uigetfile(['C:\Users\cneveu\Desktop\Data\*.' hObject.Tag(1:end-2)],'Select file');
-if ~file;return;end
-vsdprops.files(vsdprops.files(:,1)==string([hObject.Tag 's']),2) = fullfile(path,file);
+multsel = 'off';
+if strcmp(hObject.Tag,'rhsfn')
+    multsel = 'on';
+end
+
+[file, path, id] = uigetfile(['C:\Users\cneveu\Desktop\Data\*.' hObject.Tag(1:end-2)],'Select file','MultiSelect',multsel);
+
+if ~isa(file,'cell') && ~any(file);return;end
+if isa(file,'cell')
+    filestr = join(string(fullfile(path,file)),';  ');
+else
+    filestr = fullfile(path,file);
+end
+vsdprops.files(vsdprops.files(:,1)==string([hObject.Tag 's']),2) = filestr;
 guidata(hObject,vsdprops);
-guessfiles(hObject,fullfile(path,file))
+if isa(file,'cell')
+    guessfiles(hObject,fullfile(path,file{1}))
+else
+    guessfiles(hObject,fullfile(path,file))
+end
 
 function guessfiles(hObject,fname)
 vsdprops = guidata(hObject);
