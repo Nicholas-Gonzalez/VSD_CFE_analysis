@@ -256,7 +256,22 @@ pause(0.1)
 vsdprops = guidata(hObject);
 iObject = findobj('Tag',vsdprops.intan_tag);
 
-fex = arrayfun(@exist,vsdprops.files(:,2));
+fex = false(1,size(vsdprops.files,1));
+for f=1:size(vsdprops.files,1)
+    fn = vsdprops.files(f,2);
+    if contains(fn,';')
+        fstr = split(fn,';  ');
+        fexist = false(size(fstr));
+        for e=1:length(fstr)
+            fexist(e) = exist(fstr{e},'file');
+        end 
+        fex(f) = all(fexist);
+    else
+        fex(f) = exist(fn,'file');
+    end
+end
+
+
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
     if fex(vsdprops.files(:,1)=="tiffns") && get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
         im = imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2));
@@ -326,7 +341,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
                 [datap, tmp, stimp] = read_Intan_RHS2000_file(rfn{r});
                 data = [data, datap];
                 tm = [tm, tmp];
-                stimp = [stim, stimp];
+                stim = [stim, stimp];
             end
         end
         vsdprops.intan.tm = tm;
@@ -342,11 +357,14 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
                     join([string((1:size(data,1))'), repelem(" stim(uA)",size(data,1),1)])];
         [path,file] = fileparts(rfn);
 
-        vsdprops.intan.finfo.file = file;
-        vsdprops.intan.finfo.path = path;
-        vsdprops.intan.finfo.duration = max(vsdprops.intan.tm);
-        finfo = dir(rfn);
+        vsdprops.intan.finfo.file = join(file,';  ');
+        vsdprops.intan.finfo.path = join(path,';  ');
+        if isa(rfn,'cell')
+            finfo = dir(rfn{1});
+        end
         vsdprops.intan.finfo.date = finfo.date;
+        vsdprops.intan.finfo.duration = max(vsdprops.intan.tm);
+        
         vsdprops.intan.notes = notes;
         set(rhs_prog,'String','loaded','ForegroundColor','k')
     elseif  get(findobj('Tag','rhsc'),'Value')==1
@@ -574,10 +592,17 @@ end
 fstr = get(findobj(hObject.Parent,'Tag',hstr),'String');
 fph = findobj(hObject.Parent,'Tag',replace(hstr,'fns','p'));
 
-if exist(fstr,'file') 
-    set(fph,'String', 'found', 'ForegroundColor','k')
+fstr = split(fstr,';  ');
+fexist = false(size(fstr));
+for f=1:length(fstr)
+    fexist(f) = exist(fstr{f},'file');
+end
+
+
+if ~all(fexist)
+    set(fph,'String', 'not found', 'ForegroundColor','r')
 else
-    set(fph, 'String','not found', 'ForegroundColor','r')
+    set(fph, 'String','found', 'ForegroundColor','k')
 end
 
 function getvsdfile(hObject,eventdata)
@@ -597,6 +622,7 @@ else
 end
 vsdprops.files(vsdprops.files(:,1)==string([hObject.Tag 's']),2) = filestr;
 guidata(hObject,vsdprops);
+set(findobj(hObject.Parent,'Tag',[hObject.Tag 's']),'String',filestr)  
 if isa(file,'cell')
     guessfiles(hObject,fullfile(path,file{1}))
 else
@@ -605,13 +631,13 @@ end
 
 function guessfiles(hObject,fname)
 vsdprops = guidata(hObject);
-[fpath,fn,~] = fileparts(fname);
+[fpath,fn,extn] = fileparts(fname);
 fn = replace(fn,'_frame','');
 
 strs = ["tiffns"   ,"detfns","tsmfns","rhsfns","xlsxfns";...
         "_frame.tif",".det" ,".tsm"  ,".rhs",".xlsx"];
 
-    
+
 dfolder = dir(fullfile(fpath));
 fnames = string({dfolder.name});
 for s=1:size(strs,2)
