@@ -783,8 +783,9 @@ dur = round(length(props.W)*sf/sr);
 sidx = sidx + W0;
 sidx(sidx>zsize | sidx<1) = [];
 
-imdata = zeros(ysize,xsize,dur);
+imdata = int16(zeros(ysize,xsize,dur));
 frameLength = xsize*ysize; % Frame length is the product of X and Y axis lengths;
+f0 = int16(zeros(ysize,xsize,length(sidx)));
 
 fid = fopen(info.Filename,'r');
 for s=1:length(sidx)
@@ -794,14 +795,17 @@ for s=1:length(sidx)
     fseek(fid,offset,'bof');% Find target position on file.
     
     % Read data.
-    fdata = fread(fid,frameLength*dur,'int16=>double');% single saves about 25% processing time and requires half of memory 
+    fdata = fread(fid,frameLength*dur,'int16=>int16');%'int16=>double');% single saves about 25% processing time and requires half of memory 
     if length(fdata)<xsize*ysize*dur
         break
     end
     fdata = reshape(fdata,[xsize ysize dur]);
-    f0 = repmat(fdata(:,:,1),1,1,size(fdata,3));
-    fdata = (fdata - f0)./f0;
+    f0(:,:,s) = fdata(:,:,1);
+    f0p = repmat(fdata(:,:,1),1,1,size(fdata,3));
+%     fdata = (fdata - f0)./f0;
+    fdata = fdata - f0p;
     
+
     imdata = imdata + fdata;% Format data.
     if mod(s,10)==0
         set(findobj(hObject.Parent.Parent,'Tag','sprogress'),'String',num2str(s))
@@ -810,8 +814,12 @@ for s=1:length(sidx)
 end
 fclose(fid);
 
+imdata = double(imdata);
 imdata = imdata/length(sidx);
+f0a = repmat(mean(f0,3),1,1,size(imdata,3));
+imdata = imdata./f0a;
 imdata = permute(imdata,[2 1 3]);
+
 % f0 = repmat(imdata(:,:,1),1,1,size(imdata,3));
 % imdata = (imdata - f0)./f0;
 % imdata(1:6,:,:) = 0;
