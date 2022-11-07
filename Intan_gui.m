@@ -1549,7 +1549,13 @@ if isfield(props,'databackup')
     props.databackup = convert_uint(props.databackup, props.bd2uint, props.bmin, 'uint16');
 end
 
-save(fullfile(path,file),'props')
+try
+    save(fullfile(path,file),'props')
+catch
+    props.errorcode = 'save didn''t work initially, saving as v7.3. Line 1553';
+    save(fullfile(path,file),'props','-v7.3')
+    warning('save didn''t work initially, saving as v7.3. Line 1553')
+end
 disp(['Saved ' fullfile(path,file)])
 
 set(allbut,'Enable','on')
