@@ -1356,13 +1356,16 @@ preview(hObject)
 function xcorrelation(hObject,eventdata)% calculates the cross correlation of the channels shown
 props = guidata(hObject);
 
-win = 100;% window for calculating the cross correlation
+win = 379;% window for calculating the cross correlation
 nch = length(props.showidx);
 showidx = props.showidx;
+ch = props.ch;
 idx = nchoosek(1:nch,2);
 props.xcorr = nan(nch);
 props.xcorr_lag = nan(nch);
 props.xcorr_fulltrace = nan(length(idx),win*2+1);
+signit = [1,-1];
+sr = diff(props.tm([1 100]))/100*1000;
 
 disp('running xcorr')
 disp(['          ' repelem('_',round(length(idx)/10))])
@@ -1373,16 +1376,20 @@ for i=1:length(idx)
     if mod(i,10)==0
         fprintf('|')
     end
-    x = props.data(showidx(idx(i,1)),:);
-    y = props.data(showidx(idx(i,2)),:);
+    x = props.data(showidx(idx(i,1)),:)*signit(contains(props.ch(showidx(idx(i,1))),'V')+1);
+    y = props.data(showidx(idx(i,2)),:)*signit(contains(props.ch(showidx(idx(i,2))),'V')+1);
     x(isnan(x)) = 0;
     y(isnan(y)) = 0;
+%     x = abs(x);
+%     y = abs(y);
+%     x = decimate(x,20);
+%     y = decimate(y,20);
     r = xcorr(x,y,win,'normalized');
     [val,id] = max(r);
     props.xcorr(idx(i,2),idx(i,1)) = val;
     props.xcorr(idx(i,1),idx(i,2)) = val;
-    props.xcorr_lag(idx(i,2),idx(i,1)) = id-win/2;
-    props.xcorr_lag(idx(i,1),idx(i,2)) = id-win/2;
+    props.xcorr_lag(idx(i,2),idx(i,1)) = (id-win)*sr;
+    props.xcorr_lag(idx(i,1),idx(i,2)) = (id-win)*sr;
     props.xcorr_fulltrace(i,:) = r;
 end
 fprintf(newline)
@@ -1403,15 +1410,17 @@ ax(1).Color = 'none';
 axes(ax(2))
 imagesc(props.xcorr(didx,didx),'AlphaData', 1-isnan(props.xcorr))
 
-tcmap = [(0:0.02:2)', (0:0.01:1)' , (1:-0.01:0)'];
-tcmap(tcmap>1) = 1;
-lower = min(props.xcorr(:))/max(props.xcorr(:))*50;
-if lower>0
-    cmap = tcmap(50:end,:);
-else
-    cmap = tcmap(round(50-lower):end,:);
-end
-colormap(cmap)
+% tcmap = [(0:0.02:2)', (0:0.01:1)' , (1:-0.01:0)'];
+% tcmap(tcmap>1) = 1;
+% lower = min(props.xcorr(:))/max(props.xcorr(:))*50;
+% if lower>0
+%     cmap = tcmap(50:end,:);
+% else
+%     cmap = tcmap(round(50-lower):end,:);
+% end
+% colormap(cmap)
+colormap(parula)
+caxis([0 0.6])
 colorbar
 
 ax(3) = subplot(2,2,4);
