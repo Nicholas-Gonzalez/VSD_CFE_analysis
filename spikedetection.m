@@ -5,6 +5,7 @@ function spikedetection(inputdata,tm)
 
 if isstruct(inputdata)
     data = inputdata.data;
+    data(isnan(data)) = 0;
     ch = inputdata.ch;
     hideidx = inputdata.hideidx;
     showidx = inputdata.showidx;
@@ -24,6 +25,7 @@ if isstruct(inputdata)
     origim = inputdata.im;
 else
     data = inputdata;
+    data(isnan(data)) = 0;
     ch = 1:size(data,1);
     hideidx = [];
     showidx = 1:size(data,1);
@@ -663,7 +665,7 @@ idx = get(findobj('Tag','channels','Parent',fig),'Value');
 
 data = props.data(idx,:);
 tm = props.tm;
-stdata = std(data);
+stdata = std(data,"omitnan");
 sf = diff(tm(1:2));
 
 updur = round(props.params(idx).updur/1000/sf);% convert from time to # indices
