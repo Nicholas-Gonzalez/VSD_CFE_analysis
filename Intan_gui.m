@@ -111,6 +111,9 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.9 0.3 0.1],'Style','pus
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.8 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@spiked,'String','spike detection','Enable','off',...
               'Tag','filter','TooltipString','detect');
+uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@scalebar,'String','add scale bar','Enable','off',...
+              'Tag','filter','TooltipString','add scale bar');
      
 uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.2 0.3 0.1],'Style','pushbutton','Tag','plotagain',...
               'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
@@ -124,6 +127,14 @@ uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton'
 
 %% loading methods
 % This is the app that loads that data into the guidata
+function scalebar(hObject,eventdata)
+props = guidata(hObject);
+delete(findobj('Tag','scaleb'))
+for a = 1:lenght(props.ax)
+    line(props.ax(a),[10 10],[0 0.0001],'Color','k','Tag','scaleb')
+end
+
+
 function loadapp(hObject,eventdata)
 props = guidata(hObject);
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
