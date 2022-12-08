@@ -118,9 +118,12 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.9 0.3 0.1],'Style','pus
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.8 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@spiked,'String','spike detection','Enable','off',...
               'Tag','filter','TooltipString','detect');
-uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.3 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@scalebar,'String','add scale bar','Enable','off',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.2 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@scalebar,'String','scale bar Add','Enable','off',...
               'Tag','filter','TooltipString','add scale bar');
+uicontrol(cmpanel,'Units','normalized','Position',[0.8 0.7 0.1 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@scalebar,'String','Remove','Enable','off',...
+              'Tag','filter','TooltipString','remove scale bar');
 
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.3 0.1],'Style','pushbutton','Tag','adjust',...
@@ -166,15 +169,16 @@ end
 disp('finished')
 delete(buf)
 
-
-
 function scalebar(hObject,eventdata)
 props = guidata(hObject);
+xlim = props.ax(1).XLim;
+pos = xlim(1)+range(xlim)*0.05;
 delete(findobj('Tag','scaleb'));
-for a = 1:length(props.ax)
-    line(props.ax(a),[10 10],[0.0005 0.0015],'Color','k','Tag','scaleb')
+if contains(hObject.String,'Add')
+    for a = 1:length(props.ax)
+        line(props.ax(a),[pos pos],-[0.0005 0.0015],'Color','k','Tag','scaleb')
+    end
 end
-
 
 %% loading methods
 % This is the app that loads that data into the guidata
