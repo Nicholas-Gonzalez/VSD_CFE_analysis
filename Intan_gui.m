@@ -67,15 +67,18 @@ uicontrol(axpanel,'Units','pixels','Position',[0 axpanel.Position(4)-40 50 40],'
 
 % ======== channel panel ==========
 uicontrol(chpanel,'Units','normalized','Position',[0 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Show')
-uicontrol(chpanel,'Units','normalized','Position',[0 0    0.45 0.95],'Style','listbox','Max',1,'Min',1,...
+uicontrol(chpanel,'Units','normalized','Position',[0 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
               'Callback',@selection,'String',"",'Tag','showgraph');
-% uicontrol('Position',[1060 850 40 20],'Style','pushbutton','Tag','showsort',...
-%               'Callback',@sortlist,'String',[char(8595) 'sort'],'Enable','off');
 
 uicontrol(chpanel,'Units','normalized','Position',[0.55 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Hide')
-uicontrol(chpanel,'Units','normalized','Position',[0.55 0    0.45 0.95],'Style','listbox','Max',1,'Min',1,...
+uicontrol(chpanel,'Units','normalized','Position',[0.55 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
               'Callback',@selection,'String',"",'Tag','hidegraph');
-         
+
+uicontrol(chpanel,'Units','normalized','Position',[0.43 0.97 0.15 0.03],'Style','pushbutton','Tag','showsort',...
+              'Callback',@sortlist,'String',[char(8593) 'sort'],'Enable','off');
+uicontrol(chpanel,'Units','normalized','Position',[0.43 0.94 0.15 0.03],'Style','pushbutton','Tag','showsort',...
+              'Callback',@sortlist,'String',[char(8595) 'sort'],'Enable','off');
+
 uicontrol(chpanel,'Units','normalized','Position',[0.45 0.55 0.1 0.04],'Style','pushbutton','Tag','adjust',...
               'Callback',@modtxt,'String',char(8594),'FontSize',20,'Enable','off');
 uicontrol(chpanel,'Units','normalized','Position',[0.45 0.45 0.1 0.04],'Style','pushbutton','Tag','adjust',...
@@ -1012,10 +1015,14 @@ guidata(hObject,props)
 
 function sortlist(hObject,eventdata)
 props = guidata(hObject);
-[~,sidx] = sort(double(string(props.showlist)));
+[~,sidx] = sort(props.showlist);
+if contains(hObject.String,char(8595))
+    sidx = flipud(sidx);
+end
 props.showlist = props.showlist(sidx);
 set(findobj('Tag','showgraph'),'String',props.showlist);
 guidata(hObject,props)
+plotdata(findobj('Tag',props.intan_tag))
 
 function autoscale(hObject,eventdata)
 it = findobj('Tag','grid');
@@ -1026,7 +1033,11 @@ pause(0.01)
 
 props = guidata(hObject);
 if contains(hObject.String,'x')
+    ylims = {props.ax.YLim}';
     set(props.ax,'XLim',[0 max(props.ax(1).Children(1).XData)])
+    for a=1:length(props.ax)
+        props.ax(a).YLim = ylims{a};
+    end
 end
 if contains(hObject.String,'y')
     set(props.ax,'YLimMode','auto')
@@ -1607,7 +1618,7 @@ for s=1:length(sidx)
         break
     end
     fdata = reshape(fdata,[xsize ysize]);
-    imdata(:,:,s) = fdata;
+    imdata(:,:,s) = flipud(rot90(fdata));
 end
 fclose(fid);
 
