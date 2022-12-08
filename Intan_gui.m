@@ -40,9 +40,10 @@ mi(1) = uimenu(m,'Text','Open','Callback',@loadapp);
 % if isempty(recent.file)%Depricated
 %     rm = [];%Depricated
 % end
-mi(3) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
-mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
-mi(4) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
+mi(3) = uimenu(m,'Text','Generate Tiffs','Callback',@all_kframe,'Enable','on','Tag','kframe');
+mi(4) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
+mi(5) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
+mi(6) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
 
 % ---- formatting parameters --------
 fontsz = 10;
@@ -84,14 +85,19 @@ uicontrol(chpanel,'Units','normalized','Position',[0.45 0.45 0.1 0.04],'Style','
   
 % ======== control panel ==========
 
-uicontrol(cmpanel,'Units','normalized','Position',[0 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@autoscale,'String','autoscale xy all','Enable','off');
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.9 0.20 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@autoscale,'String','autoscale xy','Enable','off');
+uicontrol(cmpanel,'Units','normalized','Position',[0.20 0.9 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@autoscale,'String','x','Enable','off');
+uicontrol(cmpanel,'Units','normalized','Position',[0.25 0.9 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@autoscale,'String','y','Enable','off');
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.8 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@centerbl,'String','center zeros','Enable','off');
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.7 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@zoom,'String','increase y-scale','Enable','off');
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@zoom,'String','decrease y-scale','Enable','off');
+
           
 uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@remove_artifact,'String','Remove Artifact','Enable','off',...
@@ -105,6 +111,7 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.6 0.3 0.1],'Style','pus
               'Callback',@filterit,'String','Filter','Enable','off',...
               'Tag','filter','TooltipString','Filters the data');
 
+
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@xcorrelation,'String','XCorr','Enable','off',...
               'Tag','filter','TooltipString','Calculates the cross correlation');
@@ -114,7 +121,13 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.8 0.3 0.1],'Style','pus
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','add scale bar','Enable','off',...
               'Tag','filter','TooltipString','add scale bar');
-     
+
+
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@imhistogram,'String','Image histogram','Enable','off',...
+              'Tag','filter','TooltipString','Filters the data');
+
+
 uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.2 0.3 0.1],'Style','pushbutton','Tag','plotagain',...
               'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
               'Tag','filter','TooltipString','Plots the data again');
@@ -125,16 +138,41 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.2 0.3 0.1],'Style','pus
 uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton','Value',1,'Tag','fillroi',...
             'Callback',@updateroi,'String','fill ROI','Enable','off','Visible','on','ForegroundColor','w')
 
-%% loading methods
-% This is the app that loads that data into the guidata
+
+function all_kframe(hObject,eventdata)
+props = guidata(hObject);
+[fnames, fpath] = uigetfile('*.tsm',"MultiSelect",'on');
+files = fullfile(fpath,fnames);
+buf = uicontrol(props.axpanel,'Units','pixels',...
+    'Position',[props.axpanel.Position(3)/2, props.axpanel.Position(4)-60,200, 40],...
+    'Style','text','String','Generating Tiffs...','FontSize',13);
+pause(0.1)
+if ischar(files)
+    disp(['find_kframes   ',files])
+    find_kframe(files,false);
+else
+    for f=1:length(files)
+        disp(['find_kframes   ',files{f}])
+        set(buf,'String',files{f})
+        pause(0.1)
+        try
+            find_kframe(files{f},false);
+        catch
+            warning(['could not execute for ' files{f}])
+        end
+    end
+end
+disp('finished')
+delete(buf)
+
 function scalebar(hObject,eventdata)
 props = guidata(hObject);
 delete(findobj('Tag','scaleb'))
 for a = 1:lenght(props.ax)
     line(props.ax(a),[10 10],[0 0.0001],'Color','k','Tag','scaleb')
 end
-
-
+%% loading methods
+% This is the app that loads that data into the guidata
 function loadapp(hObject,eventdata)
 props = guidata(hObject);
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
@@ -975,7 +1013,12 @@ set(allbut,'Enable','off')
 pause(0.01)
 
 props = guidata(hObject);
-set(props.ax,'XLim',[0 max(props.ax(1).Children(1).XData)],'YLimMode','auto')
+if contains(hObject.String,'x')
+    set(props.ax,'XLim',[0 max(props.ax(1).Children(1).XData)])
+end
+if contains(hObject.String,'y')
+    set(props.ax,'YLimMode','auto')
+end
 
 set(allbut,'Enable','on')
 delete(buf)
@@ -1524,6 +1567,50 @@ end
 
 guidata(hObject,props)
 
+function imhistogram(hObject,eventdata)
+props = guidata(hObject);
+vsd = props.finfo.files(contains(props.finfo.files(:,2),'tsm'),2);
+
+warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
+info = fitsinfo(vsd);
+warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
+
+xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
+ysize = info.PrimaryData.Size(1);
+zsize = info.PrimaryData.Size(3); % Length of recording
+sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
+
+frameLength = xsize*ysize;
+sidx = round(linspace(1,zsize,10)');
+% sidx = 0:10000:100000;
+imdata = zeros(ysize,xsize,length(sidx));
+
+fid = fopen(info.Filename,'r');
+for s=1:length(sidx)
+    offset = info.PrimaryData.Offset + ... Header information takes 2880 bytes.
+                (sidx(s)-1)*frameLength*2; % Because each integer takes two bytes.    
+    fseek(fid,offset,'bof');% Find target position on file.    
+    fdata = fread(fid,frameLength,'int16=>double');%'int16=>double');% single saves about 25% processing time and requires half of memory 
+    if length(fdata)<xsize*ysize
+        break
+    end
+    fdata = reshape(fdata,[xsize ysize]);
+    imdata(:,:,s) = fdata;
+end
+fclose(fid);
+
+figure;
+subplot(2,1,1)
+colors = parula(length(sidx));
+for h=1:length(sidx)
+    histogram(imdata(:,:,h),'FaceColor',colors(h,:));hold on
+end
+legend(string((round(sidx*sr,2))'))
+
+subplot(2,1,2)
+ims = imtile(imdata);
+imagesc(ims)
+
 %% misc methods
 function note(hObject,eventdata)
 props = guidata(hObject);
@@ -1569,13 +1656,15 @@ if isfield(props,'databackup')
     props.databackup = convert_uint(props.databackup, props.bd2uint, props.bmin, 'uint16');
 end
 
-try
-    save(fullfile(path,file),'props')
-catch
-    props.errorcode = 'save didn''t work initially, saving as v7.3. Line 1553';
-    save(fullfile(path,file),'props','-v7.3')
-    warning('save didn''t work initially, saving as v7.3. Line 1553')
+names = fieldnames(props);
+for n=1:length(names)
+    if isa(props.(names{n}),'handle')
+        props = rmfield(props,names{n});
+    end
 end
+
+
+save(fullfile(path,file),'props')
 disp(['Saved ' fullfile(path,file)])
 
 set(allbut,'Enable','on')
