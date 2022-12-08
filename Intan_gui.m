@@ -127,6 +127,7 @@ uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton'
 
 %% loading methods
 % This is the app that loads that data into the guidata
+<<<<<<< Updated upstream
 function scalebar(hObject,eventdata)
 props = guidata(hObject);
 delete(findobj('Tag','scaleb'))
@@ -135,6 +136,20 @@ for a = 1:lenght(props.ax)
 end
 
 
+=======
+
+
+
+function scalebar(hObject,eventdata)
+props = guidata(hObject);
+delete(findobj('Tag','scaleb'));
+for a = 1:length(props.ax)
+    line(props.ax(a),[10 10],[0.0005 0.0015],'Color','k','Tag','scaleb')
+end
+
+
+
+>>>>>>> Stashed changes
 function loadapp(hObject,eventdata)
 props = guidata(hObject);
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
@@ -866,8 +881,11 @@ for d=1:nch
     
     if d~=nch
         props.plt(d).Parent.XTick = [];
+        props.plt(d).Parent.Box = 'off';
+        props.plt(d).Parent.XAxis.Color = 'w';
     else
         set(props.plt(d).Parent,'XTickMode','auto','XTickLabelMode', 'auto');
+        props.plt(d).Parent.Box = 'off';
     end
 end 
 
