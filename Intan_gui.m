@@ -139,6 +139,7 @@ uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton'
             'Callback',@updateroi,'String','fill ROI','Enable','off','Visible','on','ForegroundColor','w')
 
 
+
 function all_kframe(hObject,eventdata)
 props = guidata(hObject);
 [fnames, fpath] = uigetfile('*.tsm',"MultiSelect",'on');
@@ -165,12 +166,16 @@ end
 disp('finished')
 delete(buf)
 
+
+
 function scalebar(hObject,eventdata)
 props = guidata(hObject);
-delete(findobj('Tag','scaleb'))
-for a = 1:lenght(props.ax)
-    line(props.ax(a),[10 10],[0 0.0001],'Color','k','Tag','scaleb')
+delete(findobj('Tag','scaleb'));
+for a = 1:length(props.ax)
+    line(props.ax(a),[10 10],[0.0005 0.0015],'Color','k','Tag','scaleb')
 end
+
+
 %% loading methods
 % This is the app that loads that data into the guidata
 function loadapp(hObject,eventdata)
@@ -904,8 +909,11 @@ for d=1:nch
     
     if d~=nch
         props.plt(d).Parent.XTick = [];
+        props.plt(d).Parent.Box = 'off';
+        props.plt(d).Parent.XAxis.Color = 'w';
     else
         set(props.plt(d).Parent,'XTickMode','auto','XTickLabelMode', 'auto');
+        props.plt(d).Parent.Box = 'off';
     end
 end 
 
