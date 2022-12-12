@@ -161,7 +161,8 @@ str(:,4) = string(ch);
 str = join(str,'');
 
 uicontrol('Units','normalized','Position',[0.002 0.96 0.05 0.03],'Style','text','String','Select channel');
-uicontrol('Units','normalized','Position',[0.002 0.23 0.05 0.73],'Style','listbox','Max',length(ch),'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@chchannel);
+uicontrol('Units','normalized','Position',[0.002 0.23 0.05 0.73],'Style','listbox',...
+    'Max',length(ch),'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@chchannel);
 %[5 440 100 20] [5 40 100 400]
 
 % initialize axes

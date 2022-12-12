@@ -127,7 +127,9 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.2 0.1],'Style','pus
 uicontrol(cmpanel,'Units','normalized','Position',[0.8 0.7 0.1 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','Remove','Enable','off',...
               'Tag','filter','TooltipString','remove scale bar');
-
+uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.6 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@baseline,'String','remove baseline','Enable','off',...
+              'Tag','filter','TooltipString','detect');
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@imhistogram,'String','Image histogram','Enable','off',...
@@ -266,10 +268,21 @@ vsdprops.matprops.hidelist = matprops.props.hidelist;
 vsdprops.matprops.showidx = matprops.props.showidx;
 vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
+vsdprops.matprops.finfo = matprops.props.finfo;
+if isfield(matprops.props,'note')
+    vsdprops.matprops.note = matprops.props.note;
+else    
+    try
+        vsdprops.matprops.note = string(readcell(matprops.props.vsdprops.files{5,2}));
+        disp('Note.xlsx was not found in file.  Successfully loaded')
+    catch
+        warning([matprops.props.vsdprops.files{5,2} , 'not found'])
+    end  
+end
 vsdprops.matprops.Max = matprops.props.Max;
 vsdprops.matprops.tm = matprops.props.tm;
 vsdprops.matprops.ch = matprops.props.ch;
-vsdprops.matprops.finfo = matprops.props.finfo;
+
 vsdprops.matprops.im = matprops.props.im;
 vsdprops.matprops.det = matprops.props.det;
 vsdprops.matprops.kern_center = matprops.props.kern_center;
@@ -491,6 +504,16 @@ if intch && vsdch
         vsd = vsd';
         
         props.data = [intan ; vsd];
+        if isfield(vsdprops,'note')
+            for c=1:length(vsdprops.intan.ch)
+                nstr = replace(vsdprops.intan.ch(c),'A-','A');
+                idx = contains(vsdprops.note(:,1),nstr);
+                if any(idx) && ~ismissing(vsdprops.note(idx,2))           
+                    vsdprops.intan.ch(c) = join([replace(vsdprops.intan.ch(c),'-0','') vsdprops.note(idx,2)],'-');
+                end
+            end
+        end
+        
         props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
         props.tm = itm;
         showidx = [(1:size(intan,1)/2)  (1:size(vsd,1))+size(intan,1)];
@@ -503,6 +526,8 @@ if intch && vsdch
         props.finfo = vsdprops.intan.finfo;
         props.finfo.files = vsdprops.files;
         props.notes = vsdprops.intan.notes;
+        props.note = vsdprops.note;
+
     else
         if isfield(vsdprops,'vsd')
             intan = convert_uint(vsdprops.matprops.intan.data, vsdprops.matprops.intan.d2uint,...
@@ -533,6 +558,11 @@ if intch && vsdch
             props.finfo = vsdprops.matprops.intan.finfo;
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.intan.notes;
+            if isfield(vsdprops.matprops,'note')
+                props.note = vsdprops.matprops.note;disp('added')
+            else
+                keyboard
+            end
         else
             props.d2uint = vsdprops.matprops.d2uint;
             props.min = vsdprops.matprops.min;
@@ -547,6 +577,11 @@ if intch && vsdch
             props.finfo = vsdprops.matprops.finfo;
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.notes;
+            if isfield(vsdprops.matprops,'note')
+                props.note = vsdprops.matprops.note;disp('added')
+            else
+                keyboard
+            end
             props.im = vsdprops.matprops.im;
             props.det = vsdprops.matprops.det;
             props.kern_center = vsdprops.matprops.kern_center;
@@ -637,6 +672,8 @@ if didx==1
 end
 
 function cancelvsd(hObject,eventdata)
+vsdprops = guidata(hObject);
+set(vsdprops.allbut,'Enable','on')
 close(hObject.Parent)
 
 function setvsdfile(hObject,eventdata)
@@ -885,7 +922,7 @@ for d=1:nch
         props.plt(d) = plot(tm,data(idx(d),:));
         props.chk(d) = uicontrol(props.axpanel,'Units','pixels','Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
             'Value',false,'Visible','off','Tag',['c' num2str(d)]);
-        props.txt(d) = uicontrol(props.axpanel,'Units','pixels','Style','text','Position',[18 chpos  40 15],'String',props.showlist{d},'Visible','off','Tag',['t' num2str(d)]);
+        props.txt(d) = uicontrol(props.axpanel,'Units','pixels','Style','text','Position',[18 chpos  60 15],'String',props.showlist{d},'HorizontalAlignment','left','Visible','off','Tag',['t' num2str(d)]);
         props.ylim.scplus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[ props.axpanel.Position(3)-30 chpos+8  15 15],'String','+','Callback',@adjylim,'Visible','off','Tag',['p' num2str(d)],'TooltipString','increase yscale');
         props.ylim.scminus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-30 chpos-8  15 15],'String','-','Callback',@adjylim,'Visible','off','Tag',['m' num2str(d)],'TooltipString','decrease yscale');
         props.ylim.up(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-15 chpos+8  15 15],'String',char(708),'Callback',@adjylim,'Visible','off','Tag',['u' num2str(d)],'TooltipString','shift y-range up');
@@ -1429,6 +1466,7 @@ obj = findobj(hObject.Parent,'Tag','fripple','-or','Tag','fattlower','-or','Tag'
     '-or','Tag','fphigher','-or','Tag','fslower','-or','Tag','fshigher');
 set(obj,'ForegroundColor','k','TooltipString','')
 preview(hObject)
+
 %%
 function xcorrelation(hObject,eventdata)% calculates the cross correlation of the channels shown
 props = guidata(hObject);
@@ -1513,6 +1551,10 @@ guidata(hObject,props)
 function spiked(hObject,eventdata)% spike detection 
 props = guidata(hObject);
 spikedetection(props)
+
+function baseline(hObject,eventdata)% spike detection 
+props = guidata(hObject);
+rmbaseline(props)
 
 %% vsd frame image and ROI methods
 
