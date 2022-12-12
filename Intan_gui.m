@@ -52,7 +52,7 @@ csz = [nan 300 figsize(3)*0.25];% size of ROI and channels
 menusz = 90;
 insz = 250;
 % ----------------------------------
-axpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[0                       0     figsize(3)-sum(csz(2:3)) figsize(4)-menusz ],'Title','Graph','Tag','axpanel');
+axpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[0                       10     figsize(3)-sum(csz(2:3)) figsize(4)-menusz ],'Title','Graph','Tag','axpanel');
 chpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) insz   csz(2)                 figsize(4)-insz-menusz],'Title','channels','Tag','chpanel');
 cmpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) 0     sum(csz(2:3))-300       insz],'Title','Controls','Tag','cmpanel');
 inpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-300           0     300                     insz],'Title','File information','Tag','inpanel');
