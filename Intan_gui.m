@@ -1552,9 +1552,191 @@ function spiked(hObject,eventdata)% spike detection
 props = guidata(hObject);
 spikedetection(props)
 
-function baseline(hObject,eventdata)% spike detection 
+%% baseline app
+function baseline(hObject,eventdata)
 props = guidata(hObject);
-rmbaseline(props)
+% data can either be a 2D array or the structure properties from the intan
+% GUI. Each row is each channel.  If array, then time can optionally be
+% included as a second input.
+
+ofigsize = props.figsize;
+intan_tag = props.intan_tag;
+
+apptag = ['apptag' num2str(randi(1e4,1))];
+bfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3) ofigsize(4)*0.7],...
+    'Name','Remove Baseline','NumberTitle','off','Tag',apptag);
+
+
+m = uimenu('Text','Baseline tools');
+mi(1) = uimenu(m,'Text','Open Parameters','Callback',@opensaveparams,'Enable','off','Tag','open');
+mi(3) = uimenu(m,'Text','Save Parameters','Callback',@opensaveparams,'Enable','off','Tag','save');
+mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
+mi(4) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
+
+ch = props.ch;
+hideidx = props.hideidx;
+showidx = props.showidx;
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(ch),1);
+str(hideidx,2) = "gray";
+str(:,4) = string(ch);
+str = join(str,'');
+
+uicontrol('Units','normalized','Position',[0.002 0.96 0.07 0.03],'Style','text','String','Select channel');
+uicontrol('Units','normalized','Position',[0.002 0.23 0.07 0.73],'Style','listbox',...
+    'Max',length(ch),'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@chchannel);
+
+cpanel = uipanel('Title','Controls','Units','normalized','FontSize',12,'Position',[0.75 0 0.25 1],'Tag','cpanel');
+uicontrol(cpanel,'Units','normalized','Position',[0.31 0.8 0.1 0.05],'Style','edit',...
+    'String','2','Callback',@fitequation,'Enable','on','TooltipString','Number of coefficients','Tag','coeff');
+uicontrol(cpanel,'Units','normalized','Position',[0 0.79 0.3 0.05],'Style','text','String','Coefficients','HorizontalAlignment','right');
+
+uicontrol(cpanel,'Units','normalized','Position',[0.60 0.9 0.3 0.05],'Style','text','String','Select channel');
+uicontrol(cpanel,'Units','normalized','Position',[0.60 0.1 0.3 0.8],'Style','listbox','Max',length(ch),...
+    'Min',1,'String',str','Tag','chapply');
+uicontrol(cpanel,'Units','normalized','Position',[0.60 0.05 0.3 0.05],'Style','pushbutton','String','Apply','Callback',@applyrm); 
+
+
+ax = axes('Position',[0.12 0.1 0.6 0.8]);
+plt = plot(props.tm,props.data(showidx(1),:));hold on
+splt = plot(props.tm,zeros(1,length(props.tm)));hold on
+
+fun = makefun(3);
+
+guidata(bfig,intan_tag)
+
+[data,tm] = getdata(apptag);
+
+
+opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+p0 = ones(1,15);
+flimits = inf([1,15]);
+
+fparam = lsqcurvefit(fun,p0,tm,data,-flimits,flimits,opts);
+
+fplt = plot(props.tm,fun(fparam,props.tm));
+
+ax.YLim = [min(data) max(data)];
+
+props.blapp = struct('apptag',apptag,     'ax',ax,            'plt',plt,...
+                    'fplt',fplt,        'fun',fun,...
+                    'p0',p0,            'flimits',flimits,   'tm',tm,...
+                    'splt',splt,        'intan_tag',intan_tag);
+guidata(hObject,props)
+
+function chchannel(hObject,eventdata)
+intan_tag = guidata(hObject);
+props = guidata(findobj('Tag',intan_tag));
+idx = get(findobj(hObject,'Tag','channels'),'Value');
+set(props.blapp.plt,'YData',props.data(idx,:))
+fitequation(hObject)
+
+function [fun] = makefun(coef)
+estr = 'fun = @(p,x) 0 ';
+for c=1:2:coef*2
+    str = sprintf('+ p(%i).*(1 - exp((x - p(1))./-p(%i)))',c+1,c+2);
+    estr = [estr, str];
+end
+estr = [estr, ';'];
+eval(estr);
+
+function [data,tm] = getdata(apptag)
+fig = findobj('Tag',apptag);
+idx = get(findobj(fig,'Tag','channels'),'Value');
+intan_tag = guidata(fig);
+props = guidata(findobj('Tag',intan_tag));
+tm = props.tm;
+data = props.data(idx,:);
+data(isnan(data)) = 0;
+tm(data(:)==data(1)) = [];
+data(:,data(:)==data(1)) = [];
+
+function fitequation(hObject,eventdata)
+intan_tag = guidata(hObject);
+if nargin==2% for when function is called by the coeffient uicontrol
+    fig = hObject.Parent.Parent;
+else
+    fig = hObject.Parent;
+end
+props = guidata(findobj('Tag',intan_tag));
+disp('fitting')
+buf = uicontrol(fig,'Units','normalized','Position',[0.3 , 0.9, 0.4 0.1],...
+    'Style','text','String','Fitting...','FontSize',15);
+pause(0.1)
+
+idx = get(findobj(fig,'Tag','channels'),'Value');
+coef = str2double(get(findobj(fig,'Tag','coeff'),'String'));
+props.blapp.fun = makefun(coef);
+
+tm = props.tm;
+data = props.data(idx,:);
+data(isnan(data)) = 0;
+tm(data(:)==data(1)) = [];
+data(:,data(end,:)==data(end,1)) = [];
+flimits = props.blapp.flimits;
+p0 = props.blapp.p0;
+fun = props.blapp.fun;
+
+opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+ds = 64;%downsample
+tic
+fparam = lsqcurvefit(fun, p0, tm(1:ds:end), data(1:ds:end),-flimits, flimits,opts);
+toc
+set(props.blapp.fplt,'YData',props.blapp.fun(fparam,props.tm))
+sdata = props.data(idx,:) - props.blapp.fun(fparam,props.tm);
+sdata(props.tm<1) = 0; 
+set(props.blapp.splt,'YData',sdata)
+set(props.blapp.ax,'YLim',[min(props.data(idx,:)) max(sdata)])
+disp('plotted')
+guidata(findobj('Tag',intan_tag),props)
+delete(buf)
+
+
+function applyrm(hObject,eventdata)
+intan_tag = guidata(hObject);
+props = guidata(findobj('Tag',intan_tag));
+panel = hObject.Parent;
+hObject.String = 'Applying...';
+hObject.BackgroundColor = [0.6 1 0.6];
+pause(0.1)
+idx = get(findobj(panel,'Tag','chapply'),'Value');
+coef = str2double(get(findobj(panel,'Tag','coeff'),'String'));
+fun = makefun(coef);
+
+flimits = props.blapp.flimits;
+p0 = props.blapp.p0;
+
+props.blapp.applyparam = nan(length(idx),15);
+props.blapp.applyidx = idx;
+props.blapp.fun = fun;
+props.blapp.coef = coef;
+opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+ds = 64;%downsample
+
+props.bmin = min(props.data,[],2);
+props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16');
+
+for i=1:length(idx)
+    hObject.String = ['Applying..' num2str(i)];
+    pause(0.1)
+
+    tm = props.tm;
+    data = props.data(idx(i),:);
+    data(isnan(data)) = 0;
+    tm(data(:)==data(1)) = [];
+    data(:,data(end,:)==data(end,1)) = [];
+
+    fparam = lsqcurvefit(fun, p0, tm(1:ds:end), data(1:ds:end), -flimits, flimits, opts);
+    props.blapp.applyparam(i,:) = fparam;
+    sdata = props.data(idx(i),:) - fun(fparam,props.tm);
+    sdata(props.tm<1) = 0; 
+    props.data(idx(i),:) = sdata;
+end
+
+guidata(findobj('Tag',intan_tag),props)
+close(panel.Parent)
+plotdata(findobj('Tag',intan_tag))
+
 
 %% vsd frame image and ROI methods
 

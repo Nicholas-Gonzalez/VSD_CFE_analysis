@@ -62,7 +62,7 @@ uicontrol(cpanel,'Units','normalized','Position',[0 0.79 0.3 0.05],'Style','text
 
 uicontrol(cpanel,'Units','normalized','Position',[0.60 0.9 0.3 0.05],'Style','text','String','Select channel');
 uicontrol(cpanel,'Units','normalized','Position',[0.60 0.1 0.3 0.8],'Style','listbox','Max',length(ch),...
-    'Min',1,'String',str','Tag','channels');
+    'Min',1,'String',str','Tag','chapply');
 uicontrol(cpanel,'Units','normalized','Position',[0.60 0.05 0.3 0.05],'Style','pushbutton','String','Apply','Callback',@applyrm); 
 
 
@@ -86,7 +86,6 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                     'data',data,        'fplt',fplt,        'fun',fun,...
                     'p0',p0,            'flimits',flimits,   'tm',tm,...
                     'splt',splt,        'intan_tag',intan_tag))
-
 
 function chchannel(hObject,eventdata)
 props = guidata(hObject);
@@ -130,16 +129,28 @@ delete(buf)
 
 function applyrm(hObject,eventdata)
 props = guidata(hObject);
+fig = findobj('Tag',props.apptag);
 hObject.String = 'Applying...';
 hObject.BackgroundColor = [0.6 1 0.6];
 pause(0.1)
-idx = get(findobj('Tag','channels','Parent',fig),'Value');
+idx = get(findobj(fig,'Tag','chapply'),'Value');
 coef = str2double(get(findobj(fig,'Tag','coeff'),'String'));
 fun = makefun(coef);
-
+baseline.param = nan(length(idx),15);
+baseline.idx = idx;
+baseline.fun = fun;
+baseline.coef = coef;
+opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+ds = 64;%downsample
+for i=1:length(idx)
+    hObject.String = ['Applying..' num2str(i)];
+    pause(0.1)
+    baseline.param(i,:) = lsqcurvefit(baseline.fun,props.p0,props.tm(1:ds:end),props.data(idx(i),1:ds:end),-props.flimits,props.flimits,opts);
+end
 intan = findobj('Tag',props.intan_tag);
 iprops = guidata(intan);
-iprops.sdata = sdata;
+iprops.baseline = baseline;
 guidata(intan,iprops)
+iprops.applyhandle
 
 
