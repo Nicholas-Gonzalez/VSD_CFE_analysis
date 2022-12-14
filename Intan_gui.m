@@ -130,6 +130,9 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.8 0.7 0.1 0.1],'Style','pus
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.6 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@baseline,'String','remove baseline','Enable','off',...
               'Tag','filter','TooltipString','detect');
+uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.5 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@video,'String','Video','Enable','off',...
+              'Tag','filter','TooltipString','generate a video of recording');
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@imhistogram,'String','Image histogram','Enable','off',...
@@ -1677,19 +1680,19 @@ p0 = props.blapp.p0;
 fun = props.blapp.fun;
 
 opts = optimset('Display','off','Algorithm','levenberg-marquardt');
-ds = 64;%downsample
+ds = 20000;%downsample
 tic
 fparam = lsqcurvefit(fun, p0, tm(1:ds:end), data(1:ds:end),-flimits, flimits,opts);
 toc
+disp(num2str(256^2*toc/60))
 set(props.blapp.fplt,'YData',props.blapp.fun(fparam,props.tm))
 sdata = props.data(idx,:) - props.blapp.fun(fparam,props.tm);
-sdata(props.tm<1) = 0; 
+sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
 set(props.blapp.splt,'YData',sdata)
 set(props.blapp.ax,'YLim',[min(props.data(idx,:)) max(sdata)])
 disp('plotted')
 guidata(findobj('Tag',intan_tag),props)
 delete(buf)
-
 
 function applyrm(hObject,eventdata)
 intan_tag = guidata(hObject);
@@ -1710,7 +1713,7 @@ props.blapp.applyidx = idx;
 props.blapp.fun = fun;
 props.blapp.coef = coef;
 opts = optimset('Display','off','Algorithm','levenberg-marquardt');
-ds = 64;%downsample
+ds = 20000;%downsample
 
 props.bmin = min(props.data,[],2);
 props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
@@ -1729,13 +1732,91 @@ for i=1:length(idx)
     fparam = lsqcurvefit(fun, p0, tm(1:ds:end), data(1:ds:end), -flimits, flimits, opts);
     props.blapp.applyparam(i,:) = fparam;
     sdata = props.data(idx(i),:) - fun(fparam,props.tm);
-    sdata(props.tm<1) = 0; 
+    sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
     props.data(idx(i),:) = sdata;
 end
 
 guidata(findobj('Tag',intan_tag),props)
 close(panel.Parent)
 plotdata(findobj('Tag',intan_tag))
+
+%% video
+function video(hObject,eventdata)
+props = guidata(hObject);
+ofigsize = props.figsize;
+
+apptag = ['apptag' num2str(randi(1e4,1))];
+vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.7 ofigsize(4)*0.7],...
+    'Name','Remove Baseline','NumberTitle','off','Tag',apptag);
+
+vsd = props.files(contains(props.files(:,2),'tsm'),2);
+
+% if ~isfield(props,'imdata')
+    imdata = getimdata(vsd);
+    props.imdata = imdata;
+% end
+
+slidepos = 1;
+% props.imdata = reshape(props.imdata',[256, 256, 1500]);
+% uicontrol('Units','normalized','Position',[iax.Position(1) iax.Position(2)-0.05 iax.Position(3) 0.05],...
+%     'Style','slider','Value',slidepos,'Min',1,'Max',size(props.imdata,3),'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+
+imagesc(props.imdata(:,:,10))
+
+guidata(hObject,props)
+
+function imdatas = getimdata(vsd)
+warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
+info = fitsinfo(vsd);
+warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
+
+xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
+ysize = info.PrimaryData.Size(1);
+zsize = info.PrimaryData.Size(3); % Length of recording
+sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
+
+frameLength = xsize*ysize; % Frame length is the product of X and Y axis lengths;
+hoffset = info.PrimaryData.Offset;
+
+sidx = 6:100:zsize;
+
+imdata = zeros(length(sidx),ysize*xsize);
+fid = fopen(info.Filename,'r');
+for s=1:length(sidx)
+    offset = hoffset + ... Header information takes 2880 bytes.
+                (sidx(s)-1)*frameLength*2; % Because each integer takes two bytes.
+    
+    fseek(fid,offset,'bof');% Find target position on file.
+    
+    % Read data.
+    fdata = fread(fid,frameLength,'int16=>double');%'int16=>double');% single saves about 25% processing time and requires half of memory 
+    if length(fdata)<xsize*ysize
+        break
+    end
+    imdata(s,:) = fdata';% Format data.
+end
+fclose(fid);
+
+f0 = repmat(imdata(1,:),size(imdata,1),1);
+imdata = (imdata - f0)./f0;
+
+
+fun = @(p,x) p(1).*(1 - exp(x./-p(2))) - p(3).*(1 - exp(x./-p(4)));
+p0 = ones(1,4);
+flimits = inf([1,4]);
+opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+
+tm = (sidx*sr)';
+
+imdatas = imdata;
+for p=1:size(imdata,2)
+    fparam = lsqcurvefit(fun,p0,tm,imdata(:,p),-flimits,flimits,opts);
+    imdatas(:,p) = imdata(:,p) - fun(fparam,tm);
+    if mod(p,100)==0
+        disp(num2str(p/size(imdata,2)))
+    end
+end
+imdatas = reshape(imdatas',[256, 256, 1500]);
 
 
 %% vsd frame image and ROI methods
