@@ -388,8 +388,12 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
         else
             set(tsm_prog,'String',"loading...",'ForegroundColor','b');
             pause(0.1)
-%             [~, vsdprops.vsd.fparam, vsdprops.vsd.fun] = getimdata(vsd);
-            [data,tm,info] = extractTSM(tsm, det, vsdprops.vsd.fparam, vsdprops.vsd.fun);
+            [~, fparam, ~] = getimdata(tsm);
+            vsdprops.vsd.fparam = fparam;
+            fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
+            save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
+            [data,tm,info,imdata,imtm,imdataf] = extractTSM(tsm{1}, det, fparam, fun);
+            save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
             data = data';
             vsdprops.vsd.min = min(data,[],2);
             vsdprops.vsd.d2uint = repelem(2^16,size(data,1),1)./range(data,2);
@@ -1758,20 +1762,24 @@ vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
 % if ~isfield(props,'imdata')
-    imdata = getimdata(vsd);
+    [imdatas,fparam,fun,imdata,tm] = getimdata(vsd);
     props.imdata = imdata;
 % end
-
+assignin('base','imdata',imdata)
+assignin('base','imdatas',imdata)
+assignin('base','ifparam',fparam)
+assignin('base','ifun',fun)
+assignin('base','itm',tm)
 slidepos = 1;
 % props.imdata = reshape(props.imdata',[256, 256, 1500]);
 % uicontrol('Units','normalized','Position',[iax.Position(1) iax.Position(2)-0.05 iax.Position(3) 0.05],...
 %     'Style','slider','Value',slidepos,'Min',1,'Max',size(props.imdata,3),'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
 
-imagesc(props.imdata(:,:,10))
+% imagesc(props.imdata(:,:,10))
 
 guidata(hObject,props)
 
-function [imdatas,fparam,fun] = getimdata(vsd)
+function [imdatas,fparam,fun,imdata,tm] = getimdata(vsd)
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
@@ -1784,7 +1792,7 @@ sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryDat
 frameLength = xsize*ysize; % Frame length is the product of X and Y axis lengths;
 hoffset = info.PrimaryData.Offset;
 
-sidx = 6:100:zsize;
+sidx = 6:800:zsize;
 
 imdata = zeros(length(sidx),ysize*xsize);
 fid = fopen(info.Filename,'r');
@@ -1814,19 +1822,23 @@ opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 
 tm = (sidx*sr)';
 
-disp(['calculate pixel bleaching ' fpath])
-disp(['          ' repelem('_',round(numChunks/10))])
+disp(['calculate pixel bleaching ' vsd{1}])
+disp(['          ' repmat('|____________',1,4) '|']);%52
 fprintf('Progress: ')
 
 imdatas = imdata;
+fparam = nan(xsize*ysize,length(p0));
+tic
 for p=1:size(imdata,2)
-    fparam = lsqcurvefit(fun,p0,tm,imdata(:,p),-flimits,flimits,opts);
-    imdatas(:,p) = imdata(:,p) - fun(fparam,tm);
-    if mod(p,10)==0
+    fparam(p,:) = lsqcurvefit(fun,p0,tm,imdata(:,p),-flimits,flimits,opts);
+    imdatas(:,p) = imdata(:,p) - fun(fparam(p,:),tm);
+    if mod(p,round(size(imdata,2)/52))==0
         fprintf('|')
     end
 end
-imdatas = reshape(imdatas',[256, 256, 1500]);
+toc
+fprintf('\n')
+imdatas = reshape(imdatas',[256, 256, length(sidx)]);
 
 
 %% vsd frame image and ROI methods

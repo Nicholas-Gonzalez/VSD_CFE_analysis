@@ -1,11 +1,11 @@
-function [data,tm,info] = extractTSM(fpath, detpath, pixelparam,pixelfun)
+function [data,tm,info,imdata,imtm,imdataf] = extractTSM(fpath, detpath, pixelparam,pixelfun)
 
 if nargin==0
     [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
     fpath = fullfile(path,file);
 end
 
-if nargin>2
+if nargin<2
     [dfile, dpath, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.det','Select det file');
     detpath = fullfile(dpath,dfile);
 end
@@ -37,6 +37,8 @@ tm = 0:sr:zsize*sr-sr;
 % Compute the number of chunks to extract
 numChunks = ceil(zsize/chunkLength);
 
+imtm = 0:chunkLength*sr:zsize*sr;
+
 switch darkFrameMode
     case 'builtin'
         % Obtains a dark frame by indexing one frame after the end of tsm
@@ -58,13 +60,23 @@ end
 [det,~,~,kernel_size,kernpos]=readdet(detpath);
 numKern = length(kernpos);
 
+if nargin>2
+    pixelparam = permute(pixelparam,[1 3 2]);
+    pixelparam = repmat(pixelparam,1,chunkLength,1);
+    chunktm = repmat((0:chunkLength-1)*sr,xsize*ysize,1);
+end
+
 % Iterate data extraction through chunks
 kernelData = nan(zsize,numKern);
 disp(['reading ' fpath])
-disp(['          ' repelem('_',round(numChunks/10))])
+disp(['          ' repmat('|______________',1,4) '|']);
 fprintf('Progress: ')
+
+imdata = nan(ysize,xsize,numChunks);
+imdataf = nan(ysize,xsize,numChunks);
+tic
 for a = 1:numChunks
-    if mod(a,10)==0
+    if mod(a,round(numChunks/60))==0
         fprintf('|')
     end
     dataChunk = readTSM(info,chunkLength,a,false);
@@ -72,25 +84,43 @@ for a = 1:numChunks
     dataChunk = dataChunk - darkFrame;
     
     dataChunk = reshape(dataChunk,xsize*ysize,alength); % Reshape in two dimensions to facilitate indexing.
+    idx = 1:size(dataChunk,2);
 
-    chunkWin = 1+alength*(a-1):alength*a; % Index of the temporal window of the chunk.
+    if a==1
+        f0 = dataChunk(:,end);
+        f0 = repmat(f0,1,size(dataChunk,2));
+    end
 
-    chunktm = chunkWin*sr;
+    dataChunk = (dataChunk - f0(:,idx))./f0(:,idx);
+
+    if nargin>2
+        imdata(:,:,a) = reshape(dataChunk(:,1),ysize,xsize);   
+        imdatafp = pixelfun(pixelparam(:,idx,1), pixelparam(:,idx,2), pixelparam(:,idx,3),...
+            pixelparam(:,idx,4), chunktm(:,idx)+a*chunkLength*sr);
+        imdataf(:,:,a) = reshape(imdatafp(:,1),ysize,xsize); 
+        dataChunk = dataChunk - imdatafp;
+    end
+    chunkWin = idx + chunkLength*(a-1);% Index of the temporal window of the chunk.
+%     chunkWin = 1+chunkLength*(a-1):chunkLength*a; % Index of the temporal window of the chunk.
+
+%     chunktm = chunkWin*sr;
     
     for b = 1:numKern
         kIdx = det(kernpos(b)+1:kernpos(b)+kernel_size(b)); % Index of current kernel.
         
         kernelData(chunkWin,b) = mean(dataChunk(kIdx,:),1)';        
     end
+    
 end
+toc
 fprintf('\n')
 data = kernelData;
 
 %% Data pre-processsing and normalization
 
-% Find first fully illuminated frame.
+%Find first fully illuminated frame.
 mData = mean(data,2);
-darkThr = mean(darkFrame,'all')*shutterThr;
+darkThr = mean(mean(data(1,:)),'all')*shutterThr;
 light = mData > darkThr;
 firstLightFrame = find(light); 
 firstLightFrame = firstLightFrame(shutterOpenDur); % Note that this is not the true first fully illuminated frame, but a fully illuminated frame that follows the onset of shutter opening by a margin of safety specified by 'shutterOpenDur'.
@@ -118,6 +148,6 @@ if any(diff(light)==-1)
 end
 
 % Normalize data
-baseline = repmat(baseline,[zsize 1]);
-data = (data - baseline)./baseline;
+% baseline = repmat(baseline,[zsize 1]);
+% data = (data - baseline)./baseline;
 
