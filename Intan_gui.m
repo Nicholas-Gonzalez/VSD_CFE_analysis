@@ -388,7 +388,8 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
         else
             set(tsm_prog,'String',"loading...",'ForegroundColor','b');
             pause(0.1)
-            [data,tm,info] = extractTSM(tsm,det);
+%             [~, vsdprops.vsd.fparam, vsdprops.vsd.fun] = getimdata(vsd);
+            [data,tm,info] = extractTSM(tsm, det, vsdprops.vsd.fparam, vsdprops.vsd.fun);
             data = data';
             vsdprops.vsd.min = min(data,[],2);
             vsdprops.vsd.d2uint = repelem(2^16,size(data,1),1)./range(data,2);
@@ -490,6 +491,7 @@ if intch && vsdch
         if isfield(vsdprops,'vsd')
             vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
             tm = vsdprops.vsd.tm;
+            props.fparam = vsdprops.vsd.fparam;
         else
             vsd = convert_uint(vsdprops.matprops.vsd.data, vsdprops.matprops.vsd.d2uint,...
                 vsdprops.matprops.vsd.min,'double');
@@ -530,7 +532,6 @@ if intch && vsdch
         props.finfo.files = vsdprops.files;
         props.notes = vsdprops.intan.notes;
         props.note = vsdprops.note;
-
     else
         if isfield(vsdprops,'vsd')
             intan = convert_uint(vsdprops.matprops.intan.data, vsdprops.matprops.intan.d2uint,...
@@ -562,6 +563,11 @@ if intch && vsdch
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.intan.notes;
             if isfield(vsdprops.matprops,'note')
+                props.note = vsdprops.matprops.note;disp('added')
+            else
+                keyboard
+            end
+            if isfield(vsdprops.vsd.fparam,'note')
                 props.note = vsdprops.matprops.note;disp('added')
             else
                 keyboard
@@ -1765,7 +1771,7 @@ imagesc(props.imdata(:,:,10))
 
 guidata(hObject,props)
 
-function imdatas = getimdata(vsd)
+function [imdatas,fparam,fun] = getimdata(vsd)
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
@@ -1808,12 +1814,16 @@ opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 
 tm = (sidx*sr)';
 
+disp(['calculate pixel bleaching ' fpath])
+disp(['          ' repelem('_',round(numChunks/10))])
+fprintf('Progress: ')
+
 imdatas = imdata;
 for p=1:size(imdata,2)
     fparam = lsqcurvefit(fun,p0,tm,imdata(:,p),-flimits,flimits,opts);
     imdatas(:,p) = imdata(:,p) - fun(fparam,tm);
-    if mod(p,100)==0
-        disp(num2str(p/size(imdata,2)))
+    if mod(p,10)==0
+        fprintf('|')
     end
 end
 imdatas = reshape(imdatas',[256, 256, 1500]);

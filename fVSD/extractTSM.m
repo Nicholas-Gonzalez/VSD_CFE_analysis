@@ -1,4 +1,4 @@
-function [data,tm,info] = extractTSM(fpath, detpath)
+function [data,tm,info] = extractTSM(fpath, detpath, pixelparam,pixelfun)
 
 if nargin==0
     [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
@@ -74,6 +74,8 @@ for a = 1:numChunks
     dataChunk = reshape(dataChunk,xsize*ysize,alength); % Reshape in two dimensions to facilitate indexing.
 
     chunkWin = 1+alength*(a-1):alength*a; % Index of the temporal window of the chunk.
+
+    chunktm = chunkWin*sr;
     
     for b = 1:numKern
         kIdx = det(kernpos(b)+1:kernpos(b)+kernel_size(b)); % Index of current kernel.
