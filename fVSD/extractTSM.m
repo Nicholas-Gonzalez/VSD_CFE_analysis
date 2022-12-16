@@ -35,7 +35,7 @@ zsize = info.PrimaryData.Size(3); % Length of recording
 sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
 tm = 0:sr:zsize*sr-sr;
 % Compute the number of chunks to extract
-numChunks = ceil(zsize/chunkLength);
+numChunks = floor(zsize/chunkLength);
 
 imtm = 0:chunkLength*sr:zsize*sr;
 
@@ -74,6 +74,7 @@ fprintf('Progress: ')
 
 imdata = nan(ysize,xsize,numChunks);
 imdataf = nan(ysize,xsize,numChunks);
+shutter = nan(zsize,1);
 tic
 for a = 1:numChunks
     if mod(a,round(numChunks/60))==0
@@ -84,13 +85,14 @@ for a = 1:numChunks
     dataChunk = dataChunk - darkFrame;
     
     dataChunk = reshape(dataChunk,xsize*ysize,alength); % Reshape in two dimensions to facilitate indexing.
-    idx = 1:size(dataChunk,2);
+    idx = 1:alength;
 
     if a==1
         f0 = dataChunk(:,end);
         f0 = repmat(f0,1,size(dataChunk,2));
     end
-
+    chunkWin = idx + chunkLength*(a-1);% Index of the temporal window of the chunk.
+    shutter(chunkWin) = mean(dataChunk);
     dataChunk = (dataChunk - f0(:,idx))./f0(:,idx);
 
     if nargin>2
@@ -100,7 +102,7 @@ for a = 1:numChunks
         imdataf(:,:,a) = reshape(imdatafp(:,1),ysize,xsize); 
         dataChunk = dataChunk - imdatafp;
     end
-    chunkWin = idx + chunkLength*(a-1);% Index of the temporal window of the chunk.
+    
 %     chunkWin = 1+chunkLength*(a-1):chunkLength*a; % Index of the temporal window of the chunk.
 
 %     chunktm = chunkWin*sr;
