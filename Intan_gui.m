@@ -388,12 +388,12 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
         else
             set(tsm_prog,'String',"loading...",'ForegroundColor','b');
             pause(0.1)
-            [~, fparam, ~] = getimdata(tsm);
-            vsdprops.vsd.fparam = fparam;
-            fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
-            save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
-            [data,tm,info,imdata,imtm,imdataf] = extractTSM(tsm{1}, det, fparam, fun);
-            save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
+%             [~, fparam, ~] = getimdata(tsm);
+%             vsdprops.vsd.fparam = fparam;
+%             fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
+%             save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
+            [data,tm,info,imdata,imtm,imdataf] = extractTSM(tsm{1}, det);
+%             save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
             data = data';
             vsdprops.vsd.min = min(data,[],2);
             vsdprops.vsd.d2uint = repelem(2^16,size(data,1),1)./range(data,2);
@@ -495,7 +495,9 @@ if intch && vsdch
         if isfield(vsdprops,'vsd')
             vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
             tm = vsdprops.vsd.tm;
-            props.fparam = vsdprops.vsd.fparam;
+            if isfield(vsdprops.vsd,'fparam')
+                props.fparam = vsdprops.vsd.fparam;
+            end
         else
             vsd = convert_uint(vsdprops.matprops.vsd.data, vsdprops.matprops.vsd.d2uint,...
                 vsdprops.matprops.vsd.min,'double');
@@ -1070,6 +1072,7 @@ if contains(hObject.String,char(8595))
     sidx = flipud(sidx);
 end
 props.showlist = props.showlist(sidx);
+props.showidx = props.showidx;
 set(findobj('Tag','showgraph'),'String',props.showlist);
 guidata(hObject,props)
 plotdata(findobj('Tag',props.intan_tag))
@@ -1618,13 +1621,13 @@ fun = makefun(3);
 guidata(bfig,intan_tag)
 
 [data,tm] = getdata(apptag);
-
+ds = 20000;%downsample
 
 opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 p0 = ones(1,15);
 flimits = inf([1,15]);
 
-fparam = lsqcurvefit(fun,p0,tm,data,-flimits,flimits,opts);
+fparam = lsqcurvefit(fun,p0,tm(1:ds:end),data(1:ds:end),-flimits,flimits,opts);
 
 fplt = plot(props.tm,fun(fparam,props.tm));
 
@@ -1754,6 +1757,7 @@ plotdata(findobj('Tag',intan_tag))
 function video(hObject,eventdata)
 props = guidata(hObject);
 ofigsize = props.figsize;
+disp('video')
 
 apptag = ['apptag' num2str(randi(1e4,1))];
 vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.7 ofigsize(4)*0.7],...
@@ -1761,25 +1765,102 @@ vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.
 
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
-% if ~isfield(props,'imdata')
-    [imdatas,fparam,fun,imdata,tm] = getimdata(vsd);
-    props.imdata = imdata;
-% end
-assignin('base','imdata',imdata)
-assignin('base','imdatas',imdata)
-assignin('base','ifparam',fparam)
-assignin('base','ifun',fun)
-assignin('base','itm',tm)
-slidepos = 1;
-% props.imdata = reshape(props.imdata',[256, 256, 1500]);
-% uicontrol('Units','normalized','Position',[iax.Position(1) iax.Position(2)-0.05 iax.Position(3) 0.05],...
-%     'Style','slider','Value',slidepos,'Min',1,'Max',size(props.imdata,3),'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+if ~isfield(props,'video')
+    [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,1);
+    props.video.imdata = permute(props.video.imdata,[2,1,3]);
+    props.video.tm = tm;
+    props.video.fun = fun;
+    props.video.fparam = fparam;
+end
 
-% imagesc(props.imdata(:,:,10))
+slidepos = 10;
+sf = diff(props.video.tm(1:2));
+
+iax = axes('Units','normalized','Position',[0.3 0.35 0.4 0.6]);
+props.video.iax = iax;
+iaxpos = iax.Position;
+props.video.img = imagesc(props.video.imdata(:,:,slidepos));
+climv = [-0.02 0.02];
+caxis(iax, climv)
+props.video.climv = climv;
+
+iax.XTick = [];
+iax.YTick = [];
+
+
+colorbar('Units','normalized','Position',[0.7 0.35 0.01 0.6]);
+
+
+roidx = props.showlist(contains(props.showlist,'V-'));
+roidx = str2double(replace(roidx,'V-',''));
+
+for r=1:length(props.kernpos)
+    if any(roidx==r)
+       props.roi(r) = text(iax,props.kern_center(r,1),props.kern_center(r,2), ...
+                num2str(r),'Color','k','HorizontalAlignment','center','Clipping','on');
+    else
+        delete(props.roi(r))
+        props.roi(r) = gobjects(1);
+    end
+end
+
+idur = size(props.video.imdata,3);
+uicontrol('Units','normalized','Position',[iaxpos(1) iaxpos(2)-0.03 iaxpos(3) 0.03],...
+    'Style','slider','Value',slidepos,'Min',1,'Max',size(props.video.imdata,3),'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+uicontrol('Units','normalized','Position',[iaxpos(1) sum(iaxpos([2 4])) 0.03 0.03],...
+    'Style','togglebutton','Tag','Raw','String','Raw','Callback',@raw,'Enable','on');
+
+xsize = size(props.video.imdata,2);
+props.video.txtframe = text(xsize-85,10,sprintf('Frame: %i',slidepos),'FontSize',15);
+txttm = text(xsize-85, 25, sprintf('Time: %0.1f s',length(props.video.tm)*slidepos/idur*sf), 'FontSize',15);
+
+props.video.txttm = txttm;
+
+
+ax(1) = axes('Units','normalized','Position',[0.3 0.18 0.4 0.12]);
+plt(1) = plot(props.tm,props.data(props.showidx(1),:),'Tag','plt1');
+ax(2) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.12]);
+plt(2) = plot(props.tm,props.data(props.showidx(2),:),'Tag','plt2');
+set(ax,'XLim',[min(props.tm) max(props.tm)]);
+ax(3) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.24],'Color','none','Visible','off');
+ref = rectangle('Position',[10 0 sf 1],'FaceColor','k','Tag','ref');
+linkaxes(ax,'x')
+
+ch = props.ch;
+hideidx = props.hideidx;
+showidx = props.showidx;
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(ch),1);
+str(hideidx,2) = "gray";
+str(:,4) = string(ch);
+str = join(str,'');
+
+
+
+uicontrol('Units','normalized','Position',[0.2 0.20 0.07 0.05],'Style','popupmenu',...
+    'Max',length(ch),'Min',1,'String',str','Tag','channels1','Value',showidx(1),'Callback',@chimch);
+
+uicontrol('Units','normalized','Position',[0.2 0.08 0.07 0.05],'Style','popupmenu',...
+    'Max',length(ch),'Min',1,'String',str','Tag','channels2','Value',showidx(2),'Callback',@chimch);
+
+uicontrol('Units','normalized','Position',[0.4 0.30 0.06 0.02],'Style','pushbutton',...
+    'Tag','Raw','String','Set reference frame','Callback',@setreference,'Enable','on');
 
 guidata(hObject,props)
+guidata(vfig,props.intan_tag)
 
-function [imdatas,fparam,fun,imdata,tm] = getimdata(vsd)
+function raw(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+if hObject.Value
+    set(props.video.img,'CData',props.im) 
+    caxis(props.video.iax,'auto')
+else
+    frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
+    set(props.video.img,'CData',props.video.imdata(:,:,frame))
+    caxis(props.video.iax,props.video.climv)
+end
+
+function [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,ref)
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
@@ -1811,7 +1892,7 @@ for s=1:length(sidx)
 end
 fclose(fid);
 
-f0 = repmat(imdata(1,:),size(imdata,1),1);
+f0 = repmat(imdata(ref,:),size(imdata,1),1);
 imdata = (imdata - f0)./f0;
 
 
@@ -1839,6 +1920,40 @@ end
 toc
 fprintf('\n')
 imdatas = reshape(imdatas',[256, 256, length(sidx)]);
+
+function chframe(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+frame = round(hObject.Value);
+set(hObject,'Value',frame)
+set(props.video.img,'CData',props.video.imdata(:,:,frame))
+idur = get(hObject,'Max');
+sf = diff(props.video.tm(1:2));
+props.video.txtframe.String = sprintf('Frame: %i',frame);
+% props.txttm.String = sprintf('Time: %0.1f ms',(props.W(1) + length(props.W)*frame/idur)*sf*1000);
+props.video.txttm.String = sprintf('Time: %0.1f s',(length(props.video.tm)*frame/idur)*sf);
+guidata(intan,props)
+
+function chimch(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+ax = findobj(hObject.Parent,'Tag',['plt' num2str(hObject.Tag(end))]);
+set(ax,'YData',props.data(hObject.Value,:))
+
+function setreference(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+[x,~] = ginput(1);
+refr = find(props.video.tm>x,1);
+ref = findobj(hObject.Parent,'Tag','ref');
+ref.Position(1) = x;
+pause(0.1)
+
+f0 = props.video.imdata(:,:,refr);
+props.video.imdata = props.video.imdata - repmat(f0,1,1,size(props.video.imdata,3));
+slidepos = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
+set(props.video.img,'CData',props.video.imdata(:,:,slidepos))
+guidata(intan,props)
 
 
 %% vsd frame image and ROI methods

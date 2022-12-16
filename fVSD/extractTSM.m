@@ -15,7 +15,7 @@ end
 chunkLength = 485;
 shutterThr = 2; % Threshold for detection of initial shutter opening. (In times the mean dark frame intensity.)
 baselineFrames = 10; % Number of frames to average to get the baseline light intesity.
-shutterOpenDur = 40; % Number of frames during the duration it takes to open the shutter.
+shutterOpenDur = 400; % Number of frames during the duration it takes to open the shutter.
 
 darkFrameMode = 'builtin'; % 'builtin' uses the built-in dark frame at the end of .tsm files.
                             % 'firstframes' averages the first n frames to obtain the dark frame. 
@@ -121,15 +121,21 @@ data = kernelData;
 %% Data pre-processsing and normalization
 
 %Find first fully illuminated frame.
-mData = mean(data,2);
-darkThr = mean(mean(data(1,:)),'all')*shutterThr;
-light = mData > darkThr;
-firstLightFrame = find(light); 
-firstLightFrame = firstLightFrame(shutterOpenDur); % Note that this is not the true first fully illuminated frame, but a fully illuminated frame that follows the onset of shutter opening by a margin of safety specified by 'shutterOpenDur'.
+light = shutter>500;
+firstLightFrame = find(light,1)+ shutterOpenDur; 
 
 % Smooth shutter off
-baseline = mean(data(firstLightFrame:firstLightFrame+baselineFrames,:));
-data(1:firstLightFrame,:) = repmat(baseline,[firstLightFrame 1]);
+p0 = [0 0];
+flimits = inf([1,2]);
+opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+
+btm = firstLightFrame:firstLightFrame+100;
+x = 1:max(btm);
+fun = @(p,x) p(1).*exp(x./200) - p(2); 
+for i=1:size(data,2)
+    fp = lsqcurvefit(fun,p0,btm',data(btm,i),-flimits,flimits,opts);
+    data(x,i) = fun(fp,x);
+end
 
 % Smooth off instances of the bulb turning off/flickering
 if any(diff(light)==-1)
