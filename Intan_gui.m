@@ -272,6 +272,9 @@ vsdprops.matprops.showidx = matprops.props.showidx;
 vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
+if isfield(matprops.props,'video')
+    vsdprops.matprops.video = matprops.props.video;
+end
 if isfield(matprops.props,'note')
     vsdprops.matprops.note = matprops.props.note;
 else    
@@ -569,14 +572,10 @@ if intch && vsdch
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.intan.notes;
             if isfield(vsdprops.matprops,'note')
-                props.note = vsdprops.matprops.note;disp('added')
-            else
-                keyboard
+                props.note = vsdprops.matprops.note;
             end
-            if isfield(vsdprops.vsd.fparam,'note')
-                props.note = vsdprops.matprops.note;disp('added')
-            else
-                keyboard
+            if isfield(vsdprops.matprops,'video')
+                props.video = vsdprops.matprops.video;disp('added video')
             end
         else
             props.d2uint = vsdprops.matprops.d2uint;
@@ -593,9 +592,10 @@ if intch && vsdch
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.notes;
             if isfield(vsdprops.matprops,'note')
-                props.note = vsdprops.matprops.note;disp('added')
-            else
-                keyboard
+                props.note = vsdprops.matprops.note;
+            end
+            if isfield(vsdprops.matprops,'video')
+                props.video = vsdprops.matprops.video;disp('added video')
             end
             props.im = vsdprops.matprops.im;
             props.det = vsdprops.matprops.det;
@@ -1763,15 +1763,25 @@ apptag = ['apptag' num2str(randi(1e4,1))];
 vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.7 ofigsize(4)*0.7],...
     'Name','Remove Baseline','NumberTitle','off','Tag',apptag);
 
+
+pax = axes('Units','normalized','Position',[0.72 0.05 0.25 0.05],'XTick',[],'YTick',[],'Box','on');
+prog = rectangle('Position',[0 0 0 1],'FaceColor','b','Tag','progress');
+pax.XLim = [0 1];
+
+uicontrol('Units','normalized','Position',[0.72 0.13 0.25 0.04],...
+    'Style','text','Tag','progtxt','String',' ','Enable','on');
+
+pause(0.1)
+
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
-if ~isfield(props,'video')
-    [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,1);
-    props.video.imdata = permute(props.video.imdata,[2,1,3]);
+% if ~isfield(props,'video')
+    [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,1,vfig);
+    props.video.imdata = permute(imdatas,[2,1,3]);
     props.video.tm = tm;
     props.video.fun = fun;
     props.video.fparam = fparam;
-end
+% end
 
 slidepos = 10;
 sf = diff(props.video.tm(1:2));
@@ -1845,6 +1855,7 @@ uicontrol('Units','normalized','Position',[0.2 0.08 0.07 0.05],'Style','popupmen
 uicontrol('Units','normalized','Position',[0.4 0.30 0.06 0.02],'Style','pushbutton',...
     'Tag','Raw','String','Set reference frame','Callback',@setreference,'Enable','on');
 
+
 guidata(hObject,props)
 guidata(vfig,props.intan_tag)
 
@@ -1860,7 +1871,7 @@ else
     caxis(props.video.iax,props.video.climv)
 end
 
-function [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,ref)
+function [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,ref,vfig)
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
@@ -1870,13 +1881,25 @@ ysize = info.PrimaryData.Size(1);
 zsize = info.PrimaryData.Size(3); % Length of recording
 sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
 
-frameLength = xsize*ysize; % Frame length is the product of X and Y axis lengths;
+interval = 800;
+
+frameLength = xsize*ysize*interval; % Frame length is the product of X and Y axis lengths;
 hoffset = info.PrimaryData.Offset;
 
-sidx = 6:800:zsize;
+sidx = 6:interval:zsize;
 
 imdata = zeros(length(sidx),ysize*xsize);
+
+outp = round(size(imdata,1)/52);
+
+% disp(['reding image file ' vsd{1}])
+% disp(['          ' repmat('|____________',1,4) '|']);%52
+% fprintf('Progress: ')
+progress = findobj(vfig,'Tag','progress');
+set(findobj(vfig,'Tag','progtxt'),'String',['reding image file ' vsd{1}]);
+
 fid = fopen(info.Filename,'r');
+tic
 for s=1:length(sidx)
     offset = hoffset + ... Header information takes 2880 bytes.
                 (sidx(s)-1)*frameLength*2; % Because each integer takes two bytes.
@@ -1884,13 +1907,29 @@ for s=1:length(sidx)
     fseek(fid,offset,'bof');% Find target position on file.
     
     % Read data.
-    fdata = fread(fid,frameLength,'int16=>double');%'int16=>double');% single saves about 25% processing time and requires half of memory 
-    if length(fdata)<xsize*ysize
+    fdata = fread(fid,frameLength,'int16=>single');%'int16=>double');% single saves about 25% processing time and requires half of memory 
+   
+    if length(fdata)<frameLength
+        s = s - 1;
         break
     end
-    imdata(s,:) = fdata';% Format data.
+
+    fdata = reshape(fdata,[xsize*ysize interval]);
+
+    imdata(s,:) = mean(fdata,2)';% Format data.
+
+    if mod(s,1)==0
+        set(progress,'Position',[0 0 s/(length(sidx)-1) 1]);pause(0.05)
+%         fprintf('|')
+    end
 end
+toc
+fprintf('\n')
 fclose(fid);
+
+sidx = sidx(1:s);
+imdata = imdata(1:s,:);
+% % warning('still not removing all the zeros')%<--------
 
 f0 = repmat(imdata(ref,:),size(imdata,1),1);
 imdata = (imdata - f0)./f0;
@@ -1903,9 +1942,10 @@ opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 
 tm = (sidx*sr)';
 
-disp(['calculate pixel bleaching ' vsd{1}])
-disp(['          ' repmat('|____________',1,4) '|']);%52
-fprintf('Progress: ')
+% disp(['calculate pixel bleaching ' vsd{1}])
+% disp(['          ' repmat('|____________',1,4) '|']);%52
+% fprintf('Progress: ')
+set(findobj(vfig,'Tag','progtxt'),'String',['calculate pixel bleaching ' vsd{1}]);
 
 imdatas = imdata;
 fparam = nan(xsize*ysize,length(p0));
@@ -1913,8 +1953,9 @@ tic
 for p=1:size(imdata,2)
     fparam(p,:) = lsqcurvefit(fun,p0,tm,imdata(:,p),-flimits,flimits,opts);
     imdatas(:,p) = imdata(:,p) - fun(fparam(p,:),tm);
-    if mod(p,round(size(imdata,2)/52))==0
-        fprintf('|')
+    if mod(p,500)==0%round(size(imdata,2)/52))==0
+         set(progress,'Position',[0 0 p/size(imdata,2) 1]);pause(0.01)
+%         fprintf('|')
     end
 end
 toc
@@ -2125,6 +2166,13 @@ names = fieldnames(props);
 for n=1:length(names)
     if isa(props.(names{n}),'handle')
         props = rmfield(props,names{n});
+    elseif strcmp(names(n),'video')
+        vnames = fieldnames(props.video);
+        for v=1:length(vnames)
+            if isa(props.video.(vnames{v}),'handle')
+                props.video = rmfield(props.video,vnames{v});
+            end
+        end
     end
 end
 
