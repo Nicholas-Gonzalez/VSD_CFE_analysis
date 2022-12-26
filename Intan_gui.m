@@ -1761,38 +1761,41 @@ disp('video')
 
 apptag = ['apptag' num2str(randi(1e4,1))];
 vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.7 ofigsize(4)*0.7],...
-    'Name','Remove Baseline','NumberTitle','off','Tag',apptag);
+    'Name','Make Video','NumberTitle','off','Tag',apptag);
 
 
-pax = axes('Units','normalized','Position',[0.72 0.05 0.25 0.05],'XTick',[],'YTick',[],'Box','on');
+pax = axes('Units','normalized','Position',[10 0.05 0.25 0.05],'XTick',[],'YTick',[],'Box','on','Tag','progax');
 prog = rectangle('Position',[0 0 0 1],'FaceColor','b','Tag','progress');
 pax.XLim = [0 1];
 
-uicontrol('Units','normalized','Position',[0.72 0.13 0.25 0.04],...
+uicontrol('Units','normalized','Position',[0.72 0.12 0.25 0.04],...
     'Style','text','Tag','progtxt','String',' ','Enable','on');
 
 pause(0.1)
 
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
-% if ~isfield(props,'video')
+if ~isfield(props,'video')
     [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,1,vfig);
-    props.video.imdata = permute(imdatas,[2,1,3]);
+    props.video.imdata = permute(-imdatas,[2,1,3]);
     props.video.tm = tm;
     props.video.fun = fun;
     props.video.fparam = fparam;
-% end
+    props.video.reference = 0;
+end
+figure(vfig)
 
 slidepos = 10;
 sf = diff(props.video.tm(1:2));
 
-iax = axes('Units','normalized','Position',[0.3 0.35 0.4 0.6]);
+iax = axes('Units','normalized','Position',[0.3 0.35 0.4 0.6],'Tag','imgax');
 props.video.iax = iax;
 iaxpos = iax.Position;
 props.video.img = imagesc(props.video.imdata(:,:,slidepos));
 climv = [-0.02 0.02];
 caxis(iax, climv)
 props.video.climv = climv;
+iax.Tag = 'imgax';
 
 iax.XTick = [];
 iax.YTick = [];
@@ -1806,19 +1809,26 @@ roidx = str2double(replace(roidx,'V-',''));
 
 for r=1:length(props.kernpos)
     if any(roidx==r)
-       props.roi(r) = text(iax,props.kern_center(r,1),props.kern_center(r,2), ...
+       props.video.roi(r) = text(iax,props.kern_center(r,1),props.kern_center(r,2), ...
                 num2str(r),'Color','k','HorizontalAlignment','center','Clipping','on');
     else
-        delete(props.roi(r))
-        props.roi(r) = gobjects(1);
+        if isfield(props.video,'roi') && length(props.video.roi)>=r
+            delete(props.video.roi(r))
+        end
+        props.video.roi(r) = gobjects(1);
     end
 end
 
 idur = size(props.video.imdata,3);
 uicontrol('Units','normalized','Position',[iaxpos(1) iaxpos(2)-0.03 iaxpos(3) 0.03],...
-    'Style','slider','Value',slidepos,'Min',1,'Max',size(props.video.imdata,3),'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+    'Style','slider','Value',slidepos,'Min',1,'Max',size(props.video.imdata,3),...
+    'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
+
 uicontrol('Units','normalized','Position',[iaxpos(1) sum(iaxpos([2 4])) 0.03 0.03],...
     'Style','togglebutton','Tag','Raw','String','Raw','Callback',@raw,'Enable','on');
+
+uicontrol('Units','normalized','Position',[sum(iaxpos([1 3]))-0.13 sum(iaxpos([2 4])) 0.05 0.03],'Style','togglebutton',...
+    'Tag','invert','String','inverted','Value',1,'Callback',@invertim,'Enable','on');
 
 xsize = size(props.video.imdata,2);
 props.video.txtframe = text(xsize-85,10,sprintf('Frame: %i',slidepos),'FontSize',15);
@@ -1833,7 +1843,10 @@ ax(2) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.12]);
 plt(2) = plot(props.tm,props.data(props.showidx(2),:),'Tag','plt2');
 set(ax,'XLim',[min(props.tm) max(props.tm)]);
 ax(3) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.24],'Color','none','Visible','off');
-ref = rectangle('Position',[10 0 sf 1],'FaceColor','k','Tag','ref');
+ref = rectangle('Position',[props.video.reference 0 sf 1],'FaceColor','k','Tag','ref');
+rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 1 0.5],'Tag','startframe1');
+rectangle('Position',[max(props.tm) 0 sf 1],'FaceColor',[1 0.5 0.5],'Tag','stopframe1');
+set(ax,'XLim',[min(props.tm) max(props.tm)]);
 linkaxes(ax,'x')
 
 ch = props.ch;
@@ -1856,8 +1869,122 @@ uicontrol('Units','normalized','Position',[0.4 0.30 0.06 0.02],'Style','pushbutt
     'Tag','Raw','String','Set reference frame','Callback',@setreference,'Enable','on');
 
 
+
+
+uicontrol('Units','normalized','Position',[0.75 0.86 0.11 0.03],'Style','text',...
+    'String','Colormap axis','HorizontalAlignment','center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.8 0.80 0.06 0.03],'Style','edit',...
+    'Tag','cmap1','String',num2str(climv(1)),'HorizontalAlignment','center','Callback',@setcmap,'Enable','on');
+
+uicontrol('Units','normalized','Position',[0.75 0.79 0.04 0.03],'Style','text',...
+    'String','lower','HorizontalAlignment','right','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.8 0.84 0.06 0.03],'Style','edit',...
+    'Tag','cmap2','String',num2str(climv(2)),'HorizontalAlignment','center','Callback',@setcmap,'Enable','on');
+
+uicontrol('Units','normalized','Position',[0.75 0.83 0.04 0.03],'Style','text',...
+    'String','upper','HorizontalAlignment','right','Enable','on');
+
+
+
+uicontrol('Units','normalized','Position',[0.75 0.70 0.04 0.03],'Style','text',...
+    'String','text color','HorizontalAlignment','right','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.8 0.7 0.06 0.03],'Style','popupmenu',...
+    'Max',5,'Min',1,'String',["black","white","red","green","blue"],'Tag','textcolor','Value',1,'Callback',@txtcolor);
+
+
+
+uicontrol('Units','normalized','Position',[0.05 0.16 0.11 0.03],'Style','text',...
+    'String','Video window','HorizontalAlignment','center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.1 0.10 0.06 0.03],'Style','edit',...
+    'Tag','startframe','String',num2str(min(props.video.tm)),'HorizontalAlignment','center','Callback',@startstop,'Enable','on');
+
+uicontrol('Units','normalized','Position',[0.05 0.09 0.04 0.03],'Style','text',...
+    'String','start (s)','HorizontalAlignment','right','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.1 0.14 0.06 0.03],'Style','edit',...
+    'Tag','stopframe','String',num2str(max(props.video.tm)),'Callback',@startstop,'HorizontalAlignment','center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.05 0.13 0.04 0.03],'Style','text',...
+    'String','stop (s)','HorizontalAlignment','right','Enable','on');
+
+
+
+uicontrol('Units','normalized','Position',[0.05 0.05 0.1 0.04],'Style','pushbutton',...
+    'String','Make Video','Callback',@makevideo,'Enable','on');
+
+
 guidata(hObject,props)
 guidata(vfig,props.intan_tag)
+
+function startstop(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+disp([hObject.Tag '1'])
+marker = findobj(hObject.Parent,'Tag',[hObject.Tag '1']);
+newpos = str2double(hObject.String);
+pos = marker.Position;
+pos(1) = props.video.tm(find(props.video.tm>newpos,1));
+set(marker,'Position',pos)
+
+function txtcolor(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+color = hObject.String{hObject.Value};
+for r=1:length(props.video.roi)
+    if ~isa(props.video.roi(r), 'matlab.graphics.GraphicsPlaceholder')
+        props.video.roi(r).Color = color;
+    end
+end
+
+function makevideo(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+vsd = props.files(contains(props.files(:,2),'tsm'),2);
+
+[file,path,indx] = uiputfile('*.mp4','Save Video',replace(vsd,'.tsm','_video.mp4'));
+
+vid = VideoWriter(fullfile(path,file));
+imslide = findobj(hObject.Parent,'Tag','imslider');
+
+start = get(findobj(hObject.Parent,'Tag','startframe'),'String');
+stop = get(findobj(hObject.Parent,'Tag','stopframe'),'String');
+start = str2double(start);
+stop = str2double(stop);
+start = find(props.video.tm>start,1);
+stop = find(props.video.tm>stop,1);
+disp([start,stop])
+open(vid)
+for f=start:stop
+    set(props.video.img,'CData',props.video.imdata(:,:,f));
+    set(imslide,'Value',f);pause(0.01)
+    frame = getframe(gcf);
+    writeVideo(vid,frame)
+end
+close(vid)
+
+function invertim(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+props.video.imdata = -props.video.imdata;
+frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
+set(props.video.img,'CData',props.video.imdata(:,:,frame))
+guidata(intan,props)
+
+function setcmap(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+imgax = findobj(hObject.Parent,'Tag','imgax');
+idx = str2double(hObject.Tag(end));
+axes(imgax)
+vals = caxis;
+vals(idx) = str2double(hObject.String);
+caxis(imgax,vals)
+props.video.climv = vals;
+guidata(intan,props)
 
 function raw(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -1868,7 +1995,9 @@ if hObject.Value
 else
     frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
     set(props.video.img,'CData',props.video.imdata(:,:,frame))
-    caxis(props.video.iax,props.video.climv)
+    imgax = findobj(hObject.Parent,'Tag','imgax');
+    caxis(imgax,props.video.climv)
+%     caxis(props.video.iax,props.video.climv)
 end
 
 function [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,ref,vfig)
@@ -1892,11 +2021,10 @@ imdata = zeros(length(sidx),ysize*xsize);
 
 outp = round(size(imdata,1)/52);
 
-% disp(['reding image file ' vsd{1}])
-% disp(['          ' repmat('|____________',1,4) '|']);%52
-% fprintf('Progress: ')
 progress = findobj(vfig,'Tag','progress');
-set(findobj(vfig,'Tag','progtxt'),'String',['reding image file ' vsd{1}]);
+set(findobj(vfig,'Tag','progtxt'),'String',['reading image file ' vsd{1}]);
+set(findobj(vfig,'Tag','progax'),'Position',[0.72 0.05 0.25 0.05]);
+pause(0.01)
 
 fid = fopen(info.Filename,'r');
 tic
@@ -1942,9 +2070,6 @@ opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 
 tm = (sidx*sr)';
 
-% disp(['calculate pixel bleaching ' vsd{1}])
-% disp(['          ' repmat('|____________',1,4) '|']);%52
-% fprintf('Progress: ')
 set(findobj(vfig,'Tag','progtxt'),'String',['calculate pixel bleaching ' vsd{1}]);
 
 imdatas = imdata;
@@ -1959,8 +2084,11 @@ for p=1:size(imdata,2)
     end
 end
 toc
-fprintf('\n')
+
 imdatas = reshape(imdatas',[256, 256, length(sidx)]);
+set(findobj(vfig,'Tag','progtxt'),'String',' ');
+set(findobj(vfig,'Tag','progax'),'Position',[10 0.05 0.25 0.05]);
+pause(0.01)
 
 function chframe(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -1994,6 +2122,7 @@ f0 = props.video.imdata(:,:,refr);
 props.video.imdata = props.video.imdata - repmat(f0,1,1,size(props.video.imdata,3));
 slidepos = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
 set(props.video.img,'CData',props.video.imdata(:,:,slidepos))
+props.video.reference = x;
 guidata(intan,props)
 
 
