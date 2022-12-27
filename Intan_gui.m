@@ -753,11 +753,34 @@ strs = ["tiffns"   ,"detfns","tsmfns","rhsfns","xlsxfns";...
 
 dfolder = dir(fullfile(fpath));
 fnames = string({dfolder.name});
+
+noten = fullfile(fpath,'notes.xlsx');
+if exist(noten,"file")
+    notes = readcell(fullfile(fpath,'notes.xlsx'));
+    cfename = notes{ismember(notes(:,1),'001'),2};
+    if any(contains(fnames,cfename))
+       cfename = fullfile(fpath,cfename,[cfename '.rhs']);
+    else
+       for f=3:length(dfolder)
+           if dfolder(f).isdir
+                sf = dir(fullfile(dfolder(f).folder,dfolder(f).name));
+                idx = contains(string({sf.name}),cfename);
+                if any(idx)
+                    cfename = fullfile(sf(idx).folder,sf(idx).name);break
+                end
+           end
+       end
+    end
+end
+
+
 for s=1:size(strs,2)
     chk = isempty(get(findobj(hObject.Parent,'Tag',strs{1,s}),'String'));
     fns = fullfile(fpath,[fn strs{2,s}]);
     if chk && exist(fns,'file')
         set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',fns);
+    elseif chk && strs(1,s)=="rhsfns" && exist("cfename",'var') && exist(cfename,'file')
+        set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',cfename)
     elseif chk && strs(1,s)=="rhsfns" && exist(fullfile(fpath,fn),'dir')
         fstr = fullfile(fpath,fn);
         sfolder = dir(fstr);
