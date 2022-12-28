@@ -1798,16 +1798,16 @@ pause(0.1)
 
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
-ifi = 300;
+ifi = 20;
 
-% if ~isfield(props,'video')
+if ~isfield(props,'video')
     [imdatas,fparam,fun,imdata,tm] = getimdata(vsd,1,vfig,ifi);
     props.video.imdata = permute(-imdatas,[2,1,3]);
     props.video.tm = tm;% + diff(tm(1:2))*5;% don't know why this 5* needs to be done but it does
     props.video.fun = fun;
     props.video.fparam = fparam;
     props.video.reference = 1;
-% end
+end
 figure(vfig)
 % props.video.tm = props.video.tm + diff(props.video.tm(1:2))*5;
 slidepos = 10;
@@ -1856,8 +1856,10 @@ uicontrol('Units','normalized','Position',[sum(iaxpos([1 3]))-0.13 sum(iaxpos([2
     'Tag','invert','String','inverted','Value',1,'Callback',@invertim,'Enable','on');
 
 xsize = size(props.video.imdata,2);
-props.video.txtframe = text(xsize-85,10,sprintf('Frame: %i',slidepos),'FontSize',15);
-txttm = text(xsize-85, 25, sprintf('Time: %0.1f s',length(props.video.tm)*slidepos/idur*sf), 'FontSize',15);
+props.video.txtframe = text(xsize-85,10,sprintf('Frame: %i',slidepos),'FontSize',15,...
+    'Color','w');
+txttm = text(xsize-85, 25, sprintf('Time: %0.1f s',length(props.video.tm)*slidepos/idur*sf),...
+    'FontSize',15,'Color','w');
 
 props.video.txttm = txttm;
 
@@ -1867,10 +1869,13 @@ plt(1) = plot(props.tm,props.data(props.showidx(1),:),'Tag','plt1');
 ax(2) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.12]);
 plt(2) = plot(props.tm,props.data(props.showidx(2),:),'Tag','plt2');
 set(ax,'XLim',[min(props.tm) max(props.tm)]);
+ax(2).XLabel.String = 'Time (s)';
 ax(3) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.24],'Color','none','Visible','off');
 ref = rectangle('Position',[props.video.reference 0 sf 1],'FaceColor','k','Tag','ref');
-rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 1 0.5],'Tag','startframe1');
-rectangle('Position',[max(props.video.tm) 0 sf 1],'FaceColor',[1 0.5 0.5],'Tag','stopframe1');
+rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 1 0.5],'EdgeColor',[0.5 1 0.5],...
+    'Tag','startframe1');
+rectangle('Position',[max(props.video.tm) 0 sf 1],'FaceColor',[1 0.5 0.5],...
+    'EdgeColor',[1 0.5 0.5],'Tag','stopframe1');
 rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 0.5 0.5],'Tag','cframe');
 set(ax,'XLim',[min(props.tm) max(props.video.tm)]);
 linkaxes(ax,'x')
@@ -1936,21 +1941,31 @@ uicontrol('Units','normalized','Position',[0.2 0.80 0.06 0.03],'Style','edit',..
 
 % movie parameters
 uicontrol('Units','normalized','Position',[0.05 0.16 0.11 0.03],'Style','text',...
-    'String','Video window','HorizontalAlignment','center','Enable','on');
+    'String','Video time window','HorizontalAlignment','center','Enable','on');
 
-uicontrol('Units','normalized','Position',[0.1 0.10 0.06 0.03],'Style','edit',...
+uicontrol('Units','normalized','Position',[0.1 0.14 0.06 0.03],'Style','edit',...
     'Tag','startframe','String',num2str(min(props.video.tm)),'HorizontalAlignment',...
     'center','Callback',@startstop,'Enable','on');
 
-uicontrol('Units','normalized','Position',[0.05 0.09 0.04 0.03],'Style','text',...
+uicontrol('Units','normalized','Position',[0.05 0.13 0.04 0.03],'Style','text',...
     'String','start (s)','HorizontalAlignment','right','Enable','on');
 
-uicontrol('Units','normalized','Position',[0.1 0.14 0.06 0.03],'Style','edit',...
+uicontrol('Units','normalized','Position',[0.1 0.10 0.06 0.03],'Style','edit',...
     'Tag','stopframe','String',num2str(max(props.video.tm)),'Callback',@startstop,...
     'HorizontalAlignment','center','Enable','on');
 
-uicontrol('Units','normalized','Position',[0.05 0.13 0.04 0.03],'Style','text',...
+uicontrol('Units','normalized','Position',[0.05 0.09 0.04 0.03],'Style','text',...
     'String','stop (s)','HorizontalAlignment','right','Enable','on');
+
+
+uicontrol('Units','normalized','Position',[0.1 0.19 0.06 0.03],'Style','edit',...
+    'Tag','movfr','String','30','HorizontalAlignment',...
+    'center','Callback',@startstop,'Enable','on');
+
+uicontrol('Units','normalized','Position',[0.03 0.185 0.06 0.03],'Style','text',...
+    'String','Frame rate (f/s)','HorizontalAlignment','right','Enable','on');
+
+
 
 
 
@@ -1989,7 +2004,7 @@ vsd = props.files(contains(props.files(:,2),'tsm'),2);
 [file,path,indx] = uiputfile('*.mp4','Save Video',replace(vsd,'.tsm','_video.mp4'));
 
 vid = VideoWriter(fullfile(path,file));
-vid.FrameRate = 30;
+vid.FrameRate = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
 imslide = findobj(hObject.Parent,'Tag','imslider');
 
 pos = get(findobj(hObject.Parent,'Tag','cframe'),'Position');
