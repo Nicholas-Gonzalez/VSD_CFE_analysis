@@ -582,8 +582,12 @@ if intch && vsdch
             end
             if isfield(vsdprops.matprops,'video')
                 props.video = vsdprops.matprops.video;disp('added video')
-                props.video.imdata = double(props.video.imdata)/vsdprops.matprops.video.d2uint1 + mind1;
-                props.video.imdataroi = double(props.video.imdataroi)/vsdprops.matprops.video.d2uint2 + mind2;
+                d2uint1 = vsdprops.matprops.video.d2uint1;
+                min1 = vsdprops.matprops.video.min1;
+                props.video.imdata = double(props.video.imdata)/d2uint1 + min1;
+                d2uint2 = vsdprops.matprops.video.d2uint1;
+                min2 = vsdprops.matprops.video.min1;
+                props.video.imdataroi = double(props.video.imdataroi)/d2uint2 + min2;
             end
         else
             props.d2uint = vsdprops.matprops.d2uint;
@@ -604,8 +608,12 @@ if intch && vsdch
             end
             if isfield(vsdprops.matprops,'video')
                 props.video = vsdprops.matprops.video;disp('added video')
-                props.video.imdata = double(props.video.imdata)/vsdprops.matprops.video.d2uint1 + mind1;
-                props.video.imdataroi = double(props.video.imdataroi)/vsdprops.matprops.video.d2uint2 + mind2;
+                d2uint1 = vsdprops.matprops.video.d2uint1;
+                min1 = vsdprops.matprops.video.min1;
+                props.video.imdata = double(props.video.imdata)/d2uint1 + min1;
+                d2uint2 = vsdprops.matprops.video.d2uint1;
+                min2 = vsdprops.matprops.video.min1;
+                props.video.imdataroi = double(props.video.imdataroi)/d2uint2 + min2;
             end
             props.im = vsdprops.matprops.im;
             props.det = vsdprops.matprops.det;
@@ -1789,7 +1797,6 @@ plotdata(findobj('Tag',intan_tag))
 %% video
 function videoprompt(hObject,eventdata)
 props = guidata(hObject);
-figure('MenuBar','none')
 answ = 'No';
 if isfield(props,'video')
     answ = questdlg('Use the current video data?');
@@ -1798,8 +1805,8 @@ end
 if strcmp(answ,'Yes')
     video(hObject, diff(props.video.tm(1:2))*1000)
 elseif strcmp(answ,'No')
-    answ2 = inputdlg('Frame rate (ms)','Input',[1 35],'20');
-    if ~isempty(answ2{1})
+    answ2 = inputdlg('Frame rate (ms)','Input',[1 35],{'20'});
+    if ~isempty(answ2) && ~isempty(answ2{1})
         video(hObject,str2double(answ2))
     end
 end
@@ -1807,12 +1814,12 @@ end
 function video(hObject,fr)
 props = guidata(hObject);
 ofigsize = props.figsize;
-disp('video')
 
 apptag = ['apptag' num2str(randi(1e4,1))];
 vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.7 ofigsize(4)*0.7],...
     'Name','Make Video','NumberTitle','off','Tag',apptag);
 
+guidata(vfig,props.intan_tag)
 
 pax = axes('Units','normalized','Position',[10 0.05 0.25 0.05],'XTick',[],'YTick',[],'Box','on','Tag','progax');
 prog = rectangle('Position',[0 0 0 1],'FaceColor','b','Tag','progress');
@@ -1843,21 +1850,28 @@ figure(vfig)
 slidepos = 10;
 sf = diff(props.video.tm(1:2));
 
+
+iaxr = axes('Units','normalized','Position',[0.3 0.35 0.4 0.6],'Tag','imgax');
+props.video.img = image(props.im);
+iaxr.XTick = [];
+iaxr.YTick = [];
+
 iax = axes('Units','normalized','Position',[0.3 0.35 0.4 0.6],'Tag','imgax');
 props.video.iax = iax;
 iaxpos = iax.Position;
-props.video.img = imagesc(props.video.imdata(:,:,slidepos));
 climv = [-0.02 0.02];
+props.video.img = imagesc(props.video.imdata(:,:,slidepos),'AlphaData',props.video.imdata(:,:,slidepos)>climv(1));
 caxis(iax, climv)
 props.video.climv = climv;
 iax.Tag = 'imgax';
 
 iax.XTick = [];
 iax.YTick = [];
+iax.Color = 'none';
 
 
-colorbar('Units','normalized','Position',[0.7 0.35 0.01 0.6]);
-
+cb = colorbar('Units','normalized','Position',[0.7 0.35 0.01 0.6]);
+cb.Label.String = '\DeltaF/F';
 
 corridx = find(contains(props.ch,'V-'),1) - 1;
 for r=1:2
@@ -1896,10 +1910,12 @@ props.video.txttm = txttm;
 
 ax(1) = axes('Units','normalized','Position',[0.3 0.18 0.4 0.12]);
 plt(1) = plot(props.tm,props.data(props.showidx(1),:),'Tag','plt1');
+ax(1).YLabel.String = '\DeltaF/F';
 ax(2) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.12]);
 plt(2) = plot(props.tm,props.data(props.showidx(2),:),'Tag','plt2');
 set(ax,'XLim',[min(props.tm) max(props.tm)]);
 ax(2).XLabel.String = 'Time (s)';
+ax(2).YLabel.String = '\DeltaF/F';
 ax(3) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.24],'Color','none','Visible','off');
 ref = rectangle('Position',[props.video.reference 0 sf 1],'FaceColor','k','Tag','ref');
 rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 1 0.5],'EdgeColor',[0.5 1 0.5],...
@@ -1930,27 +1946,37 @@ uicontrol('Units','normalized','Position',[0.4 0.30 0.06 0.02],'Style','pushbutt
     'Tag','Raw','String','Set reference frame','Callback',@setreference,'Enable','on');
 
 
-
-
+% ------------------------------
+% colormap
+% ------------------------------
 uicontrol('Units','normalized','Position',[0.75 0.86 0.11 0.03],'Style','text',...
     'String','Colormap axis','HorizontalAlignment','center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.8 0.76 0.06 0.03],'Style','edit',...
+    'Tag','alphathr','String',num2str(climv(1)),'HorizontalAlignment','center',...
+    'Callback',@chframe,'Enable','on');
+
+uicontrol('Units','normalized','Position',[0.74 0.745 0.05 0.05],'Style','text',...
+    'String','Alpha threshold','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.8 0.80 0.06 0.03],'Style','edit',...
     'Tag','cmap1','String',num2str(climv(1)),'HorizontalAlignment','center',...
     'Callback',@setcmap,'Enable','on');
 
-uicontrol('Units','normalized','Position',[0.75 0.79 0.04 0.03],'Style','text',...
+uicontrol('Units','normalized','Position',[0.75 0.795 0.04 0.03],'Style','text',...
     'String','lower','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.8 0.84 0.06 0.03],'Style','edit',...
     'Tag','cmap2','String',num2str(climv(2)),'HorizontalAlignment','center',...
     'Callback',@setcmap,'Enable','on');
 
-uicontrol('Units','normalized','Position',[0.75 0.83 0.04 0.03],'Style','text',...
+uicontrol('Units','normalized','Position',[0.75 0.835 0.04 0.03],'Style','text',...
     'String','upper','HorizontalAlignment','right','Enable','on');
 
 
+% ------------------------------
 % ROI params
+% ------------------------------
 uicontrol('Units','normalized','Position',[0.75 0.70 0.04 0.03],'Style','text',...
     'String','text color','HorizontalAlignment','right','Enable','on');
 
@@ -1958,7 +1984,9 @@ uicontrol('Units','normalized','Position',[0.8 0.7 0.06 0.03],'Style','popupmenu
     'Max',5,'Min',1,'String',["black","white","red","green","blue"],'Tag','textcolor','Value',1,'Callback',@txtcolor);
 
 
+% ------------------------------
 % video params
+% ------------------------------
 uicontrol('Units','normalized','Position',[0.11 0.79 0.08 0.03],'Style','text',...
     'String','Frame interval (ms)','HorizontalAlignment','right','Enable','on');
 
@@ -1968,16 +1996,42 @@ uicontrol('Units','normalized','Position',[0.2 0.80 0.06 0.03],'Style','edit',..
 
 
 
-
+% ------------------------------
 % movie parameters
+% ------------------------------
 uicontrol('Units','normalized','Position',[0.05 0.16 0.11 0.03],'Style','text',...
     'String','Video time window','HorizontalAlignment','center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.1 0.33 0.06 0.03],'Style','edit',...
+    'Tag','notegap','String','10','HorizontalAlignment',...
+    'center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.03 0.325 0.06 0.04],'Style','text',...
+    'String','Minimum note gap (fr)','HorizontalAlignment','right','Enable','on',...
+    'TooltipString','The minimum gap between notes');
+
+uicontrol('Units','normalized','Position',[0.1 0.29 0.06 0.03],'Style','edit',...
+    'Tag','harmonics','String','5','HorizontalAlignment',...
+    'center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.04 0.285 0.05 0.03],'Style','text',...
+    'String','# harmonics','HorizontalAlignment','right','Enable','on',...
+    'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
+
+uicontrol('Units','normalized','Position',[0.1 0.25 0.06 0.03],'Style','edit',...
+    'Tag','noteduration','String','0.4','HorizontalAlignment',...
+    'center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.04 0.245 0.05 0.03],'Style','text',...
+    'String','duration (s)','HorizontalAlignment','right','Enable','on',...
+    'TooltipString','Duration of each note.');
+
 
 uicontrol('Units','normalized','Position',[0.1 0.14 0.06 0.03],'Style','edit',...
     'Tag','startframe','String',num2str(min(props.video.tm)),'HorizontalAlignment',...
     'center','Callback',@startstop,'Enable','on');
 
-uicontrol('Units','normalized','Position',[0.05 0.13 0.04 0.03],'Style','text',...
+uicontrol('Units','normalized','Position',[0.05 0.135 0.04 0.03],'Style','text',...
     'String','start (s)','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.1 0.10 0.06 0.03],'Style','edit',...
@@ -2004,7 +2058,7 @@ uicontrol('Units','normalized','Position',[0.05 0.05 0.1 0.04],'Style','pushbutt
 
 
 guidata(hObject,props)
-guidata(vfig,props.intan_tag)
+
 
 function startstop(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -2032,9 +2086,11 @@ props = guidata(intan);
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
 [file,path,indx] = uiputfile('*.mp4','Save Video',replace(vsd,'.tsm','_video.mp4'));
+file = replace(file,'.mp4','');
 
-vid = VideoWriter(fullfile(path,file));
-vid.FrameRate = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
+vid = VideoWriter(fullfile(path,file),'MPEG-4');
+vfr = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
+vid.FrameRate = vfr;
 imslide = findobj(hObject.Parent,'Tag','imslider');
 
 pos = get(findobj(hObject.Parent,'Tag','cframe'),'Position');
@@ -2047,16 +2103,73 @@ stop = str2double(stop);
 start = find(props.video.tm>start,1);
 stop = find(props.video.tm>stop,1);
 disp([start,stop])
+alphathr = str2double(get(findobj(hObject.Parent,'Tag','alphathr'),'String'));
+idur = length(props.video.tm);
+
+det = props.det;
+kernpos = props.kernpos;
+nroi = length(kernpos);
+
+sf = diff(props.video.tm(1:2));
+fs = 44100;
+audio = zeros(1,(stop-start)*fs/vfr);
+
+ra = str2double(get(findobj(hObject.Parent,'Tag','notegap'),'String'));
+dur = str2double(get(findobj(hObject.Parent,'Tag','noteduration'),'String'));
+nharm = str2double(get(findobj(hObject.Parent,'Tag','harmonics'),'String'));
+
+spike = false(stop-start,nroi);
+for r=1:ra
+    spike(ra,randi(nroi,[round(nroi/ra),1])) = true;
+end
+
 open(vid)
 for f=start:stop
-    set(props.video.img,'CData',props.video.imdata(:,:,f));
+    framed = props.video.imdataroi(:,:,f)';
+    fidx = f-start+1;
+    aidx = (f-start+1) + (f-start)*fs/vfr;
+    for k=1:length(kernpos)
+        if fidx<size(spike,1) && fidx>ra && framed(det(kernpos(k)+5))>alphathr &&  ~any(spike(fidx-ra:fidx,k))
+            spike(fidx,k) = true;
+            freq = k*430/nroi+70;
+            note = makesound(freq,dur,fs,nharm);
+            jitter = randi(200);
+            nidx = aidx:aidx+length(note)-1;
+            nidx = nidx + jitter;
+            nidx(nidx>length(audio)) = [];
+            audio(nidx) = audio(nidx) + note(1:length(nidx));
+        end
+    end
+
+    set(props.video.img,'CData',props.video.imdataroi(:,:,f));
+    set(props.video.img,'AlphaData',props.video.imdataroi(:,:,f)>alphathr)
     pos(1) = props.video.tm(f);
     set(findobj(hObject.Parent,'Tag','cframe'),'Position',pos)
-    set(imslide,'Value',f);pause(0.01)
+    set(imslide,'Value',f);
+    props.video.txtframe.String = sprintf('Frame: %i',f);
+    props.video.txttm.String = sprintf('Time: %0.2f s',(length(props.video.tm)*f/idur)*sf);
+    
+    pause(0.01)
     frame = getframe(gcf);
     writeVideo(vid,frame)
 end
 close(vid)
+assignin('base','spike',spike)
+audiowrite( fullfile(path,[file '.wav']), audio/max(audio), fs,'BitsPerSample',32)
+
+function note = makesound(freq,dur,fs,nharm)
+% distinguishable and pleasurable range 70 - 500 Hz
+% recommended fs = 44100
+tm = linspace(0,dur,round(dur*fs));
+% freq = 2^(k/12)*262;
+harmf = (1:nharm)*freq;
+hamp = [1, 0.55, 0.23, 0.25, 0.1, 0.4];
+fun = @(p,x) sin(x*pi*2*p);
+note = zeros(size(tm));
+for h=1:length(harmf)
+    note = note + fun(harmf(h),tm)*hamp(h);
+end
+note = note.*(1-exp(-tm/(max(tm)/20))).*exp(-tm/(max(tm)/6));
 
 function invertim(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -2249,17 +2362,19 @@ pause(0.01)
 function chframe(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
-frame = round(hObject.Value);
+frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
 pos = get(findobj(hObject.Parent,'Tag','cframe'),'Position');
 pos(1) = props.video.tm(frame);
 set(findobj(hObject.Parent,'Tag','cframe'),'Position',pos)
 
+alphathr = str2double(get(findobj(hObject.Parent,'Tag','alphathr'),'String'));
+
 set(hObject,'Value',frame)
 set(props.video.img,'CData',props.video.imdataroi(:,:,frame))
-idur = get(hObject,'Max');
+set(props.video.img,'AlphaData',props.video.imdataroi(:,:,frame)>alphathr)
+idur = size(props.video.imdataroi,3);
 sf = diff(props.video.tm(1:2));
 props.video.txtframe.String = sprintf('Frame: %i',frame);
-% props.txttm.String = sprintf('Time: %0.1f ms',(props.W(1) + length(props.W)*frame/idur)*sf*1000);
 props.video.txttm.String = sprintf('Time: %0.2f s',(length(props.video.tm)*frame/idur)*sf);
 guidata(intan,props)
 
@@ -2460,7 +2575,7 @@ props.data = convert_uint(props.data, props.d2uint, props.min, 'uint16');
 
 if isfield(props,'video')
     min1 = min(props.video.imdata(:));
-    d2uint1 = range(props.video.imdata(:));
+    d2uint1 = 2^16/range(props.video.imdata(:));
     imdata = uint16((props.video.imdata - min1)*d2uint1);
     tm = props.video.tm;
     fun = props.video.fun;
@@ -2472,7 +2587,7 @@ if isfield(props,'video')
 %         'tm','fun','fparam','reference','climv')
 
     min2 = min(props.video.imdataroi(:));
-    d2uint2 = range(props.video.imdataroi(:));
+    d2uint2 = 2^16/range(props.video.imdataroi(:));
     imdataroi = uint16((props.video.imdataroi - min2)*d2uint2);
 %     save(fullfile(path,replace(file,'.','_imdata.')),'video')
     save(fullfile(path,replace(file,'.','_imdata.')),'min1','d2uint1','min2',...
