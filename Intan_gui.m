@@ -2003,7 +2003,7 @@ uicontrol('Units','normalized','Position',[0.05 0.16 0.11 0.03],'Style','text',.
     'String','Video time window','HorizontalAlignment','center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.1 0.33 0.06 0.03],'Style','edit',...
-    'Tag','notegap','String','10','HorizontalAlignment',...
+    'Tag','notegap','String','5','HorizontalAlignment',...
     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.03 0.325 0.06 0.04],'Style','text',...
@@ -2019,7 +2019,7 @@ uicontrol('Units','normalized','Position',[0.04 0.285 0.05 0.03],'Style','text',
     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
 
 uicontrol('Units','normalized','Position',[0.1 0.25 0.06 0.03],'Style','edit',...
-    'Tag','noteduration','String','0.4','HorizontalAlignment',...
+    'Tag','noteduration','String','0.7','HorizontalAlignment',...
     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.04 0.245 0.05 0.03],'Style','text',...
@@ -2123,6 +2123,9 @@ for r=1:ra
     spike(ra,randi(nroi,[round(nroi/ra),1])) = true;
 end
 
+equalize = ones(1,nroi);
+equalize([8 63 35 29 74]) = 0.2;
+
 open(vid)
 for f=start:stop
     framed = props.video.imdataroi(:,:,f)';
@@ -2137,7 +2140,7 @@ for f=start:stop
             nidx = aidx:aidx+length(note)-1;
             nidx = nidx + jitter;
             nidx(nidx>length(audio)) = [];
-            audio(nidx) = audio(nidx) + note(1:length(nidx));
+            audio(nidx) = audio(nidx) + note(1:length(nidx))*equalize(k);
         end
     end
 
