@@ -131,7 +131,7 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.6 0.3 0.1],'Style','pus
               'Callback',@baseline,'String','remove baseline','Enable','off',...
               'Tag','filter','TooltipString','detect');
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.5 0.3 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@video,'String','Video','Enable','off',...
+              'Callback',@videoprompt,'String','Video','Enable','off',...
               'Tag','filter','TooltipString','generate a video of recording');
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.3 0.1],'Style','pushbutton','Tag','adjust',...
@@ -582,6 +582,8 @@ if intch && vsdch
             end
             if isfield(vsdprops.matprops,'video')
                 props.video = vsdprops.matprops.video;disp('added video')
+                props.video.imdata = double(props.video.imdata)/vsdprops.matprops.video.d2uint1 + mind1;
+                props.video.imdataroi = double(props.video.imdataroi)/vsdprops.matprops.video.d2uint2 + mind2;
             end
         else
             props.d2uint = vsdprops.matprops.d2uint;
@@ -602,6 +604,8 @@ if intch && vsdch
             end
             if isfield(vsdprops.matprops,'video')
                 props.video = vsdprops.matprops.video;disp('added video')
+                props.video.imdata = double(props.video.imdata)/vsdprops.matprops.video.d2uint1 + mind1;
+                props.video.imdataroi = double(props.video.imdataroi)/vsdprops.matprops.video.d2uint2 + mind2;
             end
             props.im = vsdprops.matprops.im;
             props.det = vsdprops.matprops.det;
@@ -1783,7 +1787,24 @@ close(panel.Parent)
 plotdata(findobj('Tag',intan_tag))
 
 %% video
-function video(hObject,eventdata)
+function videoprompt(hObject,eventdata)
+props = guidata(hObject);
+figure('MenuBar','none')
+answ = 'No';
+if isfield(props,'video')
+    answ = questdlg('Use the current video data?');
+end
+
+if strcmp(answ,'Yes')
+    video(hObject, diff(props.video.tm(1:2))*1000)
+elseif strcmp(answ,'No')
+    answ2 = inputdlg('Frame rate (ms)','Input',[1 35],'20');
+    if ~isempty(answ2{1})
+        video(hObject,str2double(answ2))
+    end
+end
+
+function video(hObject,fr)
 props = guidata(hObject);
 ofigsize = props.figsize;
 disp('video')
@@ -1807,16 +1828,15 @@ vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
 
 if ~isfield(props,'video')
-    [imdatas,fparam,fun,imdata,tm,imdataroi] = getimdata(vsd,1,vfig,ifi);
+    [imdatas,fparam,fun,imdata,tm,imdataroi] = getimdata(vsd,1,vfig,fr);
     props.video.imdata = permute(-imdatas,[2,1,3]);
     props.video.imdataroi = permute(-imdataroi,[2,1,3]);
     props.video.tm = tm;% + diff(tm(1:2))*5;% don't know why this 5* needs to be done but it does
     props.video.fun = fun;
     props.video.fparam = fparam;
     props.video.reference = 1;
-    ifi = diff(props.video.tm(1:2))*1000;
 end
-ifi = diff(props.video.tm(1:2))*1000;
+
 
 figure(vfig)
 % props.video.tm = props.video.tm + diff(props.video.tm(1:2))*5;
@@ -1943,7 +1963,7 @@ uicontrol('Units','normalized','Position',[0.11 0.79 0.08 0.03],'Style','text',.
     'String','Frame interval (ms)','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.2 0.80 0.06 0.03],'Style','edit',...
-    'Tag','framerate','String',num2str(ifi),'HorizontalAlignment','center',...
+    'Tag','framerate','String',num2str(fr),'HorizontalAlignment','center',...
     'Callback',@framerate,'Enable','on');
 
 
@@ -2194,13 +2214,13 @@ fparam = nan(xsize*ysize,length(p0));
 
 ds = round(800/interval);
 tic
-% for p=1:size(imdata,2)
-%     fparam(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),imdata(1:ds:end,p),-flimits,flimits,opts);
-%     imdatas(:,p) = imdata(:,p) - fun(fparam(p,:),tm);
-%     if mod(p,500)==0%round(size(imdata,2)/52))==0
-%          set(progress,'Position',[0 0 p/size(imdata,2) 1]);pause(0.01)
-%     end
-% end
+for p=1:size(imdata,2)
+    fparam(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),imdata(1:ds:end,p),-flimits,flimits,opts);
+    imdatas(:,p) = imdata(:,p) - fun(fparam(p,:),tm);
+    if mod(p,500)==0%round(size(imdata,2)/52))==0
+         set(progress,'Position',[0 0 p/size(imdata,2) 1]);pause(0.01)
+    end
+end
 toc
 
 set(findobj(vfig,'Tag','progtxt'),'String',['calculate ROI bleaching ' vsd{1}]);
@@ -2439,9 +2459,9 @@ props.d2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
 props.data = convert_uint(props.data, props.d2uint, props.min, 'uint16');
 
 if isfield(props,'video')
-    min1 = min(props.video.imdata,[],2);
-    d2uint1 = repelem(2^16,size(props.video.imdata,1),1)./range(props.video.imdata,2);
-    imdata = convert_uint(props.video.imdata, d2uint1, min1, 'uint16'); 
+    min1 = min(props.video.imdata(:));
+    d2uint1 = range(props.video.imdata(:));
+    imdata = uint16((props.video.imdata - min1)*d2uint1);
     tm = props.video.tm;
     fun = props.video.fun;
     fparam = props.video.fparam;
@@ -2451,9 +2471,9 @@ if isfield(props,'video')
 %     save(fullfile(path,replace(file,'.','_imdata.')),'minp','d2uint','imdata',...
 %         'tm','fun','fparam','reference','climv')
 
-    min2 = min(props.video.imdataroi,[],2);
-    d2uint2 = repelem(2^16,size(props.video.imdataroi,1),1)./range(props.video.imdataroi,2);
-    imdataroi = convert_uint(props.video.imdataroi, d2uint2, min2, 'uint16'); 
+    min2 = min(props.video.imdataroi(:));
+    d2uint2 = range(props.video.imdataroi(:));
+    imdataroi = uint16((props.video.imdataroi - min2)*d2uint2);
 %     save(fullfile(path,replace(file,'.','_imdata.')),'video')
     save(fullfile(path,replace(file,'.','_imdata.')),'min1','d2uint1','min2',...
         'd2uint2','imdata','imdataroi','tm','fun','fparam','reference','climv')
