@@ -299,6 +299,37 @@ if exist(imfn,'file')
     vsdprops.matprops.video = load(imfn);
 end
 
+imfn = fullfile(path,replace(file,'.','_imdata11.'));
+if exist(imfn,'file')
+    video11 = load(imfn);
+    disp(['loaded:   ' imfn])
+
+    imfn2 = replace(imfn,'imdata11.','imdata12.');
+    video12 = load(imfn2);
+    disp(['loaded:   ' imfn2])
+
+    video.imdata = cat(3,video11.imdata1,video12.imdata2);
+    fields = {'climv','d2uint1','fparam','fun','min1','reference','tm'};
+    for f=1:length(fields)
+        video.(fields{f}) = video11.(fields{f});
+    end
+
+    imfn3 = replace(imfn,'imdata11.','imdata21.');
+    video21 = load(imfn3);
+    disp(['loaded:   ' imfn3])
+
+    imfn4 = replace(imfn,'imdata11.','imdata22.');
+    video22 = load(imfn4);
+    disp(['loaded:   ' imfn4])
+
+    fields = {'climv','d2uint2','fparam','fun','min2','reference','tm'};
+    for f=1:length(fields)
+        video.(fields{f}) = video21.(fields{f});
+    end
+    video.imdataroi = cat(3,video21.imdataroi1,video22.imdataroi2);
+    vsdprops.matprops.video = video;
+end
+
 if isfield(matprops.props,'filter')
     vsdprops.matprops.filter = matprops.props.filter;
 end
@@ -1803,15 +1834,15 @@ if isfield(props,'video')
 end
 
 if strcmp(answ,'Yes')
-    video(hObject, diff(props.video.tm(1:2))*1000)
+    video(hObject, diff(props.video.tm(1:2))*1000,false)
 elseif strcmp(answ,'No')
     answ2 = inputdlg('Frame rate (ms)','Input',[1 35],{'20'});
     if ~isempty(answ2) && ~isempty(answ2{1})
-        video(hObject,str2double(answ2))
+        video(hObject,str2double(answ2),true)
     end
 end
 
-function video(hObject,fr)
+function video(hObject,fr,redo)
 props = guidata(hObject);
 ofigsize = props.figsize;
 
@@ -1834,10 +1865,10 @@ vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
 
 
-if ~isfield(props,'video')
+if redo
     [imdatas,fparam,fun,imdata,tm,imdataroi] = getimdata(vsd,1,vfig,fr);
-    props.video.imdata = permute(-imdatas,[2,1,3]);
-    props.video.imdataroi = permute(-imdataroi,[2,1,3]);
+    props.video.imdata = permute(imdatas,[2,1,3]);
+    props.video.imdataroi = permute(imdataroi,[2,1,3]);
     props.video.tm = tm;% + diff(tm(1:2))*5;% don't know why this 5* needs to be done but it does
     props.video.fun = fun;
     props.video.fparam = fparam;
@@ -1871,7 +1902,7 @@ iax.Color = 'none';
 
 
 cb = colorbar('Units','normalized','Position',[0.7 0.35 0.01 0.6]);
-cb.Label.String = '\DeltaF/F';
+cb.Label.String = '-\DeltaF/F';
 
 corridx = find(contains(props.ch,'V-'),1) - 1;
 for r=1:2
@@ -1895,6 +1926,9 @@ uicontrol('Units','normalized','Position',[iaxpos(1) iaxpos(2)-0.03 iaxpos(3) 0.
 
 uicontrol('Units','normalized','Position',[iaxpos(1) sum(iaxpos([2 4])) 0.03 0.03],...
     'Style','togglebutton','Tag','Raw','String','Raw','Callback',@raw,'Enable','on');
+
+uicontrol('Units','normalized','Position',[iaxpos(1)+0.03 sum(iaxpos([2 4])) 0.04 0.03],...
+    'Style','togglebutton','Tag','roivpix','String','Pixels','Callback',@roivpix,'Enable','on');
 
 uicontrol('Units','normalized','Position',[sum(iaxpos([1 3]))-0.13 sum(iaxpos([2 4])) 0.05 0.03],'Style','togglebutton',...
     'Tag','invert','String','inverted','Value',1,'Callback',@invertim,'Enable','on');
@@ -2058,7 +2092,16 @@ uicontrol('Units','normalized','Position',[0.05 0.05 0.1 0.04],'Style','pushbutt
 
 
 guidata(hObject,props)
+chframe(findobj(vfig,'Tag','imslider'))
 
+
+function roivpix(hObject,eventdata)
+if hObject.Value
+    hObject.String = 'ROI';
+else
+    hObject.String = 'Pixels';
+end
+chframe(findobj(hObject.Parent,'Tag','imslider'))
 
 function startstop(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -2124,7 +2167,11 @@ for r=1:ra
 end
 
 equalize = ones(1,nroi);
-equalize([8 63 35 29 74]) = 0.2;
+% equalize([8 63 35 29 74]) = 0.2;
+
+roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
+inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
+imult = [1,-1];
 
 open(vid)
 for f=start:stop
@@ -2144,8 +2191,16 @@ for f=start:stop
         end
     end
 
-    set(props.video.img,'CData',props.video.imdataroi(:,:,f));
-    set(props.video.img,'AlphaData',props.video.imdataroi(:,:,f)>alphathr)
+    if roi
+        iframe = props.video.imdataroi(:,:,f)*imult(inv);
+        set(props.video.img,'CData',iframe)
+        set(props.video.img,'AlphaData',(iframe>alphathr)*0.7)
+    else
+        iframe = props.video.imdata(:,:,f)*imult(inv);
+        set(props.video.img,'CData',iframe)
+        set(props.video.img,'AlphaData',(iframe>alphathr))
+    end
+
     pos(1) = props.video.tm(f);
     set(findobj(hObject.Parent,'Tag','cframe'),'Position',pos)
     set(imslide,'Value',f);
@@ -2176,11 +2231,12 @@ note = note.*(1-exp(-tm/(max(tm)/20))).*exp(-tm/(max(tm)/6));
 
 function invertim(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
-props = guidata(intan);
-props.video.imdata = -props.video.imdata;
-frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
-set(props.video.img,'CData',props.video.imdata(:,:,frame))
-guidata(intan,props)
+set(findobj(hObject.Parent,'Tag','progtxt'),'String','Processing...');
+pause(0.1)
+adjustdata(intan,hObject.Parent)
+chframe(findobj(hObject.Parent,'Tag','imslider'))
+set(findobj(hObject.Parent,'Tag','progtxt'),'String',' ');
+
 
 function setcmap(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -2226,7 +2282,14 @@ set(slider,'Max',size(props.video.imdata,3))
 set(slider,'SliderStep',[1 1]/size(props.video.imdata,3))
 
 frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
-set(props.video.img,'CData',props.video.imdata(:,:,frame))
+roi = get(findobj(hObject.Parent,'roivpix'),'Value');
+if roi
+    set(props.video.img,'CData',props.video.imdataroi(:,:,frame))
+    set(props.video.img,'AlphaData',props.video.imdataroi(:,:,frame)>alphathr)
+else
+    set(props.video.img,'CData',props.video.imdata(:,:,frame))
+    set(props.video.img,'AlphaData',props.video.imdata(:,:,frame)>alphathr)
+end
 imgax = findobj(hObject.Parent,'Tag','imgax');
 caxis(imgax,props.video.climv)
 
@@ -2257,7 +2320,7 @@ hoffset = info.PrimaryData.Offset;
 
 sidx = 6:interval:zsize;
 
-imdata = zeros(length(sidx),ysize*xsize);
+imdata = zeros(length(sidx),ysize*xsize,'single');
 imdataroi = imdata;
 
 outp = round(size(imdata,1)/52);
@@ -2272,6 +2335,7 @@ tic
 kernpos = props.kernpos;
 det = props.det;
 kernel_size = diff([kernpos ; length(det)])-1;
+nprog = round(length(sidx)/200);
 for s=1:length(sidx)
     offset = hoffset + ... Header information takes 2880 bytes.
                 (sidx(s)-1)*xsize*ysize*2; % Because each integer takes two bytes.
@@ -2295,7 +2359,7 @@ for s=1:length(sidx)
         imdataroi(s,kIdx) = mean(imdata(s,kIdx));
     end
 
-    if mod(s,1)==0
+    if mod(s,nprog)==0
         set(progress,'Position',[0 0 s/(length(sidx)-1) 1]);pause(0.05)
     end
 end
@@ -2306,7 +2370,6 @@ fclose(fid);
 sidx = sidx(1:s);
 imdata = imdata(1:s,:);
 imdataroi = imdataroi(1:s,:);
-% % warning('still not removing all the zeros')%<--------
 
 if ref>size(imdata,3); ref = 1;end
 
@@ -2316,9 +2379,10 @@ imdata = (imdata - f0)./f0;
 f0 = repmat(imdataroi(ref,:),size(imdataroi,1),1);
 imdataroi = (imdataroi - f0)./f0;
 
-fun = @(p,x) p(1).*(1 - exp(x./-p(2))) - p(3).*(1 - exp(x./-p(4)));
-p0 = ones(1,4);
-flimits = inf([1,4]);
+fun = @(p,x) p(1).*(1 - exp(x./-p(2))) + p(3).*(1 - exp(x./-p(4))) + p(5).*(1 - exp(x./-p(6)));
+% [fun] = makefun(3);
+p0 = ones(1,6);
+flimits = inf([1,6]);
 opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 
 tm = ((sidx+5)*sr)';% for some reason I need to add five frames of time
@@ -2329,9 +2393,11 @@ imdatas = imdata;
 fparam = nan(xsize*ysize,length(p0));
 
 ds = round(800/interval);
+
 tic
 for p=1:size(imdata,2)
-    fparam(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),imdata(1:ds:end,p),-flimits,flimits,opts);
+    pixd = double(imdata(1:ds:end,p));
+    fparam(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),pixd,-flimits,flimits,opts);
     imdatas(:,p) = imdata(:,p) - fun(fparam(p,:),tm);
     if mod(p,500)==0%round(size(imdata,2)/52))==0
          set(progress,'Position',[0 0 p/size(imdata,2) 1]);pause(0.01)
@@ -2348,7 +2414,8 @@ ds = round(800/interval);
 tic
 for p=1:length(kernpos)
     kIdx = det(kernpos(p)+1:kernpos(p)+kernel_size(p));
-    fparamr(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),imdataroi(1:ds:end,kIdx(1)),...
+    roid = double(imdataroi(1:ds:end,kIdx(1)));
+    fparamr(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),roid,...
         -flimits,flimits,opts);
     kIdx = det(kernpos(p)+1:kernpos(p)+kernel_size(p));
     imdatarois(:,kIdx) = imdataroi(:,kIdx) - repmat(fun(fparamr(p,:),tm),1,length(kIdx));
@@ -2358,6 +2425,7 @@ toc
 
 imdatas = reshape(imdatas',[256, 256, length(sidx)]);
 imdatarois = reshape(imdatarois',[256, 256, length(sidx)]);
+
 set(findobj(vfig,'Tag','progtxt'),'String',' ');
 set(findobj(vfig,'Tag','progax'),'Position',[10 0.05 0.25 0.05]);
 pause(0.01)
@@ -2373,8 +2441,19 @@ set(findobj(hObject.Parent,'Tag','cframe'),'Position',pos)
 alphathr = str2double(get(findobj(hObject.Parent,'Tag','alphathr'),'String'));
 
 set(hObject,'Value',frame)
-set(props.video.img,'CData',props.video.imdataroi(:,:,frame))
-set(props.video.img,'AlphaData',props.video.imdataroi(:,:,frame)>alphathr)
+roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
+
+inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
+imult = [1,-1];
+if roi
+    iframe = props.video.imdataroi(:,:,frame)*imult(inv);
+    set(props.video.img,'CData',iframe)
+    set(props.video.img,'AlphaData',(iframe>alphathr)*0.7)
+else
+    iframe = props.video.imdata(:,:,frame)*imult(inv);
+    set(props.video.img,'CData',iframe)
+    set(props.video.img,'AlphaData',(iframe>alphathr))
+end
 idur = size(props.video.imdataroi,3);
 sf = diff(props.video.tm(1:2));
 props.video.txtframe.String = sprintf('Frame: %i',frame);
@@ -2399,20 +2478,32 @@ function setreference(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
 [x,~] = ginput(1);
+
+set(findobj(hObject.Parent,'Tag','progtxt'),'String','Processing...');
+
 refr = find(props.video.tm>x,1);
 ref = findobj(hObject.Parent,'Tag','ref');
 ref.Position(1) = x;
 pause(0.1)
+adjustdata(intan,hObject.Parent)
+chframe(findobj(hObject.Parent,'Tag','imslider'))
+set(findobj(hObject.Parent,'Tag','progtxt'),'String',' ');
+
+
+function adjustdata(intan,vfig)
+props = guidata(intan);
+
+pos = get(findobj(vfig,'Tag','ref'),'Position');
+refr = find(props.video.tm>pos(1),1);
+props.video.reference = pos(1);
 
 f0 = props.video.imdata(:,:,refr);
 props.video.imdata = props.video.imdata - repmat(f0,1,1,size(props.video.imdata,3));
 f0 = props.video.imdataroi(:,:,refr);
-props.video.imdata = props.video.imdataroi - repmat(f0,1,1,size(props.video.imdataroi,3));
+props.video.imdataroi = props.video.imdataroi - repmat(f0,1,1,size(props.video.imdataroi,3));
 
-slidepos = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
-set(props.video.img,'CData',props.video.imdata(:,:,slidepos))
-props.video.reference = x;
 guidata(intan,props)
+
 
 
 %% vsd frame image and ROI methods
@@ -2593,8 +2684,24 @@ if isfield(props,'video')
     d2uint2 = 2^16/range(props.video.imdataroi(:));
     imdataroi = uint16((props.video.imdataroi - min2)*d2uint2);
 %     save(fullfile(path,replace(file,'.','_imdata.')),'video')
-    save(fullfile(path,replace(file,'.','_imdata.')),'min1','d2uint1','min2',...
-        'd2uint2','imdata','imdataroi','tm','fun','fparam','reference','climv')
+    if numel(imdata)>1e9
+        halfit = round(size(imdata,3)/2);
+        imdata1 = imdata(:,:,1:halfit);
+        imdata2 = imdata(:,:,halfit+1:end);
+        save(fullfile(path,replace(file,'.','_imdata11.')),'min1','d2uint1',...
+            'imdata1','tm','fun','fparam','reference','climv','halfit')
+        save(fullfile(path,replace(file,'.','_imdata12.')),'min1','d2uint1',...
+            'imdata2','tm','fun','fparam','reference','climv','halfit')
+        imdataroi1 = imdataroi(:,:,1:halfit);
+        imdataroi2 = imdataroi(:,:,halfit+1:end);
+        save(fullfile(path,replace(file,'.','_imdata21.')),'min2','d2uint2',...
+            'imdataroi1','tm','fun','fparam','reference','climv','halfit')
+        save(fullfile(path,replace(file,'.','_imdata22.')),'min2','d2uint2',...
+            'imdataroi2','tm','fun','fparam','reference','climv','halfit')
+    else
+        save(fullfile(path,replace(file,'.','_imdata.')),'min1','d2uint1','min2',...
+            'd2uint2','imdata','imdataroi','tm','fun','fparam','reference','climv')
+    end
 end
 props = rmfield(props,'video');
 
