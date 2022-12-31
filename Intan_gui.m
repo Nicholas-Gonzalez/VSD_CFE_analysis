@@ -2333,6 +2333,7 @@ pause(0.01)
 fid = fopen(info.Filename,'r');
 tic
 kernpos = props.kernpos;
+kerndata = zeros(length(sidx),length(kernpos));
 det = props.det;
 kernel_size = diff([kernpos ; length(det)])-1;
 nprog = round(length(sidx)/200);
@@ -2343,7 +2344,7 @@ for s=1:length(sidx)
     fseek(fid,offset,'bof');% Find target position on file.
     
     % Read data.
-    fdata = fread(fid,frameLength,'int16=>double');%'int16=>double');% single saves about 25% processing time and requires half of memory 
+    fdata = fread(fid,frameLength,'int16=>single');%'int16=>double');% single saves about 25% processing time and requires half of memory 
    
     if length(fdata)<frameLength
         s = s - 1;
@@ -2357,6 +2358,7 @@ for s=1:length(sidx)
     for k=1:length(kernpos)
         kIdx = det(kernpos(k)+1:kernpos(k)+kernel_size(k));
         imdataroi(s,kIdx) = mean(imdata(s,kIdx));
+        kerndata(s,k) = mean(imdata(s,kIdx));
     end
 
     if mod(s,nprog)==0
@@ -2405,20 +2407,18 @@ for p=1:size(imdata,2)
 end
 toc
 
+
 set(findobj(vfig,'Tag','progtxt'),'String',['calculate ROI bleaching ' vsd{1}]);
 
 imdatarois = imdataroi;
-fparamr = nan(xsize*ysize,length(p0));
+fparamr = nan(length(kernpos),length(p0));
 
-ds = round(800/interval);
 tic
+figure('Name','new');
 for p=1:length(kernpos)
     kIdx = det(kernpos(p)+1:kernpos(p)+kernel_size(p));
-    roid = double(imdataroi(1:ds:end,kIdx(1)));
-    fparamr(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),roid,...
-        -flimits,flimits,opts);
-    kIdx = det(kernpos(p)+1:kernpos(p)+kernel_size(p));
-    imdatarois(:,kIdx) = imdataroi(:,kIdx) - repmat(fun(fparamr(p,:),tm),1,length(kIdx));
+    fparamr(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),kerndata(1:ds:end,k),-flimits,flimits,opts);
+    imdatarois(:,kIdx) = repmat( kerndata(:,k) - fun(fparamr(p,:),tm), 1, length(kIdx));
     set(progress,'Position',[0 0 p/length(kernpos) 1]);pause(0.01)
 end
 toc
