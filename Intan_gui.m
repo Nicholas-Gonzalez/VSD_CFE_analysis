@@ -1866,9 +1866,10 @@ vsd = props.files(contains(props.files(:,2),'tsm'),2);
 
 
 if redo
-    [imdatas,fparam,fun,imdata,tm,imdataroi] = getimdata(vsd,1,vfig,fr);
+    [imdatas,fparam,fun,imdata,tm,imdataroi,kerndata] = getimdata(vsd,1,vfig,fr);
     props.video.imdata = permute(imdatas,[2,1,3]);
     props.video.imdataroi = permute(imdataroi,[2,1,3]);
+    props.video.kerndata = kerndata;
     props.video.tm = tm;% + diff(tm(1:2))*5;% don't know why this 5* needs to be done but it does
     props.video.fun = fun;
     props.video.fparam = fparam;
@@ -2145,7 +2146,7 @@ start = str2double(start);
 stop = str2double(stop);
 start = find(props.video.tm>start,1);
 stop = find(props.video.tm>stop,1);
-disp([start,stop])
+
 alphathr = str2double(get(findobj(hObject.Parent,'Tag','alphathr'),'String'));
 idur = length(props.video.tm);
 
@@ -2161,10 +2162,10 @@ ra = str2double(get(findobj(hObject.Parent,'Tag','notegap'),'String'));
 dur = str2double(get(findobj(hObject.Parent,'Tag','noteduration'),'String'));
 nharm = str2double(get(findobj(hObject.Parent,'Tag','harmonics'),'String'));
 
-spike = false(stop-start,nroi);
-for r=1:ra
-    spike(ra,randi(nroi,[round(nroi/ra),1])) = true;
-end
+% spike = false(stop-start,nroi);
+% for r=1:ra
+%     spike(ra,randi(nroi,[round(nroi/ra),1])) = true;
+% end
 
 equalize = ones(1,nroi);
 % equalize([8 63 35 29 74]) = 0.2;
@@ -2173,19 +2174,24 @@ roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
 inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
 imult = [1,-1];
 
+kerndata = props.video.kerndata>alphathr;
+kernstr = char(kerndata+48);
+spikes = zeros(size(kerndata));
+for k=1:size(kerndata,2)
+    key = [repelem('0',ra) '[1]+'];
+    [startsp,stopsp] = regexp(kernstr(:,k)',key);
+    spikes(startsp,k) = stopsp-startsp;
+end
+
 open(vid)
 for f=start:stop
-    framed = props.video.imdataroi(:,:,f)';
-    fidx = f-start+1;
     aidx = (f-start+1) + (f-start)*fs/vfr;
     for k=1:length(kernpos)
-        if fidx<size(spike,1) && fidx>ra && framed(det(kernpos(k)+5))>alphathr &&  ~any(spike(fidx-ra:fidx,k))
-            spike(fidx,k) = true;
+        if kerndata(f,k) 
             freq = k*430/nroi+70;
-            note = makesound(freq,dur,fs,nharm);
-            jitter = randi(200);
+            ndur = kerndata(f,k)*sr*2+dur;
+            note = makesound(freq,ndur,fs,nharm);
             nidx = aidx:aidx+length(note)-1;
-            nidx = nidx + jitter;
             nidx(nidx>length(audio)) = [];
             audio(nidx) = audio(nidx) + note(1:length(nidx))*equalize(k);
         end
@@ -2212,7 +2218,7 @@ for f=start:stop
     writeVideo(vid,frame)
 end
 close(vid)
-assignin('base','spike',spike)
+
 audiowrite( fullfile(path,[file '.wav']), audio/max(audio), fs,'BitsPerSample',32)
 
 function note = makesound(freq,dur,fs,nharm)
@@ -2227,7 +2233,7 @@ note = zeros(size(tm));
 for h=1:length(harmf)
     note = note + fun(harmf(h),tm)*hamp(h);
 end
-note = note.*(1-exp(-tm/(max(tm)/20))).*exp(-tm/(max(tm)/6));
+note = note.*(1-exp(-tm/(max(tm)/40))).*exp(-tm/(max(tm)/5));
 
 function invertim(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -2269,9 +2275,10 @@ intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 ref = find(props.video.tm>props.video.reference,1);
-[imdatas,fparam,fun,imdata,tm,imdataroi] = getimdata(vsd,ref,hObject.Parent);
+[imdatas,fparam,fun,imdata,tm,imdataroi,kerndata] = getimdata(vsd,ref,hObject.Parent);
 props.video.imdata = permute(-imdatas,[2,1,3]);
 props.video.imdataroi = permute(-imdataroi,[2,1,3]);
+props.video.kerndata = kerndata;
 props.video.tm = tm + diff(tm(1:2))*5;% don't know why this 5* needs to be done but it does
 props.video.fun = fun;
 props.video.fparam = fparam;
@@ -2296,7 +2303,7 @@ caxis(imgax,props.video.climv)
 
 guidata(intan,props)
 
-function [imdatas,fparam,fun,imdata,tm,imdatarois] = getimdata(vsd,ref,vfig,ifi)
+function [imdatas,fparam,fun,imdata,tm,imdatarois,kerndata] = getimdata(vsd,ref,vfig,ifi)
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
@@ -2372,6 +2379,7 @@ fclose(fid);
 sidx = sidx(1:s);
 imdata = imdata(1:s,:);
 imdataroi = imdataroi(1:s,:);
+kerndata = kerndata(1:s,:);
 
 if ref>size(imdata,3); ref = 1;end
 
@@ -2380,6 +2388,9 @@ imdata = (imdata - f0)./f0;
 
 f0 = repmat(imdataroi(ref,:),size(imdataroi,1),1);
 imdataroi = (imdataroi - f0)./f0;
+
+f0 = repmat(kerndata(ref,:),size(kerndata,1),1);
+kerndata = (kerndata - f0)./f0;
 
 fun = @(p,x) p(1).*(1 - exp(x./-p(2))) + p(3).*(1 - exp(x./-p(4))) + p(5).*(1 - exp(x./-p(6)));
 % [fun] = makefun(3);
@@ -2396,6 +2407,7 @@ fparam = nan(xsize*ysize,length(p0));
 
 ds = round(800/interval);
 
+% pixel bleaching
 tic
 for p=1:size(imdata,2)
     pixd = double(imdata(1:ds:end,p));
@@ -2413,13 +2425,13 @@ set(findobj(vfig,'Tag','progtxt'),'String',['calculate ROI bleaching ' vsd{1}]);
 imdatarois = imdataroi;
 fparamr = nan(length(kernpos),length(p0));
 
+%ROI bleaching
 tic
-figure('Name','new');
-for p=1:length(kernpos)
-    kIdx = det(kernpos(p)+1:kernpos(p)+kernel_size(p));
-    fparamr(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),kerndata(1:ds:end,k),-flimits,flimits,opts);
-    imdatarois(:,kIdx) = repmat( kerndata(:,k) - fun(fparamr(p,:),tm), 1, length(kIdx));
-    set(progress,'Position',[0 0 p/length(kernpos) 1]);pause(0.01)
+for k=1:length(kernpos)
+    kIdx = det(kernpos(k)+1:kernpos(k)+kernel_size(k));
+    fparamr(k,:) = lsqcurvefit(fun,p0,tm(1:ds:end),kerndata(1:ds:end,k),-flimits,flimits,opts);
+    imdatarois(:,kIdx) = repmat( kerndata(:,k) - fun(fparamr(k,:),tm), 1, length(kIdx));
+    set(progress,'Position',[0 0 k/length(kernpos) 1]);pause(0.01)
 end
 toc
 
@@ -2501,6 +2513,8 @@ f0 = props.video.imdata(:,:,refr);
 props.video.imdata = props.video.imdata - repmat(f0,1,1,size(props.video.imdata,3));
 f0 = props.video.imdataroi(:,:,refr);
 props.video.imdataroi = props.video.imdataroi - repmat(f0,1,1,size(props.video.imdataroi,3));
+f0 = props.video.kerndata(refr,:);
+props.video.kerndata = props.video.kerndata - repmat(f0,size(props.video.kerndata,1));
 
 guidata(intan,props)
 
