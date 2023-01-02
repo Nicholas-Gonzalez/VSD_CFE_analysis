@@ -309,7 +309,7 @@ if exist(imfn,'file')
     disp(['loaded:   ' imfn2])
 
     video.imdata = cat(3,video11.imdata1,video12.imdata2);
-    fields = {'climv','d2uint1','fparam','fun','min1','reference','tm'};
+    fields = {'climv','d2uint1','fparam','fun','min1','reference','tm','kerndata'};
     for f=1:length(fields)
         video.(fields{f}) = video11.(fields{f});
     end
@@ -616,8 +616,8 @@ if intch && vsdch
                 d2uint1 = vsdprops.matprops.video.d2uint1;
                 min1 = vsdprops.matprops.video.min1;
                 props.video.imdata = double(props.video.imdata)/d2uint1 + min1;
-                d2uint2 = vsdprops.matprops.video.d2uint1;
-                min2 = vsdprops.matprops.video.min1;
+                d2uint2 = vsdprops.matprops.video.d2uint2;
+                min2 = vsdprops.matprops.video.min2;
                 props.video.imdataroi = double(props.video.imdataroi)/d2uint2 + min2;
             end
         else
@@ -642,8 +642,8 @@ if intch && vsdch
                 d2uint1 = vsdprops.matprops.video.d2uint1;
                 min1 = vsdprops.matprops.video.min1;
                 props.video.imdata = double(props.video.imdata)/d2uint1 + min1;
-                d2uint2 = vsdprops.matprops.video.d2uint1;
-                min2 = vsdprops.matprops.video.min1;
+                d2uint2 = vsdprops.matprops.video.d2uint2;
+                min2 = vsdprops.matprops.video.min2;
                 props.video.imdataroi = double(props.video.imdataroi)/d2uint2 + min2;
             end
             props.im = vsdprops.matprops.im;
@@ -806,7 +806,7 @@ fnames = string({dfolder.name});
 noten = fullfile(fpath,'notes.xlsx');
 if exist(noten,"file")
     notes = readcell(fullfile(fpath,'notes.xlsx'));
-    cfename = notes{ismember(notes(:,1),'001'),2};
+    cfename = notes{ismember(notes(:,1),fn),2};
     if any(contains(fnames,cfename))
        cfename = fullfile(fpath,cfename,[cfename '.rhs']);
     else
@@ -2174,7 +2174,7 @@ roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
 inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
 imult = [1,-1];
 
-kerndata = props.video.kerndata>alphathr;
+kerndata = props.video.kerndata*imult(inv)>alphathr;
 kernstr = char(kerndata+48);
 spikes = zeros(size(kerndata));
 for k=1:size(kerndata,2)
@@ -2234,6 +2234,7 @@ for h=1:length(harmf)
     note = note + fun(harmf(h),tm)*hamp(h);
 end
 note = note.*(1-exp(-tm/(max(tm)/40))).*exp(-tm/(max(tm)/5));
+note = note*(4*exp(-freq/100)+1);% generate equal perceptable noise
 
 function invertim(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -2430,7 +2431,8 @@ tic
 for k=1:length(kernpos)
     kIdx = det(kernpos(k)+1:kernpos(k)+kernel_size(k));
     fparamr(k,:) = lsqcurvefit(fun,p0,tm(1:ds:end),kerndata(1:ds:end,k),-flimits,flimits,opts);
-    imdatarois(:,kIdx) = repmat( kerndata(:,k) - fun(fparamr(k,:),tm), 1, length(kIdx));
+    kerndata(:,k) =  kerndata(:,k)  - fun(fparamr(k,:),tm);
+    imdatarois(:,kIdx) = repmat( kerndata(:,k), 1, length(kIdx));
     set(progress,'Position',[0 0 k/length(kernpos) 1]);pause(0.01)
 end
 toc
@@ -2514,7 +2516,7 @@ props.video.imdata = props.video.imdata - repmat(f0,1,1,size(props.video.imdata,
 f0 = props.video.imdataroi(:,:,refr);
 props.video.imdataroi = props.video.imdataroi - repmat(f0,1,1,size(props.video.imdataroi,3));
 f0 = props.video.kerndata(refr,:);
-props.video.kerndata = props.video.kerndata - repmat(f0,size(props.video.kerndata,1));
+props.video.kerndata = props.video.kerndata - repmat(f0,size(props.video.kerndata,1),1);
 
 guidata(intan,props)
 
@@ -2690,7 +2692,7 @@ if isfield(props,'video')
     fparam = props.video.fparam;
     reference = props.video.reference;
     climv = props.video.climv;
-
+    kerndata = props.video.kerndata;
 %     save(fullfile(path,replace(file,'.','_imdata.')),'minp','d2uint','imdata',...
 %         'tm','fun','fparam','reference','climv')
 
@@ -2703,7 +2705,7 @@ if isfield(props,'video')
         imdata1 = imdata(:,:,1:halfit);
         imdata2 = imdata(:,:,halfit+1:end);
         save(fullfile(path,replace(file,'.','_imdata11.')),'min1','d2uint1',...
-            'imdata1','tm','fun','fparam','reference','climv','halfit')
+            'imdata1','tm','fun','fparam','reference','climv','halfit','kerndata')
         save(fullfile(path,replace(file,'.','_imdata12.')),'min1','d2uint1',...
             'imdata2','tm','fun','fparam','reference','climv','halfit')
         imdataroi1 = imdataroi(:,:,1:halfit);
@@ -2714,10 +2716,10 @@ if isfield(props,'video')
             'imdataroi2','tm','fun','fparam','reference','climv','halfit')
     else
         save(fullfile(path,replace(file,'.','_imdata.')),'min1','d2uint1','min2',...
-            'd2uint2','imdata','imdataroi','tm','fun','fparam','reference','climv')
+            'd2uint2','imdata','imdataroi','tm','fun','fparam','reference','climv','kerndata')
     end
+    props = rmfield(props,'video');
 end
-props = rmfield(props,'video');
 
 if isfield(props,'databackup')
     props.databackup = convert_uint(props.databackup, props.bd2uint, props.bmin, 'uint16');
