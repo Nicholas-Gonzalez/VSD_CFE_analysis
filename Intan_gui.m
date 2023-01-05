@@ -1912,7 +1912,7 @@ props = guidata(hObject);
 ofigsize = props.figsize;
 
 apptag = ['apptag' num2str(randi(1e4,1))];
-vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3)*0.7 ofigsize(4)*0.7],...
+vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.06+ofigsize(2) ofigsize(3)*0.8 ofigsize(4)-ofigsize(4)*0.16],...
     'Name','Make Video','NumberTitle','off','Tag',apptag);
 
 guidata(vfig,props.intan_tag)
@@ -1949,12 +1949,12 @@ slidepos = 10;
 sf = diff(props.video.tm(1:2));
 
 
-iaxr = axes('Units','normalized','Position',[0.3 0.35 0.4 0.6],'Tag','imgax');
+iaxr = axes('Units','normalized','Position',[0.3 0.39 0.4 0.58],'Tag','imgax');
 props.video.img = image(props.im);
 iaxr.XTick = [];
 iaxr.YTick = [];
 
-iax = axes('Units','normalized','Position',[0.3 0.35 0.4 0.6],'Tag','imgax');
+iax = axes('Units','normalized','Position',[0.3 0.39 0.4 0.58],'Tag','imgax');
 props.video.iax = iax;
 iaxpos = iax.Position;
 climv = [-0.02 0.02];
@@ -1968,7 +1968,7 @@ iax.YTick = [];
 iax.Color = 'none';
 
 
-cb = colorbar('Units','normalized','Position',[0.7 0.35 0.01 0.6]);
+cb = colorbar('Units','normalized','Position',[sum(iax.Position([1 3])) iax.Position(2) 0.01 iax.Position(4)]);
 cb.Label.String = '-\DeltaF/F';
 
 corridx = find(contains(props.ch,'V-'),1) - 1;
@@ -1997,7 +1997,7 @@ uicontrol('Units','normalized','Position',[iaxpos(1) sum(iaxpos([2 4])) 0.03 0.0
 uicontrol('Units','normalized','Position',[iaxpos(1)+0.03 sum(iaxpos([2 4])) 0.04 0.03],...
     'Style','togglebutton','Tag','roivpix','String','Pixels','Callback',@roivpix,'Enable','on');
 
-uicontrol('Units','normalized','Position',[sum(iaxpos([1 3]))-0.13 sum(iaxpos([2 4])) 0.05 0.03],'Style','togglebutton',...
+uicontrol('Units','normalized','Position',[sum(iaxpos([1 3]))-0.16 sum(iaxpos([2 4])) 0.05 0.03],'Style','togglebutton',...
     'Tag','invert','String','inverted','Value',1,'Callback',@invertim,'Enable','on');
 
 xsize = size(props.video.imdata,2);
@@ -2009,15 +2009,17 @@ txttm = text(xsize-85, 25, sprintf('Time: %0.2f s',length(props.video.tm)*slidep
 props.video.txttm = txttm;
 
 
-ax(1) = axes('Units','normalized','Position',[0.3 0.18 0.4 0.12]);
+ax(1) = axes('Units','normalized','Position',[0.3 0.24 0.4 0.09]);
 plt(1) = plot(props.tm,props.data(props.showidx(1),:),'Tag','plt1');
 ax(1).YLabel.String = '\DeltaF/F';
-ax(2) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.12]);
+ax(2) = axes('Units','normalized','Position',[0.3 0.15 0.4 0.09]);
 plt(2) = plot(props.tm,props.data(props.showidx(2),:),'Tag','plt2');
-set(ax,'XLim',[min(props.tm) max(props.tm)]);
-ax(2).XLabel.String = 'Time (s)';
 ax(2).YLabel.String = '\DeltaF/F';
-ax(3) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.24],'Color','none','Visible','off');
+ax(3) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.09]);
+plt(3) = plot(props.tm,props.data(props.showidx(3),:),'Tag','plt3');
+ax(3).XLabel.String = 'Time (s)';
+ax(3).YLabel.String = '\DeltaF/F';
+ax(4) = axes('Units','normalized','Position',[0.3 0.06 0.4 0.27],'Color','none','Visible','off');
 ref = rectangle('Position',[props.video.reference 0 sf 1],'FaceColor','k','Tag','ref');
 rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 1 0.5],'EdgeColor',[0.5 1 0.5],...
     'Tag','startframe1');
@@ -2037,14 +2039,17 @@ str = join(str,'');
 
 
 
-uicontrol('Units','normalized','Position',[0.2 0.20 0.07 0.05],'Style','popupmenu',...
+uicontrol('Units','normalized','Position',[0.18 0.28 0.07 0.05],'Style','popupmenu',...
     'Max',length(ch),'Min',1,'String',str','Tag','channels1','Value',showidx(1),'Callback',@chimch);
 
-uicontrol('Units','normalized','Position',[0.2 0.08 0.07 0.05],'Style','popupmenu',...
+uicontrol('Units','normalized','Position',[0.18 0.17 0.07 0.05],'Style','popupmenu',...
     'Max',length(ch),'Min',1,'String',str','Tag','channels2','Value',showidx(2),'Callback',@chimch);
 
-uicontrol('Units','normalized','Position',[0.4 0.30 0.06 0.02],'Style','pushbutton',...
-    'Tag','Raw','String','Set reference frame','Callback',@setreference,'Enable','on');
+uicontrol('Units','normalized','Position',[0.18 0.08 0.07 0.05],'Style','popupmenu',...
+    'Max',length(ch),'Min',1,'String',str','Tag','channels3','Value',showidx(2),'Callback',@chimch);
+
+uicontrol('Units','normalized','Position',[0.71 0.34 0.1 0.03],'Style','pushbutton',...
+    'Tag','reference','String','Set reference frame','Callback',@setreference,'Enable','on');
 
 
 % ------------------------------
@@ -2327,7 +2332,9 @@ intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
 frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
 if hObject.Value
-    set(props.video.img,'CData',repmat(props.video.imdatar(:,:,frame),1,1,3)) 
+    imframe = repmat(props.video.imdatar(:,:,frame),1,1,3);
+    set(props.video.img,'CData',imframe/max(imframe(:))) 
+%     set(props.video.img,'CData',props.video.imdatar(:,:,frame))
     caxis(props.video.iax,'auto')
 else
     set(props.video.img,'CData',props.video.imdata(:,:,frame))
@@ -2475,12 +2482,12 @@ ds = round(800/interval);
 
 % pixel bleaching
 tic
-for p=1:size(imdata,2)
-    pixd = double(imdata(1:ds:end,p));
+for p=1:size(imdatas,2)
+    pixd = double(imdatas(1:ds:end,p));
     fparam(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),pixd,-flimits,flimits,opts);
-    imdatas(:,p) = imdata(:,p) - fun(fparam(p,:),tm);
+    imdatas(:,p) = imdatas(:,p) - fun(fparam(p,:),tm);
     if mod(p,500)==0%round(size(imdata,2)/52))==0
-         set(progress,'Position',[0 0 p/size(imdata,2) 1]);pause(0.01)
+         set(progress,'Position',[0 0 p/size(imdatas,2) 1]);pause(0.01)
     end
 end
 toc
@@ -2504,6 +2511,7 @@ toc
 
 imdatas = reshape(imdatas',[256, 256, length(sidx)]);
 imdatarois = reshape(imdatarois',[256, 256, length(sidx)]);
+imdata = reshape(imdata',[256, 256, length(sidx)]);
 
 set(findobj(vfig,'Tag','progtxt'),'String',' ');
 set(findobj(vfig,'Tag','progax'),'Position',[10 0.05 0.25 0.05]);
@@ -2521,6 +2529,7 @@ alphathr = str2double(get(findobj(hObject.Parent,'Tag','alphathr'),'String'));
 
 set(hObject,'Value',frame)
 roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
+raw = get(findobj(hObject.Parent,'Tag','Raw'),'Value');
 
 inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
 imult = [1,-1];
@@ -2529,9 +2538,16 @@ if roi
     set(props.video.img,'CData',iframe)
     set(props.video.img,'AlphaData',(iframe>alphathr)*0.7)
 else
-    iframe = props.video.imdata(:,:,frame)*imult(inv);
-    set(props.video.img,'CData',iframe)
-    set(props.video.img,'AlphaData',(iframe>alphathr))
+    if raw
+        iframe = repmat(props.video.imdatar(:,:,frame),[1,1,3]);
+        set(props.video.img,'CData',iframe/max(iframe(:)))
+        set(props.video.img,'AlphaData',(iframe>-inf));
+        caxis(props.video.iax,'auto')
+    else
+        iframe = props.video.imdata(:,:,frame)*imult(inv);
+        set(props.video.img,'CData',iframe)
+        set(props.video.img,'AlphaData',(iframe>alphathr))
+    end
 end
 idur = size(props.video.imdataroi,3);
 sf = diff(props.video.tm(1:2));
