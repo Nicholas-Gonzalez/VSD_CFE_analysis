@@ -41,9 +41,10 @@ mi(1) = uimenu(m,'Text','Open','Callback',@loadapp);
 %     rm = [];%Depricated
 % end
 mi(3) = uimenu(m,'Text','Generate Tiffs','Callback',@all_kframe,'Enable','on','Tag','kframe');
-mi(4) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
-mi(5) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
-mi(6) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
+mi(4) = uimenu(m,'Text','Average Image','Callback',@avgtsm,'Enable','on');
+mi(5) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
+mi(6) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
+mi(7) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
 
 % ---- formatting parameters --------
 fontsz = 10;
@@ -176,6 +177,70 @@ else
 end
 disp('finished')
 delete(buf)
+
+function avgtsm(hObject,eventdata)
+[fnames, fpath] = uigetfile('*.tsm',"MultiSelect",'off');
+file = fullfile(fpath,fnames);
+
+pause(0.1)
+if ischar(file)
+    fig = figure('Name','Progress','NumberTitle','off');
+    fig.Position(4) = 100;
+
+
+    disp(['avgs   ',file])
+    warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
+    info = fitsinfo(file);
+    warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
+    
+    xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
+    ysize = info.PrimaryData.Size(1);
+    zsize = info.PrimaryData.Size(3); % Length of recording
+    
+    interval = 500;
+
+    frameLength = xsize*ysize*interval; % Frame length is the product of X and Y axis lengths;
+    hoffset = info.PrimaryData.Offset;
+    
+    sidx = 6:interval:zsize;
+    
+    im = zeros(ysize,xsize,length(sidx));
+    
+    ax = axes('YTick',[],'XTick',[],'Box','on','XLim',[0 1]);
+    progress = rectangle('Position',[0 0 0 1],'FaceColor','b','Tag','progress');
+    pause(0.01)
+    
+    fid = fopen(info.Filename,'r');
+    tic
+    nprog = round(length(sidx)/200);
+    nprog(nprog==0) = 1;
+    for s=1%:4%length(sidx)  Not sure why last frame section is junk.  Why is it ending prematurely
+        offset = hoffset +  (sidx(s)-1)*xsize*ysize*2; % Because each integer takes two bytes.
+        
+        fseek(fid,offset,'bof');% Find target position on file.
+        
+        % Read data.
+        fdata = fread(fid,frameLength,'int16=>single');%'int16=>double');% single saves about 25% processing time and requires half of memory 
+       
+        if length(fdata)<frameLength
+            s = s - 1;
+            break
+        end   
+        fdata = reshape(fdata,[xsize*ysize interval]);
+        fdata = mean(fdata,2);
+    
+        im(:,:,s) = reshape(fdata,ysize,xsize)';% Format data.    
+        if mod(s,nprog)==0
+            set(progress,'Position',[0 0 s/(length(sidx)-1) 1]);pause(0.05)
+        end
+    end
+    toc
+    fclose(fid);
+    im = mean(im,3);
+    im = im/max(im(:));
+    imwrite(im,replace(file,'.tsm','_average.tif'))
+    close(fig)
+end
 
 function scalebar(hObject,eventdata)
 props = guidata(hObject);
@@ -1868,6 +1933,7 @@ vsd = props.files(contains(props.files(:,2),'tsm'),2);
 if redo
     [imdatas,fparam,fun,imdata,tm,imdataroi,kerndata] = getimdata(vsd,1,vfig,fr);
     props.video.imdata = permute(imdatas,[2,1,3]);
+    props.video.imdatar = permute(imdata,[2,1,3]);
     props.video.imdataroi = permute(imdataroi,[2,1,3]);
     props.video.kerndata = kerndata;
     props.video.tm = tm;% + diff(tm(1:2))*5;% don't know why this 5* needs to be done but it does
@@ -2244,7 +2310,6 @@ adjustdata(intan,hObject.Parent)
 chframe(findobj(hObject.Parent,'Tag','imslider'))
 set(findobj(hObject.Parent,'Tag','progtxt'),'String',' ');
 
-
 function setcmap(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
@@ -2260,11 +2325,11 @@ guidata(intan,props)
 function raw(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
+frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
 if hObject.Value
-    set(props.video.img,'CData',props.im) 
+    set(props.video.img,'CData',repmat(props.video.imdatar(:,:,frame),1,1,3)) 
     caxis(props.video.iax,'auto')
 else
-    frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
     set(props.video.img,'CData',props.video.imdata(:,:,frame))
     imgax = findobj(hObject.Parent,'Tag','imgax');
     caxis(imgax,props.video.climv)
@@ -2277,8 +2342,9 @@ props = guidata(intan);
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
 ref = find(props.video.tm>props.video.reference,1);
 [imdatas,fparam,fun,imdata,tm,imdataroi,kerndata] = getimdata(vsd,ref,hObject.Parent);
-props.video.imdata = permute(-imdatas,[2,1,3]);
-props.video.imdataroi = permute(-imdataroi,[2,1,3]);
+props.video.imdata = permute(imdatas,[2,1,3]);
+props.video.imdatar = permute(imdata,[2,1,3]);
+props.video.imdataroi = permute(imdataroi,[2,1,3]);
 props.video.kerndata = kerndata;
 props.video.tm = tm + diff(tm(1:2))*5;% don't know why this 5* needs to be done but it does
 props.video.fun = fun;
@@ -2385,7 +2451,7 @@ kerndata = kerndata(1:s,:);
 if ref>size(imdata,3); ref = 1;end
 
 f0 = repmat(imdata(ref,:),size(imdata,1),1);
-imdata = (imdata - f0)./f0;
+imdatas = (imdata - f0)./f0;
 
 f0 = repmat(imdataroi(ref,:),size(imdataroi,1),1);
 imdataroi = (imdataroi - f0)./f0;
@@ -2403,7 +2469,6 @@ tm = ((sidx+5)*sr)';% for some reason I need to add five frames of time
 
 set(findobj(vfig,'Tag','progtxt'),'String',['calculate pixel bleaching ' vsd{1}]);
 
-imdatas = imdata;
 fparam = nan(xsize*ysize,length(p0));
 
 ds = round(800/interval);
@@ -2502,7 +2567,6 @@ pause(0.1)
 adjustdata(intan,hObject.Parent)
 chframe(findobj(hObject.Parent,'Tag','imslider'))
 set(findobj(hObject.Parent,'Tag','progtxt'),'String',' ');
-
 
 function adjustdata(intan,vfig)
 props = guidata(intan);
@@ -2699,24 +2763,38 @@ if isfield(props,'video')
     min2 = min(props.video.imdataroi(:));
     d2uint2 = 2^16/range(props.video.imdataroi(:));
     imdataroi = uint16((props.video.imdataroi - min2)*d2uint2);
+
+    min3 = min(props.video.imdatar(:));
+    d2uint3 = 2^16/range(props.video.imdatar(:));
+    imdatar = uint16((props.video.imdatar - min3)*d2uint3);
 %     save(fullfile(path,replace(file,'.','_imdata.')),'video')
     if numel(imdata)>1e9
         halfit = round(size(imdata,3)/2);
+        
         imdata1 = imdata(:,:,1:halfit);
         imdata2 = imdata(:,:,halfit+1:end);
         save(fullfile(path,replace(file,'.','_imdata11.')),'min1','d2uint1',...
             'imdata1','tm','fun','fparam','reference','climv','halfit','kerndata')
         save(fullfile(path,replace(file,'.','_imdata12.')),'min1','d2uint1',...
             'imdata2','tm','fun','fparam','reference','climv','halfit')
+        
         imdataroi1 = imdataroi(:,:,1:halfit);
         imdataroi2 = imdataroi(:,:,halfit+1:end);
         save(fullfile(path,replace(file,'.','_imdata21.')),'min2','d2uint2',...
             'imdataroi1','tm','fun','fparam','reference','climv','halfit')
         save(fullfile(path,replace(file,'.','_imdata22.')),'min2','d2uint2',...
             'imdataroi2','tm','fun','fparam','reference','climv','halfit')
+        
+        imdatar1 = imdatar(:,:,1:halfit);
+        imdatar2 = imdatar(:,:,halfit+1:end);
+        save(fullfile(path,replace(file,'.','_imdata31.')),'min3','d2uint3',...
+            'imdatar1','tm','fun','fparam','reference','climv','halfit')
+        save(fullfile(path,replace(file,'.','_imdata32.')),'min3','d2uint3',...
+            'imdatar2','tm','fun','fparam','reference','climv','halfit')
     else
         save(fullfile(path,replace(file,'.','_imdata.')),'min1','d2uint1','min2',...
-            'd2uint2','imdata','imdataroi','tm','fun','fparam','reference','climv','kerndata')
+            'd2uint2','min3','d2uint3','imdata','imdataroi','imdatar','tm','fun',...
+            'fparam','reference','climv','kerndata')
     end
     props = rmfield(props,'video');
 end
