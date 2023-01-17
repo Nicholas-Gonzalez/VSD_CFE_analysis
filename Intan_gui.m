@@ -367,31 +367,33 @@ if vid
     imfn = fullfile(path,replace(file,'.','_imdata.'));
     if exist(imfn,'file')
         vsdprops.matprops.video = load(imfn);
-    end
-    
-    imfn = fullfile(path,replace(file,'.','_imdata11.'));
+    else
+        imfn = fullfile(path,replace(file,'.','_imdata11.'));
         fieldname = ["imdata","imdataroi","imdatar"];
-    for n=1:3
-        imfn1 = replace(imfn,'imdata11.',['imdata' num2str(n) '1.']);
-        if exist(imfn1,'file')
-            video1 = load(imfn1);
-            disp(['loaded:   ' imfn1])
-        
-            imfn2 = replace(imfn,'imdata11.',['imdata' num2str(n) '2.']);
-            video2 = load(imfn2);
-            disp(['loaded:   ' imfn2])
-        
-            fields = {'climv',['d2uint' num2str(n)],'fparam','fun',['min' num2str(n)],'reference','tm'};
-            if n==1
-                fields = [fields , 'kerndata'];
+        for n=1:3
+            p = 1;
+            while 1==1
+                imfn1 = replace(imfn,'imdata11.',['imdata' num2str(n) num2str(p) '.']);
+                if ~exist(imfn1,'file'); break; end
+                video1 = load(imfn1);     
+                fields = {'climv',['d2uint' num2str(n)],'fparam','fun',['min' num2str(n)],'reference','tm','chunks'};
+                if p==1
+                    video.(fieldname{n}) = video1.([fieldname{n} 'p']);
+                    if n==1
+                        fields = [fields , 'kerndata'];
+                    end
+            
+                    for f=1:length(fields)
+                        video.(fields{f}) = video1.(fields{f});
+                    end
+                else
+                    video.(fieldname{n}) = cat(3,video.(fieldname{n}), video1.([fieldname{n} 'p']));
+                end
+                disp(['loaded:   ' imfn1])
+                p = p + 1;
             end
-    
-            for f=1:length(fields)
-                video.(fields{f}) = video1.(fields{f});
-            end
-            video.(fieldname{n}) = cat(3,video1.([fieldname{n} '1']),video2.([fieldname{n} '2']));
-            vsdprops.matprops.video = video;
         end
+        vsdprops.matprops.video = video;
     end
 end
 
@@ -1999,7 +2001,7 @@ uicontrol('Units','normalized','Position',[0.71 0.27 0.1 0.03],...
     'SliderStep',[1 1]/idur,'Callback',@chframe,'Tag','imslider');
 
 uicontrol('Units','normalized','Position',[iaxpos(1) sum(iaxpos([2 4])) 0.03 0.03],...
-    'Style','togglebutton','Tag','Raw','String','Raw','Callback',@raw,'Enable','on');
+    'Style','togglebutton','Tag','Raw','String','Raw','Callback',@chframe,'Enable','on');
 
 uicontrol('Units','normalized','Position',[iaxpos(1)+0.03 sum(iaxpos([2 4])) 0.04 0.03],...
     'Style','togglebutton','Tag','roivpix','String','Pixels','Callback',@roivpix,'Enable','on');
@@ -2138,7 +2140,7 @@ instrumentfile = fullfile(fileparts(which('Intan_gui')),'all_instruments.xml');
 all_instruments = readstruct(instrumentfile);
 instruments = {all_instruments.part_list.score_part.part_name}';
 
-uicontrol('Units','normalized','Position',[0.11 0.69 0.08 0.03],'Style','text',...
+uicontrol('Units','normalized','Position',[0.11 0.695 0.08 0.03],'Style','text',...
     'String','Instrument 1','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.2 0.70 0.06 0.03],'Style','popupmenu',...
@@ -2191,7 +2193,7 @@ uicontrol('Units','normalized','Position',[0.05 0.09 0.04 0.03],'Style','text',.
 
 uicontrol('Units','normalized','Position',[0.1 0.21 0.06 0.03],'Style','edit',...
     'Tag','movfr','String','30','HorizontalAlignment',...
-    'center','Callback',@startstop,'Enable','on');
+    'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.03 0.205 0.06 0.03],'Style','text',...
     'String','Frame rate (f/s)','HorizontalAlignment','right','Enable','on');
@@ -2352,6 +2354,9 @@ for k=1:size(kerndata,2)
     spikes(startsp,k) = stopsp-startsp;
 end
 
+spikeswm = spikes/sr/2;
+
+assignin('base','spikes',spikes)
 open(vid)
 for f=start:stop
     aidx = (f-start+1) + (f-start)*fs/vfr;
@@ -2360,7 +2365,7 @@ for f=start:stop
             freq = k*430/nroi+70;
             ndur = kerndata(f,k)*sr*2+dur;
             note = makesound(freq,ndur,fs,nharm);
-            nidx = aidx:aidx+length(note)-1;
+            nidx = round(aidx:aidx+length(note)-1);
             nidx(nidx>length(audio)) = [];
             audio(nidx) = audio(nidx) + note(1:length(nidx))*equalize(k);
         end
@@ -2527,7 +2532,8 @@ set(slider,'Max',size(props.video.imdata,3))
 set(slider,'SliderStep',[1 1]/size(props.video.imdata,3))
 
 frame = round(get(findobj(hObject.Parent,'Tag','imslider'),'Value'));
-roi = get(findobj(hObject.Parent,'roivpix'),'Value');
+roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
+alphathr = str2double(get(findobj(hObject.Parent,'Tag','alphathr'),'String'));
 if roi
     set(props.video.img,'CData',props.video.imdataroi(:,:,frame))
     set(props.video.img,'AlphaData',props.video.imdataroi(:,:,frame)>alphathr)
@@ -2537,8 +2543,6 @@ else
 end
 imgax = findobj(hObject.Parent,'Tag','imgax');
 caxis(imgax,props.video.climv)
-
-
 guidata(intan,props)
 
 function [imdatas,fparam,fun,imdata,tm,imdatarois,kerndata] = getimdata(vsd,ref,vfig,ifi)
@@ -2691,12 +2695,14 @@ if strcmp(hObject.Tag,'imslider')
 elseif strcmp(hObject.Tag,'selectframe')
     tm = ginput(1);disp(tm)
     frame = find(props.video.tm>=tm(1),1);
-else
+elseif any(["<<","<","+",">",">>"]==hObject.String)
     chidx = strcmp(["<<","<","+",">",">>"],hObject.String);
     fast = 10;
     chval = [-fast,-1,0,1,fast];
     frame = find(props.video.tm>=pos(1),1) + chval(chidx);
     frame(frame<1) = 1;
+else
+    frame = round(get(slider,'Value'));
 end
 pos(1) = props.video.tm(frame);
 set(findobj(hObject.Parent,'Tag','cframe'),'Position',pos)
@@ -2708,11 +2714,13 @@ roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
 raw = get(findobj(hObject.Parent,'Tag','Raw'),'Value');
 
 inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
+
 imult = [1,-1];
 if roi
     iframe = props.video.imdataroi(:,:,frame)*imult(inv);
     set(props.video.img,'CData',iframe)
     set(props.video.img,'AlphaData',(iframe>alphathr)*0.7)
+    caxis(props.video.iax,props.video.climv)
 else
     if raw
         iframe = repmat(props.video.imdatar(:,:,frame),[1,1,3]);
@@ -2723,6 +2731,7 @@ else
         iframe = props.video.imdata(:,:,frame)*imult(inv);
         set(props.video.img,'CData',iframe)
         set(props.video.img,'AlphaData',(iframe>alphathr))
+        caxis(props.video.iax,props.video.climv)
     end
 end
 idur = size(props.video.imdataroi,3);
@@ -2962,35 +2971,26 @@ if isfield(props,'video')
         imdatar = uint16((props.video.imdatar - min3)*d2uint3);
     end
 %     save(fullfile(path,replace(file,'.','_imdata.')),'video')
-    if numel(imdata)>1e9
-        halfit = round(size(imdata,3)/2);
-        
-        imdata1 = imdata(:,:,1:halfit);
-        imdata2 = imdata(:,:,halfit+1:end);
-        save(fullfile(path,replace(file,'.','_imdata11.')),'min1','d2uint1',...
-            'imdata1','tm','fun','fparam','reference','climv','halfit','kerndata')
-        save(fullfile(path,replace(file,'.','_imdata12.')),'min1','d2uint1',...
-            'imdata2','tm','fun','fparam','reference','climv','halfit')
-        
-        imdataroi1 = imdataroi(:,:,1:halfit);
-        imdataroi2 = imdataroi(:,:,halfit+1:end);
-        save(fullfile(path,replace(file,'.','_imdata21.')),'min2','d2uint2',...
-            'imdataroi1','tm','fun','fparam','reference','climv','halfit')
-        save(fullfile(path,replace(file,'.','_imdata22.')),'min2','d2uint2',...
-            'imdataroi2','tm','fun','fparam','reference','climv','halfit')
+
+    numchunk = ceil((numel(imdata)/9e8));
+    chunks = round(linspace(0,size(imdata,3),numchunk+1));
+    for n=1:numchunk
+        imdatap = imdata(:,:,chunks(n)+1:chunks(n+1));
+        save(fullfile(path,replace(file,'.',['_imdata1' num2str(n) '.'])),'min1','d2uint1',...
+            'imdatap','tm','fun','fparam','reference','climv','chunks','kerndata')
+        disp(fullfile(path,replace(file,'.',['_imdata1' num2str(n) '.'])))
+
+        imdataroip = imdataroi(:,:,chunks(n)+1:chunks(n+1));
+        save(fullfile(path,replace(file,'.',['_imdata2' num2str(n) '.'])),'min2','d2uint2',...
+            'imdataroip','tm','fun','fparam','reference','climv','chunks')
+        disp(fullfile(path,replace(file,'.',['_imdata2' num2str(n) '.'])))
         
         if exist('d2uint3','var')
-            imdatar1 = imdatar(:,:,1:halfit);
-            imdatar2 = imdatar(:,:,halfit+1:end);
-            save(fullfile(path,replace(file,'.','_imdata31.')),'min3','d2uint3',...
-                'imdatar1','tm','fun','fparam','reference','climv','halfit')
-            save(fullfile(path,replace(file,'.','_imdata32.')),'min3','d2uint3',...
-                'imdatar2','tm','fun','fparam','reference','climv','halfit')
+            imdatarp = imdatar(:,:,chunks(n)+1:chunks(n+1));
+            save(fullfile(path,replace(file,'.',['_imdata3' num2str(n) '.'])),'min3','d2uint3',...
+                'imdatarp','tm','fun','fparam','reference','climv','chunks')
+            disp(fullfile(path,replace(file,'.',['_imdata3' num2str(n) '.'])))
         end
-    else
-        save(fullfile(path,replace(file,'.','_imdata.')),'min1','d2uint1','min2',...
-            'd2uint2','min3','d2uint3','imdata','imdataroi','imdatar','tm','fun',...
-            'fparam','reference','climv','kerndata')
     end
     props = rmfield(props,'video');
 end
