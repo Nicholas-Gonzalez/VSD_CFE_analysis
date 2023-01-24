@@ -1918,7 +1918,7 @@ props = guidata(hObject);
 ofigsize = props.figsize;
 
 apptag = ['apptag' num2str(randi(1e4,1))];
-vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.06+ofigsize(2) ofigsize(3)*0.9 ofigsize(4)-ofigsize(4)*0.16],...
+vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.06+ofigsize(2) ofigsize(3)*0.95 ofigsize(4)-ofigsize(4)*0.16],...
     'Name','Make Video','NumberTitle','off','Tag',apptag);
 
 m = uimenu('Text','Video');
@@ -1958,16 +1958,18 @@ slidepos = 10;
 sf = diff(props.video.tm(1:2));
 
 
-iaxr = axes('Units','normalized','Position',[0.3 0.39 0.35 0.58],'Tag','imgax');
+iaxr = axes('Units','normalized','Position',[0.3 0.39 0.32 0.58],'Tag','imgax');
 props.video.img = image(props.im);
 iaxr.XTick = [];
 iaxr.YTick = [];
 
+inv = 1;
+imult = [1,-1];
 iax = axes('Units','normalized','Position',iaxr.Position,'Tag','imgax');
 props.video.iax = iax;
 iaxpos = iax.Position;
 climv = [-0.02 0.02];
-props.video.img = imagesc(props.video.imdata(:,:,slidepos),'AlphaData',props.video.imdata(:,:,slidepos)>climv(1));
+props.video.img = imagesc(props.video.imdata(:,:,slidepos)*imult(inv+1),'AlphaData',props.video.imdata(:,:,slidepos)>climv(1));
 caxis(iax, climv)
 props.video.climv = climv;
 iax.Tag = 'imgax';
@@ -2005,7 +2007,7 @@ uicontrol('Units','normalized','Position',[iaxpos(1)+0.03 sum(iaxpos([2 4])) 0.0
     'Style','togglebutton','Tag','roivpix','String','Pixels','Callback',@roivpix,'Enable','on');
 
 uicontrol('Units','normalized','Position',[sum(iaxpos([1 3]))-0.16 sum(iaxpos([2 4])) 0.05 0.03],'Style','togglebutton',...
-    'Tag','invert','String','inverted','Value',1,'Callback',@invertim,'Enable','on');
+    'Tag','invert','String','inverted','Value',inv,'Callback',@invertim,'Enable','on');
 
 xsize = size(props.video.imdata,2);
 props.video.txtframe = text(xsize-85,10,sprintf('Frame: %i',slidepos),'FontSize',15,...
@@ -2027,20 +2029,23 @@ ax = gobjects(4,1);
 axheight = 0.085;
 topax = 0.91;
 for a=1:length(ax)
-    ax(a) = axes('Units','normalized','Position',[0.725 topax-axheight*(a-1) 0.275 0.085]);
+    ax(a) = axes('Units','normalized','Position',[0.71 topax-axheight*(a-1) 0.285 0.085]);
     plt(a) = plot(props.tm,props.data(props.showidx(a),:),'Tag',['plt' num2str(a)]);
     ax(a).YLabel.String = '\DeltaF/F';
-    if a<length(ax)
-        ax(a).XTick = [];
-    else
-        ax(a).XLabel.String = 'Time (s)';
-    end
+    ax(a).XTick = [];
 
-    uicontrol('Units','normalized','Position',[0.655 topax-axheight*(a-1) 0.05 0.05],'Style','popupmenu',...
+    uicontrol('Units','normalized','Position',[0.63 topax-axheight*(a-1) 0.05 0.05],'Style','popupmenu',...
         'Max',length(ch),'Min',1,'String',str','Tag',['channels' num2str(a)],'Value',showidx(a),'Callback',@chimch);
 end
-
-ax(5) = axes('Units','normalized','Position',[ax(end).Position(1:3) 0.34],'Color','none','Visible','off');
+ax(5) = axes('Units','normalized','Position',[ax(end).Position(1) 0.05 ax(end).Position(3) 0.605]);
+props.video.kimg = imagesc(props.video.tm, 1:size(props.video.kerndata,2), props.video.kerndata'*imult(inv+1));
+ax(5).YTick = 1:2:size(props.video.kerndata,2);
+ax(5).YLabel.String = 'Neuron';
+ax(5).XLabel.String = 'Time (s)';
+ax(5).Tag = 'kimgax';
+caxis(ax(5), climv)
+axsize = sum(cellfun(@(x) x(4),{ax.Position}'));
+ax(6) = axes('Units','normalized','Position',[ax(end).Position(1:3) axsize],'Color','none','Visible','off');
 ref = rectangle('Position',[props.video.reference 0 sf 1],'FaceColor','k','Tag','ref');
 rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 1 0.5],'EdgeColor',[0.5 1 0.5],...
     'Tag','startframe1');
@@ -2048,6 +2053,8 @@ rectangle('Position',[max(props.video.tm) 0 sf 1],'FaceColor',[1 0.5 0.5],...
     'EdgeColor',[1 0.5 0.5],'Tag','stopframe1');
 rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 0.5 0.5],'Tag','cframe');
 set(ax,'XLim',[min(props.tm) max(props.video.tm)]);
+ax(end).YLim = [0 1];
+ax(end).Toolbar.Visible = 'off';
 linkaxes(ax,'x')
 
 %changing frames -------------------------------
@@ -2197,6 +2204,7 @@ nax.XTickLabel = pitch(1:2:end);
 nax.XTickLabelRotation = 0;
 nax.YLim = [1 length(vch)];
 nax.YTick = 1:2:length(vch);
+nax.YLabel.String = 'Neuron';
 nax.YDir = 'reverse';
 nax.FontSize = 8;
 nax.YGrid = 'on';
@@ -2544,11 +2552,13 @@ function setcmap(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
 imgax = findobj(hObject.Parent,'Tag','imgax');
+kimgax = findobj(hObject.Parent,'Tag','kimgax');
 idx = str2double(hObject.Tag(end));
 axes(imgax)
 vals = caxis;
 vals(idx) = str2double(hObject.String);
 caxis(imgax,vals)
+caxis(kimgax,vals)
 props.video.climv = vals;
 guidata(intan,props)
 
@@ -2815,7 +2825,7 @@ intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
 [x,~] = ginput(1);
 
-set(findobj(hObject.Parent,'Tag','progtxt'),'String','Processing...');
+set(findobj(hObject.Parent,'Tag','progtxt'),'String','Processing...','Position',[0.72 0.12 0.25 0.04]);
 
 refr = find(props.video.tm>x,1);
 ref = findobj(hObject.Parent,'Tag','ref');
@@ -2823,7 +2833,7 @@ ref.Position(1) = x;
 pause(0.1)
 adjustdata(intan,hObject.Parent)
 chframe(findobj(hObject.Parent,'Tag','imslider'))
-set(findobj(hObject.Parent,'Tag','progtxt'),'String',' ');
+set(findobj(hObject.Parent,'Tag','progtxt'),'String',' ','Position',[5.72 0.12 0.25 0.04]);
 
 function adjustdata(intan,vfig)
 props = guidata(intan);
@@ -2838,6 +2848,10 @@ f0 = props.video.imdataroi(:,:,refr);
 props.video.imdataroi = props.video.imdataroi - repmat(f0,1,1,size(props.video.imdataroi,3));
 f0 = props.video.kerndata(refr,:);
 props.video.kerndata = props.video.kerndata - repmat(f0,size(props.video.kerndata,1),1);
+
+inv = get(findobj(vfig,'Tag','invert'),'Value')+1;
+imult = [1,-1];
+set(props.video.kimg,'CData',props.video.kerndata'*imult(inv))
 
 guidata(intan,props)
 
