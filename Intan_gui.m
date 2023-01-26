@@ -2142,6 +2142,7 @@ vch = props.ch(contains(props.ch,'V-'));
 pitch = [repmat(["A" "B" "C" "D" "E" "F" "G"],1,7) "A" "B" "C"];
 octave = ["0","0", repelem(["1","2","3","4","5","6","7"],1,7), "8"];
 notes = join([pitch',octave'],'');
+props.video.notes = notes;
 
 instr_range = ["D5","C8"; "C4","C7"; "B3","E6"; "D3","B6"; "B1","B5";...
          "A3","E6"; "D3","A5"; "A2","E5"; "C2","A4"; "B1","G5";...
@@ -2161,15 +2162,12 @@ instr_range = ["D5","C8"; "C4","C7"; "B3","E6"; "D3","B6"; "B1","B5";...
 
 vsdidx = string((1:length(vch))');
 height = 0.027;
-for i=1:13
+ninstr = 13;
+for i=1:ninstr
     y = 0.96-height*(i-1);
     if i==1
-        chkv = 1;
-        enable = 'on';
         instr = 51;
     else
-        chkv = 0;
-        enable = 'off';
         instr = i;
     end
     rng = instr_range(instr,:);
@@ -2178,26 +2176,37 @@ for i=1:13
         lastone = length(inotes);
         lastone(lastone>length(vsdidx)) = length(vsdidx);
         vstr = join([vsdidx(1), vsdidx(lastone)],'-');
+        nstr = [notes{inotes(1)} '-' notes{inotes(lastone)}];
         vsdidx(1:lastone) = [];
+
+
+        chkv = 1;
+        enable = 'on';
     else
         vstr = '-';
+        chkv = 0;
+        enable = 'off';
+        nstr = join(instr_range(instr,:),'-');
     end
     
     uicontrol('Units','normalized','Position',[0.01 y 0.02 height],'Style','checkbox',...
-        'Tag',['instrumentchk_' num2str(i)],'HorizontalAlignment','center','Value',chkv,...
+        'Tag',['instrument' num2str(i)],'HorizontalAlignment','center','Value',chkv,...
         'Enable','on','callback',@use_instrument);
     uicontrol('Units','normalized','Position',[0.03 y 0.09 height],'Style','edit',...
-        'Tag',['instrument' num2str(i)],'String',join(instr_range(instr,:),'-'),'HorizontalAlignment','center',...
-        'Enable',enable);
+        'Tag',['instrument' num2str(i)],'String',nstr,'HorizontalAlignment','center',...
+        'Enable',enable,'callback',@update_notes);
     uicontrol('Units','normalized','Position',[0.12 y 0.09 height],'Style','edit',...
         'Tag',['instrument' num2str(i)],'String',vstr,'HorizontalAlignment','center',...
-        'Enable',enable);
+        'Enable',enable,'callback',@update_notes);
     uicontrol('Units','normalized','Position',[0.21 y 0.09 height],'Style','popupmenu',...
         'Tag',['instrument' num2str(i)],'String',instruments,'Value',instr,'HorizontalAlignment','center',...
         'Enable',enable);
 end
 
 nax = axes('units','normalized','Position',[0.02 0.03 0.18 0.60]);
+for i=1:ninstr
+    props.video.notesgraph(i) = scatter(-10, -10,'filled');hold on
+end
 nax.XLim = [1 length(pitch)];
 nax.XTick = 1:2:length(pitch);
 nax.XTickLabel = pitch(1:2:end);
@@ -2209,6 +2218,10 @@ nax.YDir = 'reverse';
 nax.FontSize = 8;
 nax.YGrid = 'on';
 nax.XGrid = 'on';
+
+obj = findobj(vfig,'Tag','instrument1');
+knotes = getnotes(obj(2));
+setnotes(props.video.notesgraph, knotes)
 
 % audio video settings-------------------------
 uicontrol('Units','normalized','Position',[0.31 0.11 0.11 0.03],'Style','text',...
@@ -2268,6 +2281,70 @@ uicontrol('Units','normalized','Position',[0.32 0.00 0.1 0.04],'Style','pushbutt
 
 guidata(hObject,props)
 chframe(findobj(vfig,'Tag','imslider'))
+
+function update_notes(hObject,eventdata)
+knotes = getnotes(hObject);
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+setnotes(props.video.notesgraph, knotes)
+
+function setnotes(notesgraph,knotes)
+showg = false(1,0);
+for i=1:length(knotes)
+    set(notesgraph(i),'XData',knotes(i).noteidx,'YData',knotes(i).vsdidx)
+    instrumento = findobj(notesgraph(1).Parent.Parent,'Tag',['instrument' num2str(i)]);
+    showg(i) = instrumento(4).Value;
+end
+legend(notesgraph(showg), {knotes(showg).instrument})
+
+function knotes = getnotes(hObject)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
+vfig = hObject.Parent;
+notes = props.video.notes;
+instr = 1;
+instrumento = findobj(vfig,'Tag',['instrument' num2str(instr)]);
+while ~isempty(instrumento)
+    rstr = get(instrumento(3),'String');
+    vstr = get(instrumento(2),'String');
+    rgrp = strsplit(rstr,',');
+    vgrp = strsplit(vstr,',');
+    set(instrumento(3),'ForegroundColor','black')  
+    
+    knotes(instr).noteidx = zeros(1,0);
+    knotes(instr).vsdidx = zeros(1,0);
+    if get(instrumento(4),'Value')
+        for g=1:length(rgrp)
+            notest = regexp(rgrp{g},'[ABCDEFG][0-8]','match');
+            noteidx = cellfun(@(x) find(contains(notes,x)),notest);
+            if contains(rgrp{g},'-') && length(noteidx)>1
+                subnotes = noteidx(1):noteidx(2);
+            else
+                subnotes = noteidx;
+            end
+            knotes(instr).noteidx = [knotes(instr).noteidx subnotes];
+        end
+
+        for g=1:length(vgrp)
+            vsdest = regexp(vgrp{g},'[0-9]+','match');
+            if contains(vgrp{g},'-') && length(vsdest)>1
+                subvsd = str2double(vsdest{1}):str2double(vsdest{2});
+            else
+                subvsd = str2double(vsdest{1});
+            end
+            knotes(instr).vsdidx = [knotes(instr).vsdidx subvsd];
+        end
+        
+        if length(knotes(instr).noteidx) ~= length(knotes(instr).vsdidx)
+            set(instrumento(3),'ForegroundColor','red')
+            error(['not all specified notes have corresponding roi for instrument ' num2str(instr)])
+        end
+    end
+    knotes(instr).instrument = instrumento(1).String{instrumento(1).Value};
+    instr = instr + 1;
+    instrumento = findobj(vfig,'Tag',['instrument' num2str(instr)]);
+end
+assignin('base','knotes',knotes)
 
 function use_instrument(hObject,eventdata)
 idx = regexp(hObject.Tag,'\d+','match');
