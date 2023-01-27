@@ -2122,7 +2122,7 @@ uicontrol('Units','normalized','Position',[0.5 0.0 0.06 0.03],'Style','popupmenu
 % ------------------------------
 % video params
 % ------------------------------
-uicontrol('Units','normalized','Position',[0.31 0.31 0.05 0.03],'Style','text',...
+uicontrol('Units','normalized','Position',[0.29 0.31 0.07 0.03],'Style','text',...
     'String','Frame interval (ms)','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.37 0.32 0.06 0.03],'Style','edit',...
@@ -2220,36 +2220,59 @@ nax.YGrid = 'on';
 nax.XGrid = 'on';
 
 obj = findobj(vfig,'Tag','instrument1');
-knotes = getnotes(obj(2),props);
-setnotes(props.video.notesgraph, knotes)
+props.video.knotes = getnotes(obj(2),props);
+setnotes(props.video.notesgraph, props.video.knotes)
 
 % audio video settings-------------------------
 uicontrol('Units','normalized','Position',[0.31 0.11 0.11 0.03],'Style','text',...
     'String','Video time window','HorizontalAlignment','center','Enable','on');
 
+% uicontrol('Units','normalized','Position',[0.37 0.28 0.06 0.03],'Style','edit',...
+%     'Tag','notegap','String','5','HorizontalAlignment',...
+%     'center','Enable','on');
+% 
+% uicontrol('Units','normalized','Position',[0.30 0.275 0.06 0.03],'Style','text',...
+%     'String','Minimum note gap (fr)','HorizontalAlignment','right','Enable','on',...
+%     'TooltipString','The minimum gap between notes');
+% 
+% uicontrol('Units','normalized','Position',[0.37 0.24 0.06 0.03],'Style','edit',...
+%     'Tag','harmonics','String','5','HorizontalAlignment',...
+%     'center','Enable','on');
+% 
+% uicontrol('Units','normalized','Position',[0.31 0.235 0.05 0.03],'Style','text',...
+%     'String','# harmonics','HorizontalAlignment','right','Enable','on',...
+%     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
+
+% uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','edit',...
+%     'Tag','noteduration','String','0.7','HorizontalAlignment',...
+%     'center','Enable','on');
+
 uicontrol('Units','normalized','Position',[0.37 0.28 0.06 0.03],'Style','edit',...
-    'Tag','notegap','String','5','HorizontalAlignment',...
+    'Tag','beatspers','String','2','HorizontalAlignment',...
     'center','Enable','on');
 
-uicontrol('Units','normalized','Position',[0.30 0.275 0.06 0.03],'Style','text',...
-    'String','Minimum note gap (fr)','HorizontalAlignment','right','Enable','on',...
+uicontrol('Units','normalized','Position',[0.28 0.275 0.08 0.03],'Style','text',...
+    'String','Beats per second','HorizontalAlignment','right','Enable','on',...
     'TooltipString','The minimum gap between notes');
 
-uicontrol('Units','normalized','Position',[0.37 0.24 0.06 0.03],'Style','edit',...
-    'Tag','harmonics','String','5','HorizontalAlignment',...
+notedur = ["1/32","1/16","3/32","1/8","3/16","1/4","3/8","1/2","3/4","1"];
+
+uicontrol('Units','normalized','Position',[0.37 0.24 0.06 0.03],'Style','popupmenu',...
+    'Tag','harmonics','String',notedur,'HorizontalAlignment',...
     'center','Enable','on');
 
-uicontrol('Units','normalized','Position',[0.31 0.235 0.05 0.03],'Style','text',...
-    'String','# harmonics','HorizontalAlignment','right','Enable','on',...
+uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',...
+    'String','Shortest rest','HorizontalAlignment','right','Enable','on',...
     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
 
-uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','edit',...
-    'Tag','noteduration','String','0.7','HorizontalAlignment',...
+uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','popupmenu',...
+    'Tag','noteduration','String',notedur,'HorizontalAlignment',...
     'center','Enable','on');
 
-uicontrol('Units','normalized','Position',[0.31 0.195 0.05 0.03],'Style','text',...
-    'String','duration (s)','HorizontalAlignment','right','Enable','on',...
+uicontrol('Units','normalized','Position',[0.29 0.195 0.07 0.03],'Style','text',...
+    'String','Minumu duration','HorizontalAlignment','right','Enable','on',...
     'TooltipString','Duration of each note.');
+
 
 
 uicontrol('Units','normalized','Position',[0.37 0.09 0.06 0.03],'Style','edit',...
@@ -2275,9 +2298,11 @@ uicontrol('Units','normalized','Position',[0.30 0.155 0.06 0.03],'Style','text',
     'String','Frame rate (f/s)','HorizontalAlignment','right','Enable','on');
 
 
-uicontrol('Units','normalized','Position',[0.32 0.00 0.1 0.04],'Style','pushbutton',...
-    'String','Make Video','Callback',@makevideo,'Enable','on');
+uicontrol('Units','normalized','Position',[0.36 0.00 0.09 0.04],'Style','pushbutton',...
+    'String','Make Audio/Video','Callback',@exportav,'Enable','on','Tag','audiovideo');
 
+uicontrol('Units','normalized','Position',[0.28 0.00 0.08 0.04],'Style','pushbutton',...
+    'String','Make Audio','Callback',@exportav,'Enable','on','Tag','audioonly');
 
 guidata(hObject,props)
 chframe(findobj(vfig,'Tag','imslider'))
@@ -2285,8 +2310,9 @@ chframe(findobj(vfig,'Tag','imslider'))
 function update_notes(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
-knotes = getnotes(hObject,props);
-setnotes(props.video.notesgraph, knotes)
+props.video.knotes = getnotes(hObject,props);
+setnotes(props.video.notesgraph, props.video.knotes)
+guidata(intan,props)
 
 function setnotes(notesgraph,knotes)
 showg = false(1,0);
@@ -2342,7 +2368,7 @@ while ~isempty(instrumento)
     instr = instr + 1;
     instrumento = findobj(vfig,'Tag',['instrument' num2str(instr)]);
 end
-assignin('base','knotes',knotes)
+% assignin('base','knotes',knotes)
 
 function use_instrument(hObject,eventdata)
 idx = regexp(hObject.Tag,'\d+','match');
@@ -2435,7 +2461,7 @@ for r=1:length(props.video.roi)
     end
 end
 
-function makevideo(hObject,eventdata)
+function exportav(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
 vsd = props.files(contains(props.files(:,2),'tsm'),2);
@@ -2443,9 +2469,6 @@ vsd = props.files(contains(props.files(:,2),'tsm'),2);
 [file,path,indx] = uiputfile('*.mp4','Save Video',replace(vsd,'.tsm','_video.mp4'));
 file = replace(file,'.mp4','');
 
-vid = VideoWriter(fullfile(path,file),'MPEG-4');
-vfr = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
-vid.FrameRate = vfr;
 imslide = findobj(hObject.Parent,'Tag','imslider');
 
 pos = get(findobj(hObject.Parent,'Tag','cframe'),'Position');
@@ -2497,39 +2520,45 @@ end
 spikeswm = spikes/sr/2;
 
 assignin('base','spikes',spikes)
-open(vid)
-for f=start:stop
-    aidx = (f-start+1) + (f-start)*fs/vfr;
-    for k=1:length(kernpos)
-        if kerndata(f,k) 
-            freq = k*430/nroi+70;
-            ndur = kerndata(f,k)*sr*2+dur;
-            note = makesound(freq,ndur,fs,nharm);
-            nidx = round(aidx:aidx+length(note)-1);
-            nidx(nidx>length(audio)) = [];
-            audio(nidx) = audio(nidx) + note(1:length(nidx))*equalize(k);
+
+if strcmp(hObject.Tag,'audiovideo')
+    vid = VideoWriter(fullfile(path,file),'MPEG-4');
+    vfr = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
+    vid.FrameRate = vfr;
+    open(vid)
+    for f=start:stop
+        aidx = (f-start+1) + (f-start)*fs/vfr;
+        for k=1:length(kernpos)
+            if kerndata(f,k) 
+                freq = k*430/nroi+70;
+                ndur = kerndata(f,k)*sr*2+dur;
+                note = makesound(freq,ndur,fs,nharm);
+                nidx = round(aidx:aidx+length(note)-1);
+                nidx(nidx>length(audio)) = [];
+                audio(nidx) = audio(nidx) + note(1:length(nidx))*equalize(k);
+            end
         end
-    end
-
-    if roi
-        iframe = props.video.imdataroi(:,:,f)*imult(inv);
-        set(props.video.img,'CData',iframe)
-        set(props.video.img,'AlphaData',(iframe>alphathr)*0.7)
-    else
-        iframe = props.video.imdata(:,:,f)*imult(inv);
-        set(props.video.img,'CData',iframe)
-        set(props.video.img,'AlphaData',(iframe>alphathr))
-    end
-
-    pos(1) = props.video.tm(f);
-    set(findobj(hObject.Parent,'Tag','cframe'),'Position',pos)
-    set(imslide,'Value',f);
-    props.video.txtframe.String = sprintf('Frame: %i',f);
-    props.video.txttm.String = sprintf('Time: %0.2f s',(length(props.video.tm)*f/idur)*sf);
     
-    pause(0.01)
-    frame = getframe(gcf);
-    writeVideo(vid,frame)
+        if roi
+            iframe = props.video.imdataroi(:,:,f)*imult(inv);
+            set(props.video.img,'CData',iframe)
+            set(props.video.img,'AlphaData',(iframe>alphathr)*0.7)
+        else
+            iframe = props.video.imdata(:,:,f)*imult(inv);
+            set(props.video.img,'CData',iframe)
+            set(props.video.img,'AlphaData',(iframe>alphathr))
+        end
+    
+        pos(1) = props.video.tm(f);
+        set(findobj(hObject.Parent,'Tag','cframe'),'Position',pos)
+        set(imslide,'Value',f);
+        props.video.txtframe.String = sprintf('Frame: %i',f);
+        props.video.txttm.String = sprintf('Time: %0.2f s',(length(props.video.tm)*f/idur)*sf);
+        
+        pause(0.01)
+        frame = getframe(gcf);
+        writeVideo(vid,frame)
+    end
 end
 close(vid)
 
