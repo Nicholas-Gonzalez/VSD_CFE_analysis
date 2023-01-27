@@ -2220,7 +2220,7 @@ nax.YGrid = 'on';
 nax.XGrid = 'on';
 
 obj = findobj(vfig,'Tag','instrument1');
-knotes = getnotes(obj(2));
+knotes = getnotes(obj(2),props);
 setnotes(props.video.notesgraph, knotes)
 
 % audio video settings-------------------------
@@ -2283,9 +2283,9 @@ guidata(hObject,props)
 chframe(findobj(vfig,'Tag','imslider'))
 
 function update_notes(hObject,eventdata)
-knotes = getnotes(hObject);
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
+knotes = getnotes(hObject,props);
 setnotes(props.video.notesgraph, knotes)
 
 function setnotes(notesgraph,knotes)
@@ -2297,9 +2297,7 @@ for i=1:length(knotes)
 end
 legend(notesgraph(showg), {knotes(showg).instrument})
 
-function knotes = getnotes(hObject)
-intan = findobj('Tag',guidata(hObject));
-props = guidata(intan);
+function knotes = getnotes(hObject,props)
 vfig = hObject.Parent;
 notes = props.video.notes;
 instr = 1;
@@ -2349,7 +2347,8 @@ assignin('base','knotes',knotes)
 function use_instrument(hObject,eventdata)
 idx = regexp(hObject.Tag,'\d+','match');
 seten = ["off","on"];
-set(findobj(hObject.Parent,'Tag',['instrument' idx{1}]),'Enable',seten(hObject.Value+1))
+obj = findobj(hObject.Parent,'Tag',['instrument' idx{1}]);
+set(obj(1:3),'Enable',seten(hObject.Value+1))
 
 function saveframe(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
