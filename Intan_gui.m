@@ -2203,7 +2203,7 @@ for i=1:ninstr
         'Enable',enable);
 end
 
-nax = axes('units','normalized','Position',[0.02 0.03 0.18 0.60]);
+nax = axes('units','normalized','Position',[0.02 0.03 0.18 0.58]);
 for i=1:ninstr
     props.video.notesgraph(i) = scatter(-10, -10,'filled');hold on
 end
@@ -2223,9 +2223,24 @@ obj = findobj(vfig,'Tag','instrument1');
 props.video.knotes = getnotes(obj(2),props);
 setnotes(props.video.notesgraph, props.video.knotes)
 
+% uicontrol('Units','normalized','Position',[0.20 0.60 0.05 0.03],'Style','text',...
+%     'String','Select Audio Channels','HorizontalAlignment','center');
+% 
+% uicontrol('Units','normalized','Position',[0.20 0.03 0.05 0.58],'Style','listbox',...
+%     'String',vch,'Max',length(ch),'Min',1,'HorizontalAlignment','center',...
+%     'Tag','selectvsd','FontSize',4.1,'Enable','on');
+
+uicontrol('Units','normalized','Position',[0.21 0.28 0.07 0.03],'Style','edit',...
+    'Tag','exportonly','String','all','HorizontalAlignment',...
+    'center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.21 0.31 0.07 0.03],'Style','text',...
+    'String','Channels to write music','HorizontalAlignment','center',...
+    'TooltipString','Type which channels to write music for.');
+
 % audio video settings-------------------------
 uicontrol('Units','normalized','Position',[0.31 0.11 0.11 0.03],'Style','text',...
-    'String','Video time window','HorizontalAlignment','center','Enable','on');
+    'String','Video time window','HorizontalAlignment','center');
 
 % uicontrol('Units','normalized','Position',[0.37 0.28 0.06 0.03],'Style','edit',...
 %     'Tag','notegap','String','5','HorizontalAlignment',...
@@ -2242,23 +2257,31 @@ uicontrol('Units','normalized','Position',[0.31 0.11 0.11 0.03],'Style','text',.
 % uicontrol('Units','normalized','Position',[0.31 0.235 0.05 0.03],'Style','text',...
 %     'String','# harmonics','HorizontalAlignment','right','Enable','on',...
 %     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
-
+%
 % uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','edit',...
 %     'Tag','noteduration','String','0.7','HorizontalAlignment',...
 %     'center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.225 0.18 0.04 0.03],'Style','edit',...
+    'Tag','timesig','String','1/4','HorizontalAlignment',...
+    'center','Enable','on');
+
+uicontrol('Units','normalized','Position',[0.21 0.21 0.07 0.03],'Style','text',...
+    'String','Time signature','HorizontalAlignment','center',...
+    'TooltipString','Type which channels to write music for.');
 
 uicontrol('Units','normalized','Position',[0.37 0.28 0.06 0.03],'Style','edit',...
     'Tag','beatspers','String','2','HorizontalAlignment',...
     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.28 0.275 0.08 0.03],'Style','text',...
-    'String','Beats per second','HorizontalAlignment','right','Enable','on',...
+    'String','Beats per second','HorizontalAlignment','right',...
     'TooltipString','The minimum gap between notes');
 
 notedur = ["1/32","1/16","3/32","1/8","3/16","1/4","3/8","1/2","3/4","1"];
 
 uicontrol('Units','normalized','Position',[0.37 0.24 0.06 0.03],'Style','popupmenu',...
-    'Tag','harmonics','String',notedur,'HorizontalAlignment',...
+    'Tag','restduration','String',notedur,'Value',4,'HorizontalAlignment',...
     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',...
@@ -2266,7 +2289,7 @@ uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',
     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
 
 uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','popupmenu',...
-    'Tag','noteduration','String',notedur,'HorizontalAlignment',...
+    'Tag','noteduration','String',notedur,'Value',4,'HorizontalAlignment',...
     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.29 0.195 0.07 0.03],'Style','text',...
@@ -2368,7 +2391,6 @@ while ~isempty(instrumento)
     instr = instr + 1;
     instrumento = findobj(vfig,'Tag',['instrument' num2str(instr)]);
 end
-% assignin('base','knotes',knotes)
 
 function use_instrument(hObject,eventdata)
 idx = regexp(hObject.Tag,'\d+','match');
@@ -2488,13 +2510,27 @@ det = props.det;
 kernpos = props.kernpos;
 nroi = length(kernpos);
 
+vfr = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
 sf = diff(props.video.tm(1:2));
 fs = 44100;
 audio = zeros(1,(stop-start)*fs/vfr);
 
-ra = str2double(get(findobj(hObject.Parent,'Tag','notegap'),'String'));
-dur = str2double(get(findobj(hObject.Parent,'Tag','noteduration'),'String'));
-nharm = str2double(get(findobj(hObject.Parent,'Tag','harmonics'),'String'));
+notedurations = get(findobj(hObject.Parent,'Tag','noteduration'),'String');
+
+tmsigobj = get(findobj(hObject.Parent,'Tag','timesig'),'String');
+tmsig = str2double(strsplit(tmsigobj,'/'));
+bps = str2double(get(findobj(hObject.Parent,'Tag','beatspers'),'String'));
+duridx = get(findobj(hObject.Parent,'Tag','noteduration'),'Value');
+dur = str2double(strsplit(notedurations{duridx},'/'));
+restidx = get(findobj(hObject.Parent,'Tag','restduration'),'Value');
+rest = str2double(strsplit(notedurations{restidx},'/'));
+
+notedur = dur(1)/dur(2)*tmsig(2)/bps;disp(notedur)
+ra = rest(1)/rest(2)*tmsig(2)/bps;
+rai = round(ra/sr); 
+
+% dur = str2double(get(findobj(hObject.Parent,'Tag','noteduration'),'String'));
+% nharm = str2double(get(findobj(hObject.Parent,'Tag','harmonics'),'String'));
 
 % spike = false(stop-start,nroi);
 % for r=1:ra
@@ -2512,7 +2548,7 @@ kerndata = props.video.kerndata*imult(inv)>alphathr;
 kernstr = char(kerndata+48);
 spikes = zeros(size(kerndata));
 for k=1:size(kerndata,2)
-    key = [repelem('0',ra) '[1]+'];
+    key = [repelem('0',rai) '[1]+'];
     [startsp,stopsp] = regexp(kernstr(:,k)',key);
     spikes(startsp,k) = stopsp-startsp;
 end
@@ -2520,10 +2556,10 @@ end
 spikeswm = spikes/sr/2;
 
 assignin('base','spikes',spikes)
+assignin('base','spikeswm',spikeswm)
 
 if strcmp(hObject.Tag,'audiovideo')
     vid = VideoWriter(fullfile(path,file),'MPEG-4');
-    vfr = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
     vid.FrameRate = vfr;
     open(vid)
     for f=start:stop
@@ -2559,10 +2595,10 @@ if strcmp(hObject.Tag,'audiovideo')
         frame = getframe(gcf);
         writeVideo(vid,frame)
     end
+    close(vid)
 end
-close(vid)
 
-audiowrite( fullfile(path,[file '.wav']), audio/max(audio), fs,'BitsPerSample',32)
+% audiowrite( fullfile(path,[file '.wav']), audio/max(audio), fs,'BitsPerSample',32)
 
 function writemusic(spikes)
 all_instruments = readstruct('all_instruments.xml');
