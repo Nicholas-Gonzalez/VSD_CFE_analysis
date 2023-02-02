@@ -2379,13 +2379,14 @@ function knotes = getnotes(hObject,props)
 vfig = hObject.Parent;
 notes = props.video.notes;
 instr = 1;
+allvsd = zeros(1,0);
 instrumento = findobj(vfig,'Tag',['instrument' num2str(instr)]);
 while ~isempty(instrumento)
     rstr = get(instrumento(3),'String');
     vstr = get(instrumento(2),'String');
     rgrp = strsplit(rstr,',');
     vgrp = strsplit(vstr,',');
-    set(instrumento(3),'ForegroundColor','black')  
+    set(instrumento(2:3),'ForegroundColor','black')  
     
     knotes(instr).noteidx = zeros(1,0);
     knotes(instr).vsdidx = zeros(1,0);
@@ -2415,6 +2416,18 @@ while ~isempty(instrumento)
             set(instrumento(3),'ForegroundColor','red')
             error(['not all specified notes have corresponding roi for instrument ' num2str(instr)])
         end
+
+        if length(knotes(instr).vsdidx)~=length(unique(knotes(instr).vsdidx))
+             set(instrumento(2),'ForegroundColor','red')
+            error(['roi is used more than once within instrument ' num2str(instr)])
+        end
+
+        if any(ismember(allvsd,knotes(instr).vsdidx))
+            set(instrumento(2),'ForegroundColor','red')
+            error(['roi in instrument ' num2str(instr) ' is used in another instrument'])
+        end
+
+        allvsd = [allvsd, subvsd];
     end
     knotes(instr).instrument = instrumento(1).String{instrumento(1).Value};
     instr = instr + 1;
@@ -2523,7 +2536,6 @@ file = replace(file,'.mp4','');
 imslide = findobj(hObject.Parent,'Tag','imslider');
 
 pos = get(findobj(hObject.Parent,'Tag','cframe'),'Position');
-sr = diff(props.video.tm(1:2));
 
 start = get(findobj(hObject.Parent,'Tag','startframe'),'String');
 stop = get(findobj(hObject.Parent,'Tag','stopframe'),'String');
@@ -2560,25 +2572,10 @@ roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
 inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
 imult = [1,-1];
 
-estr = get(findobj(hObject.Parent,'Tag','exportonly'),'String');
-egrp = strsplit(estr,',');
-eidx = zeros(1,0);
-for g=1:length(egrp)
-    est = regexp(egrp{g},'[0-9]+','match');
-    if contains(egrp{g},'-') && length(est)>1
-        subvsd = str2double(est{1}):str2double(est{2});
-    else
-        subvsd = str2double(est{1});
-    end
-    eidx = [eidx subvsd];
-end
-
-
 kerndata = props.video.kerndata*imult(inv)>alphathr;
-props.video.kerndatav = kerndata(start:stop,eidx);
+props.video.kerndatav = kerndata(start:stop,:);
 
 writemusic(hObject.Parent,props)
-
 
 if strcmp(hObject.Tag,'audiovideo')
     vid = VideoWriter(fullfile(path,file),'MPEG-4');
@@ -2625,24 +2622,6 @@ end
 function writemusic(vfig,props)
 % all_instruments = readstruct('all_instruments.xml');
 
-music.versionAttribute = '4.0';
-
-dur = get(findobj(vfigt,'Tag','noteduration'),'Value');
-rest = get(findobj(vfig,'Tag','restduration'),'Value');
-rest = props.video.durationsnum(rest);
-
-tmsigobj = get(findobj(vfig,'Tag','timesig'),'String');
-tmsig = str2double(strsplit(tmsigobj,'/'));
-bps = str2double(get(findobj(vfig,'Tag','beatspers'),'String'));
-
-
-props.video.notedur = dur*tmsig(2)/bps;
-ra = rest*tmsig(2)/bps;
-props.video.ra = ra;
-rai = round(ra/sr); 
-props.video.rai = rai;
-
-
  % delete line after close video gui 2/2/23 ---->
 props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
 props.video.durationsnum  = [1/32  , 1/16 , 3/32 , 1/8    , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
@@ -2650,30 +2629,69 @@ props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","q
 props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
 % <---- delete line after close video gui 2/2/23
 
+music.versionAttribute = '4.0';
+
+dur = get(findobj(vfig,'Tag','noteduration'),'Value');
+rest = get(findobj(vfig,'Tag','restduration'),'Value');
+rest = props.video.durationsnum(rest);
+
+tmsigobj = get(findobj(vfig,'Tag','timesig'),'String');
+tmsig = str2double(strsplit(tmsigobj,'/'));
+bps = str2double(get(findobj(vfig,'Tag','beatspers'),'String'));
+
+props.video.notedur = dur*tmsig(2)/bps;
+ra = rest*tmsig(2)/bps;
+fr = get(findobj(vfig,'Tag','movfr'),'Value');
+rai = round(ra*fr); 
+
+frmpn = round(tmsig(1)/tmsig(2)/props.video.durationsnum(dur));
+
 pitch = props.video.pitch;
 octave = props.video.octave;
 durationsnum = props.video.durationsnum;
 durationsstr = props.video.durationsstr;
-spikeswm = props.video.spikeswm ;
 dots = props.video.dots;
 
 
-kernstr = char(props.video.kerndatav+48);
-spikes = zeros(size(kerndata));
-for k=1:size(kerndata,2)
-    key = [repelem('0',rai) '[1]+'];
-    [startsp,stopsp] = regexp(kernstr(:,k)',key);
-    spikes(startsp,k) = stopsp-startsp;
+estr = get(findobj(vfig,'Tag','exportonly'),'String');
+egrp = strsplit(estr,',');
+eidx = zeros(1,0);
+if contains(estr,'all')
+    eidx = 1:size(kerndata,2);
+else
+    for g=1:length(egrp)
+        est = regexp(egrp{g},'[0-9]+','match');
+        if contains(egrp{g},'-') && length(est)>1
+            subvsd = str2double(est{1}):str2double(est{2});
+        else
+            subvsd = str2double(est{1});
+        end
+        eidx = [eidx subvsd];
+    end
 end
 
+% kernstr = char(props.video.kerndatav(:,eidx)+48);
+% spikes = zeros(size(kernstr));
+% key = [repelem('0',rai) '[1]+'];
+% for k=1:size(kernstr,2)
+%     [startsp,stopsp] = regexp(kernstr(:,k)',key);
+%     spikes(startsp,k) = stopsp-startsp;
+% end
 
-durtype = ["quarter","half","whole"];
-Oboe = {[22 2 1;24 2 1;23 2 2],...
-         [21 1 1;23 2 2;22 1 3]};
-Clarinet = {[22 2 1;24 2 1;23 2 2],...
-         [21 1 1;23 2 2;22 1 3]};
-parts = {{Clarinet,'Clarinet'},...
-         {Oboe,'Oboe'}};
+parts = cell(length(knotes),1);
+knotes = props.video.knotes;
+for k=1:length(knotes)
+    if ~isempty(knotes(k).vsdidx) && any(ismember(knotes(k).vsdidx, eidx))
+        inote = []; %<-- add notes
+        instr = knotes(k).instrument;
+        parts{k} = {inote,instr};
+    end
+end
+parts(cellfun(@isempty,parts)) = [];
+
+kerndatav = props.video.kerndatav(:,eidx);
+
+keyboard
 for p=1:length(parts)
     pname = ['P' num2str(p)];
     music.part_list.score_part(p).idAttribute = pname;
@@ -2682,19 +2700,22 @@ for p=1:length(parts)
     music.part_list.score_part(p).score_instrument.instrument_name = parts{p}{2};
 
     music.part(p).idAttribute = ['P' num2str(p)];
+end
 
-    notes = parts{p}{1};
-    for m=1:length(notes)
-        music.part(p).measure(m).numberAttribute = num2str(m);
+% notes = parts{p}{1};
+for m=1:length(notes)
+    kendatam = kerndatav((1:frmpn) + (m-1)*frmpn, :);
+    music.part(p).measure(m).numberAttribute = num2str(m);
+    for p=1:length(parts)
         if m==1
             music.part(p).measure(m).attributes.key.fifths = 0;
-            music.part(p).measure(m).attributes.time.beats = 4;
-            music.part(p).measure(m).attributes.time.beat_type = 4;
+            music.part(p).measure(m).attributes.time.beats = tmsig(2);
+            music.part(p).measure(m).attributes.time.beat_type = tmsig(2);
             music.part(p).measure(m).attributes.clef.sign = 'G';
             music.part(p).measure(m).attributes.clef.line = 2;
         end
         c = 0;
-        for n=1:size(notes{m})
+        for n=1:frmpn
             music.part(p).measure(m).note(n).chord = double(c==notes{m}(n,3));
             music.part(p).measure(m).note(n).pitch.step = pitch(notes{m}(n,1));
             music.part(p).measure(m).note(n).pitch.octave = octave(notes{m}(n,1));
@@ -2704,6 +2725,7 @@ for p=1:length(parts)
         end
     end
 end
+
 
 
 writestruct(music,'test3.xml','StructNodeName','score_partwise')
