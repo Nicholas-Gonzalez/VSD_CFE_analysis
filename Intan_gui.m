@@ -153,30 +153,32 @@ uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton'
 
 
 function all_kframe(hObject,eventdata)
-props = guidata(hObject);
 [fnames, fpath] = uigetfile('*.tsm',"MultiSelect",'on');
-files = fullfile(fpath,fnames);
-buf = uicontrol(props.axpanel,'Units','pixels',...
-    'Position',[props.axpanel.Position(3)/2, props.axpanel.Position(4)-60,200, 40],...
-    'Style','text','String','Generating Tiffs...','FontSize',13);
-pause(0.1)
-if ischar(files)
-    disp(['find_kframes   ',files])
-    find_kframe(files,false);
-else
-    for f=1:length(files)
-        disp(['find_kframes   ',files{f}])
-        set(buf,'String',files{f})
-        pause(0.1)
-        try
-            find_kframe(files{f},false);
-        catch
-            warning(['could not execute for ' files{f}])
+if any(fnames)
+    props = guidata(hObject);
+    files = fullfile(fpath,fnames);
+    buf = uicontrol(props.axpanel,'Units','pixels',...
+        'Position',[props.axpanel.Position(3)/2, props.axpanel.Position(4)-60,200, 40],...
+        'Style','text','String','Generating Tiffs...','FontSize',13);
+    pause(0.1)
+    if ischar(files)
+        disp(['find_kframes   ',files])
+        find_kframe(files,false);
+    else
+        for f=1:length(files)
+            disp(['find_kframes   ',files{f}])
+            set(buf,'String',files{f})
+            pause(0.1)
+            try
+                find_kframe(files{f},false);
+            catch
+                warning(['could not execute for ' files{f}])
+            end
         end
     end
+    disp('finished')
+    delete(buf)
 end
-disp('finished')
-delete(buf)
 
 function avgtsm(hObject,eventdata)
 [fnames, fpath] = uigetfile('*.tsm',"MultiSelect",'off');
@@ -1957,7 +1959,8 @@ figure(vfig)
 slidepos = 10;
 sf = diff(props.video.tm(1:2));
 
-
+% initializing video image ----------------------
+for a=1
 iaxr = axes('Units','normalized','Position',[0.3 0.39 0.32 0.58],'Tag','imgax');
 props.video.img = image(props.im);
 iaxr.XTick = [];
@@ -1996,10 +1999,14 @@ for r=1:4
             'HorizontalAlignment','center','FontSize',20, 'Clipping','on','Tag',['rois' num2str(r)]);
     end
 end
-
+end
 
 idur = size(props.video.imdata,3);
 
+% -------------------
+% row, pix, invert, timestamp
+% -------------------
+for a=1
 uicontrol('Units','normalized','Position',[iaxpos(1) sum(iaxpos([2 4])) 0.03 0.03],...
     'Style','togglebutton','Tag','Raw','String','Raw','Callback',@chframe,'Enable','on');
 
@@ -2016,7 +2023,10 @@ txttm = text(xsize-85, 25, sprintf('Time: %0.2f s',length(props.video.tm)*slidep
     'FontSize',15,'Color','w');
 
 props.video.txttm = txttm;
+end
 
+% time series data ------------------
+for a=1
 ch = props.ch;
 hideidx = props.hideidx;
 showidx = props.showidx;
@@ -2056,9 +2066,10 @@ set(ax,'XLim',[min(props.tm) max(props.video.tm)]);
 ax(end).YLim = [0 1];
 ax(end).Toolbar.Visible = 'off';
 linkaxes(ax,'x')
+end
 
 %changing frames -------------------------------
-
+for a=1
 uicontrol('Units','normalized','Position',[0.46 0.27 0.1 0.03],'Style','slider',...
     'Value',slidepos,'Min',1,'Max',idur,'SliderStep',[1 1]/idur,'Callback',@chframe,...
     'Tag','imslider');
@@ -2080,10 +2091,12 @@ uicontrol('Units','normalized','Position',[0.54 0.24 0.02 0.03],'Style','pushbut
 
 uicontrol('Units','normalized','Position',[0.46 0.21 0.1 0.03],'Style','pushbutton',...
     'Tag','reference','String','Set reference frame','Callback',@setreference,'Enable','on');
+end
 
 % ------------------------------
 % colormap
 % ------------------------------
+for a=1
 uicontrol('Units','normalized','Position',[0.45 0.16 0.11 0.03],'Style','text',...
     'String','Colormap axis','HorizontalAlignment','center','Enable','on');
 
@@ -2107,33 +2120,38 @@ uicontrol('Units','normalized','Position',[0.5 0.14 0.06 0.03],'Style','edit',..
 
 uicontrol('Units','normalized','Position',[0.45 0.135 0.04 0.03],'Style','text',...
     'String','upper','HorizontalAlignment','right','Enable','on');
-
+end
 
 % ------------------------------
 % ROI params
 % ------------------------------
+for a=1
 uicontrol('Units','normalized','Position',[0.45 0.00 0.04 0.03],'Style','text',...
     'String','text color','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.5 0.0 0.06 0.03],'Style','popupmenu',...
     'Max',5,'Min',1,'String',["black","white","red","green","blue"],'Tag','textcolor','Value',1,'Callback',@txtcolor);
-
+end
 
 % ------------------------------
 % video params
 % ------------------------------
+for a=1
 uicontrol('Units','normalized','Position',[0.29 0.31 0.07 0.03],'Style','text',...
     'String','Frame interval (ms)','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.37 0.32 0.06 0.03],'Style','edit',...
     'Tag','framerate','String',num2str(fr),'HorizontalAlignment','center',...
     'Callback',@framerate,'Enable','on');
-
+end
 
 
 % ------------------------------
 % movie parameters
 % ------------------------------
+
+% setting notes and intruments --------------
+for a=1
 instrumentfile = fullfile(fileparts(which('Intan_gui')),'all_instruments.xml');
 all_instruments = readstruct(instrumentfile);
 instruments = {all_instruments.part_list.score_part.part_name}';
@@ -2143,6 +2161,8 @@ pitch = [repmat(["A" "B" "C" "D" "E" "F" "G"],1,7) "A" "B" "C"];
 octave = ["0","0", repelem(["1","2","3","4","5","6","7"],1,7), "8"];
 notes = join([pitch',octave'],'');
 props.video.notes = notes;
+props.video.pitch = pitch;
+props.video.octave = octave;
 
 instr_range = ["D5","C8"; "C4","C7"; "B3","E6"; "D3","B6"; "B1","B5";...
          "A3","E6"; "D3","A5"; "A2","E5"; "C2","A4"; "B1","G5";...
@@ -2158,11 +2178,12 @@ instr_range = ["D5","C8"; "C4","C7"; "B3","E6"; "D3","B6"; "B1","B5";...
          "",""; "",""; "",""; "","";"","";...
          "",""; "",""; "",""; "","";"","";...
          "",""; "",""; "",""];
-
+end
 
 vsdidx = string((1:length(vch))');
 height = 0.027;
 ninstr = 13;
+% instruments panel ---------------
 for i=1:ninstr
     y = 0.96-height*(i-1);
     if i==1
@@ -2203,6 +2224,8 @@ for i=1:ninstr
         'Enable',enable);
 end
 
+% notes axis-----------
+for a=1
 nax = axes('units','normalized','Position',[0.02 0.03 0.18 0.58]);
 for i=1:ninstr
     props.video.notesgraph(i) = scatter(-10, -10,'filled');hold on
@@ -2222,6 +2245,7 @@ nax.XGrid = 'on';
 obj = findobj(vfig,'Tag','instrument1');
 props.video.knotes = getnotes(obj(2),props);
 setnotes(props.video.notesgraph, props.video.knotes)
+end
 
 % uicontrol('Units','normalized','Position',[0.20 0.60 0.05 0.03],'Style','text',...
 %     'String','Select Audio Channels','HorizontalAlignment','center');
@@ -2239,6 +2263,7 @@ uicontrol('Units','normalized','Position',[0.21 0.31 0.07 0.03],'Style','text',.
     'TooltipString','Type which channels to write music for.');
 
 % audio video settings-------------------------
+for a=1
 uicontrol('Units','normalized','Position',[0.31 0.11 0.11 0.03],'Style','text',...
     'String','Video time window','HorizontalAlignment','center');
 
@@ -2278,10 +2303,13 @@ uicontrol('Units','normalized','Position',[0.28 0.275 0.08 0.03],'Style','text',
     'String','Beats per second','HorizontalAlignment','right',...
     'TooltipString','The minimum gap between notes');
 
-notedur = ["1/32","1/16","3/32","1/8","3/16","1/4","3/8","1/2","3/4","1"];
+props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
+props.video.durationsnum  = [1/32  , 1/16 , 3/32 , 1/8    , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
+props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","quarter","half","half","whole"];
+props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
 
 uicontrol('Units','normalized','Position',[0.37 0.24 0.06 0.03],'Style','popupmenu',...
-    'Tag','restduration','String',notedur,'Value',4,'HorizontalAlignment',...
+    'Tag','restduration','String',props.video.durationsfrac,'Value',4,'HorizontalAlignment',...
     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',...
@@ -2289,7 +2317,7 @@ uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',
     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
 
 uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','popupmenu',...
-    'Tag','noteduration','String',notedur,'Value',4,'HorizontalAlignment',...
+    'Tag','noteduration','String',props.video.durationsfrac,'Value',4,'HorizontalAlignment',...
     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.29 0.195 0.07 0.03],'Style','text',...
@@ -2326,6 +2354,7 @@ uicontrol('Units','normalized','Position',[0.36 0.00 0.09 0.04],'Style','pushbut
 
 uicontrol('Units','normalized','Position',[0.28 0.00 0.08 0.04],'Style','pushbutton',...
     'String','Make Audio','Callback',@exportav,'Enable','on','Tag','audioonly');
+end
 
 guidata(hObject,props)
 chframe(findobj(vfig,'Tag','imslider'))
@@ -2502,6 +2531,7 @@ start = str2double(start);
 stop = str2double(stop);
 start = find(props.video.tm>start,1);
 stop = find(props.video.tm>stop,1);
+tmidx = start:stop;
 
 alphathr = str2double(get(findobj(hObject.Parent,'Tag','alphathr'),'String'));
 idur = length(props.video.tm);
@@ -2510,24 +2540,10 @@ det = props.det;
 kernpos = props.kernpos;
 nroi = length(kernpos);
 
-vfr = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));
+vfr = str2double(get(findobj(hObject.Parent,'Tag','movfr'),'String'));% frame rate
 sf = diff(props.video.tm(1:2));
 fs = 44100;
 audio = zeros(1,(stop-start)*fs/vfr);
-
-notedurations = get(findobj(hObject.Parent,'Tag','noteduration'),'String');
-
-tmsigobj = get(findobj(hObject.Parent,'Tag','timesig'),'String');
-tmsig = str2double(strsplit(tmsigobj,'/'));
-bps = str2double(get(findobj(hObject.Parent,'Tag','beatspers'),'String'));
-duridx = get(findobj(hObject.Parent,'Tag','noteduration'),'Value');
-dur = str2double(strsplit(notedurations{duridx},'/'));
-restidx = get(findobj(hObject.Parent,'Tag','restduration'),'Value');
-rest = str2double(strsplit(notedurations{restidx},'/'));
-
-notedur = dur(1)/dur(2)*tmsig(2)/bps;disp(notedur)
-ra = rest(1)/rest(2)*tmsig(2)/bps;
-rai = round(ra/sr); 
 
 % dur = str2double(get(findobj(hObject.Parent,'Tag','noteduration'),'String'));
 % nharm = str2double(get(findobj(hObject.Parent,'Tag','harmonics'),'String'));
@@ -2544,36 +2560,42 @@ roi = get(findobj(hObject.Parent,'Tag','roivpix'),'Value');
 inv = get(findobj(hObject.Parent,'Tag','invert'),'Value')+1;
 imult = [1,-1];
 
-kerndata = props.video.kerndata*imult(inv)>alphathr;
-kernstr = char(kerndata+48);
-spikes = zeros(size(kerndata));
-for k=1:size(kerndata,2)
-    key = [repelem('0',rai) '[1]+'];
-    [startsp,stopsp] = regexp(kernstr(:,k)',key);
-    spikes(startsp,k) = stopsp-startsp;
+estr = get(findobj(hObject.Parent,'Tag','exportonly'),'String');
+egrp = strsplit(estr,',');
+eidx = zeros(1,0);
+for g=1:length(egrp)
+    est = regexp(egrp{g},'[0-9]+','match');
+    if contains(egrp{g},'-') && length(est)>1
+        subvsd = str2double(est{1}):str2double(est{2});
+    else
+        subvsd = str2double(est{1});
+    end
+    eidx = [eidx subvsd];
 end
 
-spikeswm = spikes/sr/2;
 
-assignin('base','spikes',spikes)
-assignin('base','spikeswm',spikeswm)
+kerndata = props.video.kerndata*imult(inv)>alphathr;
+props.video.kerndatav = kerndata(start:stop,eidx);
+
+writemusic(hObject.Parent,props)
+
 
 if strcmp(hObject.Tag,'audiovideo')
     vid = VideoWriter(fullfile(path,file),'MPEG-4');
     vid.FrameRate = vfr;
     open(vid)
     for f=start:stop
-        aidx = (f-start+1) + (f-start)*fs/vfr;
-        for k=1:length(kernpos)
-            if kerndata(f,k) 
-                freq = k*430/nroi+70;
-                ndur = kerndata(f,k)*sr*2+dur;
-                note = makesound(freq,ndur,fs,nharm);
-                nidx = round(aidx:aidx+length(note)-1);
-                nidx(nidx>length(audio)) = [];
-                audio(nidx) = audio(nidx) + note(1:length(nidx))*equalize(k);
-            end
-        end
+%         aidx = (f-start+1) + (f-start)*fs/vfr;
+%         for k=1:length(kernpos)
+%             if kerndata(f,k) 
+%                 freq = k*430/nroi+70;
+%                 ndur = kerndata(f,k)*sr*2+dur;
+%                 note = makesound(freq,ndur,fs,nharm);
+%                 nidx = round(aidx:aidx+length(note)-1);
+%                 nidx(nidx>length(audio)) = [];
+%                 audio(nidx) = audio(nidx) + note(1:length(nidx))*equalize(k);
+%             end
+%         end
     
         if roi
             iframe = props.video.imdataroi(:,:,f)*imult(inv);
@@ -2600,13 +2622,50 @@ end
 
 % audiowrite( fullfile(path,[file '.wav']), audio/max(audio), fs,'BitsPerSample',32)
 
-function writemusic(spikes)
-all_instruments = readstruct('all_instruments.xml');
+function writemusic(vfig,props)
+% all_instruments = readstruct('all_instruments.xml');
 
 music.versionAttribute = '4.0';
 
-pitch = repmat('CDEFGAB',1,8);
-octave = repelem(1:8,7);
+dur = get(findobj(vfigt,'Tag','noteduration'),'Value');
+rest = get(findobj(vfig,'Tag','restduration'),'Value');
+rest = props.video.durationsnum(rest);
+
+tmsigobj = get(findobj(vfig,'Tag','timesig'),'String');
+tmsig = str2double(strsplit(tmsigobj,'/'));
+bps = str2double(get(findobj(vfig,'Tag','beatspers'),'String'));
+
+
+props.video.notedur = dur*tmsig(2)/bps;
+ra = rest*tmsig(2)/bps;
+props.video.ra = ra;
+rai = round(ra/sr); 
+props.video.rai = rai;
+
+
+ % delete line after close video gui 2/2/23 ---->
+props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
+props.video.durationsnum  = [1/32  , 1/16 , 3/32 , 1/8    , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
+props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","quarter","half","half","whole"];
+props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
+% <---- delete line after close video gui 2/2/23
+
+pitch = props.video.pitch;
+octave = props.video.octave;
+durationsnum = props.video.durationsnum;
+durationsstr = props.video.durationsstr;
+spikeswm = props.video.spikeswm ;
+dots = props.video.dots;
+
+
+kernstr = char(props.video.kerndatav+48);
+spikes = zeros(size(kerndata));
+for k=1:size(kerndata,2)
+    key = [repelem('0',rai) '[1]+'];
+    [startsp,stopsp] = regexp(kernstr(:,k)',key);
+    spikes(startsp,k) = stopsp-startsp;
+end
+
 
 durtype = ["quarter","half","whole"];
 Oboe = {[22 2 1;24 2 1;23 2 2],...
