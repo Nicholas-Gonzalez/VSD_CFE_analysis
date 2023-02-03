@@ -2680,8 +2680,8 @@ end
 %     spikes(startsp,k) = stopsp-startsp;
 % end
 
-parts = cell(length(knotes),1);
 knotes = props.video.knotes;
+parts = cell(length(knotes),1);
 for k=1:length(knotes)
     if ~isempty(knotes(k).vsdidx) && any(ismember(knotes(k).vsdidx, eidx))
         parts{k} = {knotes(k).vsdidx, knotes(k).instrument};
@@ -2691,7 +2691,6 @@ parts(cellfun(@isempty,parts)) = [];
 
 kerndatav = props.video.kerndatav(:,eidx);
 
-keyboard
 for p=1:length(parts)
     pname = ['P' num2str(p)];
     music.part_list.score_part(p).idAttribute = pname;
@@ -2707,7 +2706,9 @@ for m=1:ciel(size(kerndatav,1)/frmpn)
     kendatam = kerndatav((1:frmpn) + (m-1)*frmpn, :);
     music.part(p).measure(m).numberAttribute = num2str(m);
     for p=1:length(parts)
-        kendatamp = kendatam(n,parts{p}{1});
+        kendatamp = kendatam(:,parts{p}{1});
+%         pitch <---- preset this
+%         octave
         if m==1
             music.part(p).measure(m).attributes.key.fifths = 0;
             music.part(p).measure(m).attributes.time.beats = tmsig(2);
@@ -2717,16 +2718,30 @@ for m=1:ciel(size(kerndatav,1)/frmpn)
         end
         c = 0;
         for n=1:frmpn
-            if any(kendatamp(n,:))
-                music.part(p).measure(m).note(n).chord = double(c==notes{m}(n,3));
-                music.part(p).measure(m).note(n).pitch.step = pitch(notes{m}(n,1));
-                music.part(p).measure(m).note(n).pitch.octave = octave(notes{m}(n,1));
+            spiked = find(kendatamp(n,:));
+            if n==1
+                didspike = false(1,size(kendatamp,2));
             else
-                music.part(p).measure(m).note(n).rest = 1;
-                music.part(p).measure(m).note(n).duration = sum(~any(kendatamp,2));
-                music.part(p).measure(m).note(n).type = durtype(sum(~any(kendatamp,2)));
+                didspike = kendatamp(1:n-1,:);
             end
-            c = notes{m}(n,3);
+
+            if any(kendatamp(n,:))
+                for s=1:length(spiked)
+                    if ~any(didspike(:,s))
+                        music.part(p).measure(m).note(n).chord = length(spiked)>1;
+                        music.part(p).measure(m).note(n).pitch.step = pitch(s);
+                        music.part(p).measure(m).note(n).pitch.octave = octave(s);
+                        music.part(p).measure(m).note(n).duration = sum(kendatamp(:,s));
+                        music.part(p).measure(m).note(n).type = durtype(sum(~any(kendatamp,2)));
+                    end
+                end
+            else
+                if any(spiked,'all')
+                    music.part(p).measure(m).note(n).rest = 1;
+                    music.part(p).measure(m).note(n).duration = sum(~any(kendatamp,2));
+                    music.part(p).measure(m).note(n).type = durtype(sum(~any(kendatamp,2)));
+                end
+            end
         end
     end
 end
