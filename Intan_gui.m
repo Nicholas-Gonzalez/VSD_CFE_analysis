@@ -2632,6 +2632,8 @@ props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1 
 music.versionAttribute = '4.0';
 
 dur = get(findobj(vfig,'Tag','noteduration'),'Value');
+dur2 = find(props.video.durationsnum==props.video.durationsnum(dur)*2);
+durtype = [props.video.durationsstr(dur), props.video.durationsstr(dur2)];
 rest = get(findobj(vfig,'Tag','restduration'),'Value');
 rest = props.video.durationsnum(rest);
 
@@ -2682,9 +2684,7 @@ parts = cell(length(knotes),1);
 knotes = props.video.knotes;
 for k=1:length(knotes)
     if ~isempty(knotes(k).vsdidx) && any(ismember(knotes(k).vsdidx, eidx))
-        inote = []; %<-- add notes
-        instr = knotes(k).instrument;
-        parts{k} = {inote,instr};
+        parts{k} = {knotes(k).vsdidx, knotes(k).instrument};
     end
 end
 parts(cellfun(@isempty,parts)) = [];
@@ -2703,10 +2703,11 @@ for p=1:length(parts)
 end
 
 % notes = parts{p}{1};
-for m=1:length(notes)
+for m=1:ciel(size(kerndatav,1)/frmpn)
     kendatam = kerndatav((1:frmpn) + (m-1)*frmpn, :);
     music.part(p).measure(m).numberAttribute = num2str(m);
     for p=1:length(parts)
+        kendatamp = kendatam(n,parts{p}{1});
         if m==1
             music.part(p).measure(m).attributes.key.fifths = 0;
             music.part(p).measure(m).attributes.time.beats = tmsig(2);
@@ -2716,11 +2717,15 @@ for m=1:length(notes)
         end
         c = 0;
         for n=1:frmpn
-            music.part(p).measure(m).note(n).chord = double(c==notes{m}(n,3));
-            music.part(p).measure(m).note(n).pitch.step = pitch(notes{m}(n,1));
-            music.part(p).measure(m).note(n).pitch.octave = octave(notes{m}(n,1));
-            music.part(p).measure(m).note(n).duration = notes{m}(n,2);
-            music.part(p).measure(m).note(n).type = durtype(notes{m}(n,2));
+            if any(kendatamp(n,:))
+                music.part(p).measure(m).note(n).chord = double(c==notes{m}(n,3));
+                music.part(p).measure(m).note(n).pitch.step = pitch(notes{m}(n,1));
+                music.part(p).measure(m).note(n).pitch.octave = octave(notes{m}(n,1));
+            else
+                music.part(p).measure(m).note(n).rest = 1;
+                music.part(p).measure(m).note(n).duration = sum(~any(kendatamp,2));
+                music.part(p).measure(m).note(n).type = durtype(sum(~any(kendatamp,2)));
+            end
             c = notes{m}(n,3);
         end
     end
@@ -2737,6 +2742,7 @@ fclose(fid);
 fstr = replace(fstr,'_','-');
 fstr = replace(fstr,'<chord>0</chord>','');
 fstr = replace(fstr,'<chord>1</chord>','<chord/>');
+fstr = replace(fstr,'<rest>1</rest>','<rest/>');
 fstr = replace(fstr,'<?xml version="1.0" encoding="UTF-8"?>',...
     ['<?xml version="1.0" encoding="UTF-8" standalone="no"?>',newline,...
     '<!DOCTYPE score-partwise PUBLIC',...
