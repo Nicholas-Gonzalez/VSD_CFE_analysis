@@ -2648,12 +2648,9 @@ rai = round(ra*fr);
 
 frmpn = round(tmsig(1)/tmsig(2)/props.video.durationsnum(dur));
 
-pitch = props.video.pitch;
-octave = props.video.octave;
 durationsnum = props.video.durationsnum;
 durationsstr = props.video.durationsstr;
 dots = props.video.dots;
-
 
 estr = get(findobj(vfig,'Tag','exportonly'),'String');
 egrp = strsplit(estr,',');
@@ -2681,34 +2678,35 @@ end
 % end
 
 knotes = props.video.knotes;
-parts = cell(length(knotes),1);
 for k=1:length(knotes)
     if ~isempty(knotes(k).vsdidx) && any(ismember(knotes(k).vsdidx, eidx))
-        parts{k} = {knotes(k).vsdidx, knotes(k).instrument};
+        idx = ismember(knotes(k).vsdidx, eidx);
+        parts(k).noteidx = knotes(k).noteidx(idx);
+        parts(k).pitch = props.video.pitch(parts(k).noteidx);
+        parts(k).octave = double(props.video.octave(parts(k).noteidx));
+        parts(k).vsdidx = knotes(k).vsdidx(idx);
+        parts(k).instrument = knotes(k).instrument;
     end
 end
-parts(cellfun(@isempty,parts)) = [];
-
-kerndatav = props.video.kerndatav(:,eidx);
 
 for p=1:length(parts)
     pname = ['P' num2str(p)];
     music.part_list.score_part(p).idAttribute = pname;
-    music.part_list.score_part(p).part_name = parts{p}{2};
+    music.part_list.score_part(p).part_name = parts(p).instrument;
     music.part_list.score_part(p).score_instrument.idAttribute = [pname '-I1'];
-    music.part_list.score_part(p).score_instrument.instrument_name = parts{p}{2};
+    music.part_list.score_part(p).score_instrument.instrument_name = parts(p).instrument;
 
     music.part(p).idAttribute = ['P' num2str(p)];
 end
 
-% notes = parts{p}{1};
-for m=1:ciel(size(kerndatav,1)/frmpn)
-    kendatam = kerndatav((1:frmpn) + (m-1)*frmpn, :);
+kerndatav = props.video.kerndatav;
+for m=1:ceil(size(kerndatav,1)/frmpn)
+    kerndatam = kerndatav((1:frmpn) + (m-1)*frmpn, :);
     music.part(p).measure(m).numberAttribute = num2str(m);
     for p=1:length(parts)
-        kendatamp = kendatam(:,parts{p}{1});
-%         pitch <---- preset this
-%         octave
+        kerndatamp = kerndatam(:, parts(p).vsdidx);
+        pitch = parts(p).pitch;
+        octave = parts(p).octave;keyboard
         if m==1
             music.part(p).measure(m).attributes.key.fifths = 0;
             music.part(p).measure(m).attributes.time.beats = tmsig(2);
@@ -2718,11 +2716,11 @@ for m=1:ciel(size(kerndatav,1)/frmpn)
         end
         c = 0;
         for n=1:frmpn
-            spiked = find(kendatamp(n,:));
+            spiked = find(kerndatamp(n,:));
             if n==1
-                didspike = false(1,size(kendatamp,2));
+                didspike = false(1,size(kerndatamp,2));
             else
-                didspike = kendatamp(1:n-1,:);
+                didspike = kerndatamp(1:n-1,:);
             end
 
             if any(kendatamp(n,:))
@@ -2731,15 +2729,15 @@ for m=1:ciel(size(kerndatav,1)/frmpn)
                         music.part(p).measure(m).note(n).chord = length(spiked)>1;
                         music.part(p).measure(m).note(n).pitch.step = pitch(s);
                         music.part(p).measure(m).note(n).pitch.octave = octave(s);
-                        music.part(p).measure(m).note(n).duration = sum(kendatamp(:,s));
-                        music.part(p).measure(m).note(n).type = durtype(sum(~any(kendatamp,2)));
+                        music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
+                        music.part(p).measure(m).note(n).type = durtype(sum(~any(kerndatamp,2)));
                     end
                 end
             else
                 if any(spiked,'all')
                     music.part(p).measure(m).note(n).rest = 1;
-                    music.part(p).measure(m).note(n).duration = sum(~any(kendatamp,2));
-                    music.part(p).measure(m).note(n).type = durtype(sum(~any(kendatamp,2)));
+                    music.part(p).measure(m).note(n).duration = sum(~any(kerndatamp,2));
+                    music.part(p).measure(m).note(n).type = durtype(sum(~any(kerndatamp,2)));
                 end
             end
         end
