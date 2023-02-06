@@ -2288,19 +2288,19 @@ uicontrol('Units','normalized','Position',[0.31 0.11 0.11 0.03],'Style','text',.
 %     'center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.225 0.18 0.04 0.03],'Style','edit',...
-    'Tag','timesig','String','1/4','HorizontalAlignment',...
-    'center','Enable','on');
+    'Tag','timesig','String','1/1','HorizontalAlignment',...
+    'center','Enable','off');
 
 uicontrol('Units','normalized','Position',[0.21 0.21 0.07 0.03],'Style','text',...
     'String','Time signature','HorizontalAlignment','center',...
     'TooltipString','Type which channels to write music for.');
 
 uicontrol('Units','normalized','Position',[0.37 0.28 0.06 0.03],'Style','edit',...
-    'Tag','beatspers','String','2','HorizontalAlignment',...
-    'center','Enable','on');
+    'Tag','beatsperm','String','112.5','HorizontalAlignment',...
+    'center','Enable','off');
 
 uicontrol('Units','normalized','Position',[0.28 0.275 0.08 0.03],'Style','text',...
-    'String','Beats per second','HorizontalAlignment','right',...
+    'String','Beats per minute','HorizontalAlignment','right',...
     'TooltipString','The minimum gap between notes');
 
 props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
@@ -2309,16 +2309,16 @@ props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","q
 props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
 
 uicontrol('Units','normalized','Position',[0.37 0.24 0.06 0.03],'Style','popupmenu',...
-    'Tag','restduration','String',props.video.durationsfrac,'Value',4,'HorizontalAlignment',...
-    'center','Enable','on');
+    'Tag','restduration','String',props.video.durationsfrac,'Value',2,'HorizontalAlignment',...
+    'center','Enable','off');
 
 uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',...
     'String','Shortest rest','HorizontalAlignment','right','Enable','on',...
     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
 
 uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','popupmenu',...
-    'Tag','noteduration','String',props.video.durationsfrac,'Value',4,'HorizontalAlignment',...
-    'center','Enable','on');
+    'Tag','noteduration','String',props.video.durationsfrac,'Value',2,'HorizontalAlignment',...
+    'center','Enable','off');
 
 uicontrol('Units','normalized','Position',[0.29 0.195 0.07 0.03],'Style','text',...
     'String','Minumu duration','HorizontalAlignment','right','Enable','on',...
@@ -2627,23 +2627,25 @@ props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3
 props.video.durationsnum  = [1/32  , 1/16 , 3/32 , 1/8    , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
 props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","quarter","half","half","whole"];
 props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
-
 % <---- delete line after close video gui 2/2/23
 
 music.versionAttribute = '4.0';
 
+
 dur = get(findobj(vfig,'Tag','noteduration'),'Value');
-dur2 = find(props.video.durationsnum==props.video.durationsnum(dur)*2);
-durtype = [props.video.durationsstr(dur), props.video.durationsstr(dur2)];
+durtype = props.video.durationsstr(dur:dur+8);
+dots = props.video.dots(dur:dur+8);
 rest = get(findobj(vfig,'Tag','restduration'),'Value');
 rest = props.video.durationsnum(rest);
 
-tmsigobj = get(findobj(vfig,'Tag','timesig'),'String');
-tmsig = str2double(strsplit(tmsigobj,'/'));
-bps = str2double(get(findobj(vfig,'Tag','beatspers'),'String'));
+% tmsigobj = get(findobj(vfig,'Tag','timesig'),'String');
+% tmsig = str2double(strsplit(tmsigobj,'/'));
+tmsig = [1 1];
+bpm = str2double(get(findobj(vfig,'Tag','beatspers'),'String'));
 
-props.video.notedur = dur*tmsig(2)/bps;
-ra = rest*tmsig(2)/bps;
+
+notedur = props.video.durationsnum(dur)*tmsig(2)/(bpm/60);
+ra = rest*tmsig(2)/(bpm/60);
 fr = get(findobj(vfig,'Tag','movfr'),'Value');
 rai = round(ra*fr); 
 
@@ -2747,10 +2749,23 @@ for m=1:floor(size(kerndatav,1)/frmpn)
             end
             
             if n==1
-                music.part(p).measure(m).note(n) = struct('chord',[],'rest',[],'pitch',[],'duration',[],'voice',[],'type',[],'staff',[]);
+                music.part(p).measure(m).note(n) = struct('chord',[],'rest',[],...
+                    'pitch',[],'duration',[],'voice',[],'type',[],'dot',[],'staff',[]);
             end
 
             if any(kerndatamp(t,:))
+                if t==1
+                    for s=spiked
+                        music.part(p).measure(m).note(n).chord = double(sum(kerndatamp(t,:))>1);
+                        music.part(p).measure(m).note(n).pitch.step = pitch(s);
+                        music.part(p).measure(m).note(n).pitch.octave = octave(s);
+                        music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
+                        music.part(p).measure(m).note(n).type = durtype(sum(kerndatamp(:,s)));
+                        music.part(p).measure(m).note(n).dot = dots(sum(kerndatamp(:,s)));
+                        music.part(p).measure(m).note(n).staff = staff{p}(s);
+                        n = n + 1;
+                    end
+                end
                 for s=spiked
                     if ~any(didspike(:,s)) && any(kerndatamp(:,s))
                         music.part(p).measure(m).note(n).chord = double(length(spiked)>1);
@@ -2758,6 +2773,7 @@ for m=1:floor(size(kerndatav,1)/frmpn)
                         music.part(p).measure(m).note(n).pitch.octave = octave(s);
                         music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
                         music.part(p).measure(m).note(n).type = durtype(sum(kerndatamp(:,s)));
+                        music.part(p).measure(m).note(n).dot = dots(sum(kerndatamp(:,s)));
                         music.part(p).measure(m).note(n).staff = staff{p}(s);
                         n = n + 1;
                     end
@@ -2768,6 +2784,7 @@ for m=1:floor(size(kerndatav,1)/frmpn)
                         music.part(p).measure(m).note(n).rest = 1;
                         music.part(p).measure(m).note(n).duration = sum(~any(kerndatamp,2));
                         music.part(p).measure(m).note(n).type = durtype(sum(~any(kerndatamp,2)));
+                        music.part(p).measure(m).note(n).dot = dots(sum(~any(kerndatamp,2)));
                         music.part(p).measure(m).note(n).staff = c;
                         n = n + 1;
                     end
@@ -2788,6 +2805,8 @@ fstr = replace(fstr,'_','-');
 fstr = replace(fstr,'<chord>0</chord>','');
 fstr = replace(fstr,'<chord>1</chord>','<chord/>');
 fstr = replace(fstr,'<rest>1</rest>','<rest/>');
+fstr = replace(fstr,'<dot>0</dot>','');
+fstr = replace(fstr,'<dot>1</dot>','<dot/>');
 fstr = replace(fstr,'<?xml version="1.0" encoding="UTF-8"?>',...
     ['<?xml version="1.0" encoding="UTF-8" standalone="no"?>',newline,...
     '<!DOCTYPE score-partwise PUBLIC',...
