@@ -2575,7 +2575,7 @@ imult = [1,-1];
 kerndata = props.video.kerndata*imult(inv)>alphathr;
 props.video.kerndatav = kerndata(start:stop,:);
 
-writemusic(hObject.Parent,props)
+writemusic(hObject.Parent,props,fullfile(path,file))
 
 if strcmp(hObject.Tag,'audiovideo')
     vid = VideoWriter(fullfile(path,file),'MPEG-4');
@@ -2619,7 +2619,7 @@ end
 
 % audiowrite( fullfile(path,[file '.wav']), audio/max(audio), fs,'BitsPerSample',32)
 
-function writemusic(vfig,props)
+function writemusic(vfig,props,file)
 % all_instruments = readstruct('all_instruments.xml');
 
  % delete line after close video gui 2/2/23 ---->
@@ -2627,6 +2627,7 @@ props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3
 props.video.durationsnum  = [1/32  , 1/16 , 3/32 , 1/8    , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
 props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","quarter","half","half","whole"];
 props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
+
 % <---- delete line after close video gui 2/2/23
 
 music.versionAttribute = '4.0';
@@ -2648,15 +2649,11 @@ rai = round(ra*fr);
 
 frmpn = round(tmsig(1)/tmsig(2)/props.video.durationsnum(dur));
 
-durationsnum = props.video.durationsnum;
-durationsstr = props.video.durationsstr;
-dots = props.video.dots;
-
 estr = get(findobj(vfig,'Tag','exportonly'),'String');
 egrp = strsplit(estr,',');
 eidx = zeros(1,0);
 if contains(estr,'all')
-    eidx = 1:size(kerndata,2);
+    eidx = 1:size(props.video.kerndata,2);
 else
     for g=1:length(egrp)
         est = regexp(egrp{g},'[0-9]+','match');
@@ -2695,49 +2692,85 @@ for p=1:length(parts)
     music.part_list.score_part(p).part_name = parts(p).instrument;
     music.part_list.score_part(p).score_instrument.idAttribute = [pname '-I1'];
     music.part_list.score_part(p).score_instrument.instrument_name = parts(p).instrument;
-
     music.part(p).idAttribute = ['P' num2str(p)];
 end
 
 kerndatav = props.video.kerndatav;
-for m=1:ceil(size(kerndatav,1)/frmpn)
+assignin('base',['kerndatam' num2str(1)],kerndatav(:, parts(1).vsdidx))
+assignin('base',['kerndatam' num2str(2)],kerndatav(:, parts(2).vsdidx))
+for m=1:floor(size(kerndatav,1)/frmpn)
     kerndatam = kerndatav((1:frmpn) + (m-1)*frmpn, :);
     music.part(p).measure(m).numberAttribute = num2str(m);
     for p=1:length(parts)
         kerndatamp = kerndatam(:, parts(p).vsdidx);
         pitch = parts(p).pitch;
-        octave = parts(p).octave;keyboard
+        octave = parts(p).octave;
+        music.part(p).measure(m).numberAttribute = num2str(m);
         if m==1
+            music.part(p).measure(m).numberAttribute = num2str(m);
             music.part(p).measure(m).attributes.key.fifths = 0;
-            music.part(p).measure(m).attributes.time.beats = tmsig(2);
+            music.part(p).measure(m).attributes.time.beats = tmsig(1);
             music.part(p).measure(m).attributes.time.beat_type = tmsig(2);
-            music.part(p).measure(m).attributes.clef.sign = 'G';
-            music.part(p).measure(m).attributes.clef.line = 2;
+            if any(parts(p).noteidx>24) && any(parts(p).noteidx<21)
+                music.part(p).measure(m).attributes.staves = 2;
+            else
+                music.part(p).measure(m).attributes.staves = 1;
+            end
+            if any(parts(p).noteidx>24) || all(parts(p).noteidx>=21) 
+                music.part(p).measure(m).attributes.clef(1).numberAttribute = num2str(1);
+                music.part(p).measure(m).attributes.clef(1).sign = 'G';
+                music.part(p).measure(m).attributes.clef(1).line = 2;
+                if any(parts(p).noteidx<21)
+                    music.part(p).measure(m).attributes.clef(2).numberAttribute = num2str(2);
+                    music.part(p).measure(m).attributes.clef(2).sign = 'F';
+                    music.part(p).measure(m).attributes.clef(2).line = 4;
+                    staff{p} = zeros(size(octave));
+                    staff{p}(parts(p).noteidx>=24) = 1;
+                    staff{p}(parts(p).noteidx<24) = 2;
+                else
+                    staff{p} = ones(size(octave));
+                end
+            else
+                music.part(p).measure(m).attributes.clef.sign = 'F';
+                music.part(p).measure(m).attributes.clef.line = 4;
+                staff = ones(size(octave));
+            end
         end
-        c = 0;
-        for n=1:frmpn
-            spiked = find(kerndatamp(n,:));
-            if n==1
+        
+        n = 1;
+        for t=1:frmpn
+            spiked = find(kerndatamp(t,:));
+            if t==1
                 didspike = false(1,size(kerndatamp,2));
             else
-                didspike = kerndatamp(1:n-1,:);
+                didspike = kerndatamp(1:t-1,:);
+            end
+            
+            if n==1
+                music.part(p).measure(m).note(n) = struct('chord',[],'rest',[],'pitch',[],'duration',[],'voice',[],'type',[],'staff',[]);
             end
 
-            if any(kendatamp(n,:))
-                for s=1:length(spiked)
-                    if ~any(didspike(:,s))
-                        music.part(p).measure(m).note(n).chord = length(spiked)>1;
+            if any(kerndatamp(t,:))
+                for s=spiked
+                    if ~any(didspike(:,s)) && any(kerndatamp(:,s))
+                        music.part(p).measure(m).note(n).chord = double(length(spiked)>1);
                         music.part(p).measure(m).note(n).pitch.step = pitch(s);
                         music.part(p).measure(m).note(n).pitch.octave = octave(s);
                         music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
-                        music.part(p).measure(m).note(n).type = durtype(sum(~any(kerndatamp,2)));
+                        music.part(p).measure(m).note(n).type = durtype(sum(kerndatamp(:,s)));
+                        music.part(p).measure(m).note(n).staff = staff{p}(s);
+                        n = n + 1;
                     end
                 end
             else
-                if any(spiked,'all')
-                    music.part(p).measure(m).note(n).rest = 1;
-                    music.part(p).measure(m).note(n).duration = sum(~any(kerndatamp,2));
-                    music.part(p).measure(m).note(n).type = durtype(sum(~any(kerndatamp,2)));
+                if any(didspike) || t==1
+                    for c=1:length(unique(staff{p}))
+                        music.part(p).measure(m).note(n).rest = 1;
+                        music.part(p).measure(m).note(n).duration = sum(~any(kerndatamp,2));
+                        music.part(p).measure(m).note(n).type = durtype(sum(~any(kerndatamp,2)));
+                        music.part(p).measure(m).note(n).staff = c;
+                        n = n + 1;
+                    end
                 end
             end
         end
@@ -2745,10 +2778,9 @@ for m=1:ceil(size(kerndatav,1)/frmpn)
 end
 
 
+writestruct(music,[file '.xml'],'StructNodeName','score_partwise')
 
-writestruct(music,'test3.xml','StructNodeName','score_partwise')
-
-fid = fopen('test3.xml','r');
+fid = fopen([file '.xml'],'r');
 fstr = fread(fid,'*char')';
 fclose(fid);
 
@@ -2762,7 +2794,7 @@ fstr = replace(fstr,'<?xml version="1.0" encoding="UTF-8"?>',...
     ' "-//Recordare//DTD MusicXML 4.0 Partwise//EN"',... 
     ' "http://www.musicxml.org/dtds/partwise.dtd">']);
 
-fid = fopen('test3.musicxml','w');
+fid = fopen([file '.musicxml'],'w');
 fprintf(fid,'%s',fstr);
 fclose(fid);
 
