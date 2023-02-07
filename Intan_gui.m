@@ -2623,18 +2623,18 @@ function writemusic(vfig,props,file)
 % all_instruments = readstruct('all_instruments.xml');
 
  % delete line after close video gui 2/2/23 ---->
-props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
-props.video.durationsnum  = [1/32  , 1/16 , 3/32 , 1/8    , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
-props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","quarter","half","half","whole"];
-props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
+props.video.durationsfrac = ["1/16","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
+props.video.durationsnum  = [1/16 , 1/8     , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
+props.video.durationsstr  = ["16th","eighth","eighth","quarter","quarter","half","half","whole"];
+props.video.dots  = logical([0     ,0       ,   1    ,0        ,1        ,0     ,1     ,0 ]);
 % <---- delete line after close video gui 2/2/23
 
 music.versionAttribute = '4.0';
 
 
 dur = get(findobj(vfig,'Tag','noteduration'),'Value');
-durtype = props.video.durationsstr(dur:dur+8);
-dots = props.video.dots(dur:dur+8);
+durtype = props.video.durationsstr(dur);
+dots = props.video.dots(dur);
 rest = get(findobj(vfig,'Tag','restduration'),'Value');
 rest = props.video.durationsnum(rest);
 
@@ -2754,40 +2754,37 @@ for m=1:floor(size(kerndatav,1)/frmpn)
             end
 
             if any(kerndatamp(t,:))
-                if t==1
-                    for s=spiked
-                        music.part(p).measure(m).note(n).chord = double(sum(kerndatamp(t,:))>1);
-                        music.part(p).measure(m).note(n).pitch.step = pitch(s);
-                        music.part(p).measure(m).note(n).pitch.octave = octave(s);
-                        music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
-                        music.part(p).measure(m).note(n).type = durtype(sum(kerndatamp(:,s)));
-                        music.part(p).measure(m).note(n).dot = dots(sum(kerndatamp(:,s)));
-                        music.part(p).measure(m).note(n).staff = staff{p}(s);
-                        n = n + 1;
-                    end
-                end
                 for s=spiked
-                    if ~any(didspike(:,s)) && any(kerndatamp(:,s))
-                        music.part(p).measure(m).note(n).chord = double(length(spiked)>1);
-                        music.part(p).measure(m).note(n).pitch.step = pitch(s);
-                        music.part(p).measure(m).note(n).pitch.octave = octave(s);
-                        music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
-                        music.part(p).measure(m).note(n).type = durtype(sum(kerndatamp(:,s)));
-                        music.part(p).measure(m).note(n).dot = dots(sum(kerndatamp(:,s)));
-                        music.part(p).measure(m).note(n).staff = staff{p}(s);
-                        n = n + 1;
-                    end
+                    music.part(p).measure(m).note(n).chord = double(sum(kerndatamp(t,:))>1);
+                    music.part(p).measure(m).note(n).pitch.step = pitch(s);
+                    music.part(p).measure(m).note(n).pitch.octave = octave(s);
+%                         nend = find(~kerndatamp(t:end,s),1)-1;
+                    music.part(p).measure(m).note(n).duration = 1;
+                    music.part(p).measure(m).note(n).type = durtype;
+                    music.part(p).measure(m).note(n).dot = dots;
+                    music.part(p).measure(m).note(n).staff = staff{p}(s);
+                    n = n + 1;
                 end
+%                 for s=spiked
+%                     if ~any(didspike(:,s)) && any(kerndatamp(:,s))
+%                         music.part(p).measure(m).note(n).chord = double(length(spiked)>1);
+%                         music.part(p).measure(m).note(n).pitch.step = pitch(s);
+%                         music.part(p).measure(m).note(n).pitch.octave = octave(s);
+%                         music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
+%                         music.part(p).measure(m).note(n).type = durtype(sum(kerndatamp(:,s)));
+%                         music.part(p).measure(m).note(n).dot = dots(sum(kerndatamp(:,s)));
+%                         music.part(p).measure(m).note(n).staff = staff{p}(s);
+%                         n = n + 1;
+%                     end
+%                 end
             else
-                if any(didspike) || t==1
-                    for c=1:length(unique(staff{p}))
-                        music.part(p).measure(m).note(n).rest = 1;
-                        music.part(p).measure(m).note(n).duration = sum(~any(kerndatamp,2));
-                        music.part(p).measure(m).note(n).type = durtype(sum(~any(kerndatamp,2)));
-                        music.part(p).measure(m).note(n).dot = dots(sum(~any(kerndatamp,2)));
-                        music.part(p).measure(m).note(n).staff = c;
-                        n = n + 1;
-                    end
+                for c=1:length(unique(staff{p}))
+                    music.part(p).measure(m).note(n).rest = 1;
+                    music.part(p).measure(m).note(n).duration = 1;
+                    music.part(p).measure(m).note(n).type = durtype;
+                    music.part(p).measure(m).note(n).dot = dots;
+                    music.part(p).measure(m).note(n).staff = c;
+                    n = n + 1;
                 end
             end
         end
