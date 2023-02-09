@@ -1027,6 +1027,9 @@ set(findobj(props.chpanel,'Tag','showsort'),'Enable','on')
 set(findobj(props.cmpanel,'Tag','adjust'),'Enable','on')
 set(findobj(props.cmpanel,'Tag','filter'),'Enable','on')
 
+if isfield(props,'plt') && isgraphics(props.plt(1))
+    props.ax(1).XLim = [min(props.plt(1).XData) max(props.plt(1).XData)];
+end
 guidata(hObject,props)
 updateroi(hObject)
 set(allbut(isvalid(allbut)),'Enable','on')
@@ -1052,7 +1055,7 @@ tm = props.tm;
 gsize = props.axpanel.Position(4) - 100;
 posy = linspace(gsize - gsize/nch,0,nch) + 50;
 
-if isgraphics(props.plt(1))
+if isfield(props,'plt') && isgraphics(props.plt(1))
     xlim = props.ax(1).XLim;
 else
     xlim = [min(tm), max(tm)];
