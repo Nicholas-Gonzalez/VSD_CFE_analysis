@@ -154,7 +154,7 @@ uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton'
 
 function all_kframe(hObject,eventdata)
 [fnames, fpath] = uigetfile('*.tsm',"MultiSelect",'on');
-if any(fnames)
+if length(fnames)>1
     props = guidata(hObject);
     files = fullfile(fpath,fnames);
     buf = uicontrol(props.axpanel,'Units','pixels',...
@@ -1052,6 +1052,11 @@ tm = props.tm;
 gsize = props.axpanel.Position(4) - 100;
 posy = linspace(gsize - gsize/nch,0,nch) + 50;
 
+if isgraphics(props.plt(1))
+    xlim = props.ax(1).XLim;
+else
+    xlim = [min(tm), max(tm)];
+end
 
 if isfield(props,'plt')
     delete(props.plt)
@@ -1121,7 +1126,7 @@ for d=1:nch
     end
 end 
 
-set(props.ax,'YTick',[],'XLim',[0 max(tm)])% somehow is also modifying im, but only when loading new files, 05-23-22: not sure if this comment is still applicable
+set(props.ax,'YTick',[],'XLim',xlim)% somehow is also modifying im, but only when loading new files, 05-23-22: not sure if this comment is still applicable
 linkaxes(props.ax,'x')
 set(findobj(props.chpanel,'Tag','adjust'),'Enable','on')
 set(findobj(props.chpanel,'Tag','showsort'),'Enable','on')
@@ -2303,13 +2308,13 @@ uicontrol('Units','normalized','Position',[0.28 0.275 0.08 0.03],'Style','text',
     'String','Beats per minute','HorizontalAlignment','right',...
     'TooltipString','The minimum gap between notes');
 
-props.video.durationsfrac = ["1/32","1/16","3/32","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
-props.video.durationsnum  = [1/32  , 1/16 , 3/32 , 1/8    , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
-props.video.durationsstr  = ["32nd","16th","16th","eighth","eighth","quarter","quarter","half","half","whole"];
-props.video.dots  = logical([0     ,0     ,1     ,0       ,1       ,0        ,1        ,0     ,1     ,0]);
+props.video.durationsfrac = ["1/16","1/8"   ,"3/16"  ,"1/4"    ,"3/8"    ,"1/2" ,"3/4" ,"1"];
+props.video.durationsnum  = [1/16 , 1/8     , 3/16   , 1/4     , 3/8     , 1/2  , 3/4  , 1 ];
+props.video.durationsstr  = ["16th","eighth","eighth","quarter","quarter","half","half","whole"];
+props.video.dots  = logical([0     ,0       ,   1    ,0        ,1        ,0     ,1     ,0 ]);
 
 uicontrol('Units','normalized','Position',[0.37 0.24 0.06 0.03],'Style','popupmenu',...
-    'Tag','restduration','String',props.video.durationsfrac,'Value',2,'HorizontalAlignment',...
+    'Tag','restduration','String',props.video.durationsfrac,'Value',1,'HorizontalAlignment',...
     'center','Enable','off');
 
 uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',...
@@ -2317,7 +2322,7 @@ uicontrol('Units','normalized','Position',[0.29 0.235 0.07 0.03],'Style','text',
     'TooltipString','Number of harmonics for each note.  The greater the number the more like a piano');
 
 uicontrol('Units','normalized','Position',[0.37 0.20 0.06 0.03],'Style','popupmenu',...
-    'Tag','noteduration','String',props.video.durationsfrac,'Value',2,'HorizontalAlignment',...
+    'Tag','noteduration','String',props.video.durationsfrac,'Value',1,'HorizontalAlignment',...
     'center','Enable','off');
 
 uicontrol('Units','normalized','Position',[0.29 0.195 0.07 0.03],'Style','text',...
@@ -2702,90 +2707,53 @@ assignin('base',['kerndatam' num2str(1)],kerndatav(:, parts(1).vsdidx))
 assignin('base',['kerndatam' num2str(2)],kerndatav(:, parts(2).vsdidx))
 for m=1:floor(size(kerndatav,1)/frmpn)
     kerndatam = kerndatav((1:frmpn) + (m-1)*frmpn, :);
-    music.part(p).measure(m).numberAttribute = num2str(m);
     for p=1:length(parts)
         kerndatamp = kerndatam(:, parts(p).vsdidx);
         pitch = parts(p).pitch;
         octave = parts(p).octave;
         music.part(p).measure(m).numberAttribute = num2str(m);
         if m==1
-            music.part(p).measure(m).numberAttribute = num2str(m);
             music.part(p).measure(m).attributes.key.fifths = 0;
             music.part(p).measure(m).attributes.time.beats = tmsig(1);
             music.part(p).measure(m).attributes.time.beat_type = tmsig(2);
-            if any(parts(p).noteidx>24) && any(parts(p).noteidx<21)
-                music.part(p).measure(m).attributes.staves = 2;
-            else
-                music.part(p).measure(m).attributes.staves = 1;
-            end
+            music.part(p).measure(m).attributes.staves = 1;
             if any(parts(p).noteidx>24) || all(parts(p).noteidx>=21) 
-                music.part(p).measure(m).attributes.clef(1).numberAttribute = num2str(1);
-                music.part(p).measure(m).attributes.clef(1).sign = 'G';
-                music.part(p).measure(m).attributes.clef(1).line = 2;
-                if any(parts(p).noteidx<21)
-                    music.part(p).measure(m).attributes.clef(2).numberAttribute = num2str(2);
-                    music.part(p).measure(m).attributes.clef(2).sign = 'F';
-                    music.part(p).measure(m).attributes.clef(2).line = 4;
-                    staff{p} = zeros(size(octave));
-                    staff{p}(parts(p).noteidx>=24) = 1;
-                    staff{p}(parts(p).noteidx<24) = 2;
-                else
-                    staff{p} = ones(size(octave));
-                end
+                music.part(p).measure(m).attributes.clef.sign = 'G';
+                music.part(p).measure(m).attributes.clef.line = 2;
             else
                 music.part(p).measure(m).attributes.clef.sign = 'F';
                 music.part(p).measure(m).attributes.clef.line = 4;
-                staff = ones(size(octave));
             end
+            music.part(p).measure(m).direction.placementAttribute = 'above';
+            music.part(p).measure(m).direction.direction_type.words = 'Moderato';
+            music.part(p).measure(m).direction.sound.tempoAttribute = '450';
         end
         
         n = 1;
         for t=1:frmpn
-            spiked = find(kerndatamp(t,:));
-            if t==1
-                didspike = false(1,size(kerndatamp,2));
-            else
-                didspike = kerndatamp(1:t-1,:);
-            end
-            
             if n==1
                 music.part(p).measure(m).note(n) = struct('chord',[],'rest',[],...
                     'pitch',[],'duration',[],'voice',[],'type',[],'dot',[],'staff',[]);
             end
 
             if any(kerndatamp(t,:))
-                for s=spiked
-                    music.part(p).measure(m).note(n).chord = double(sum(kerndatamp(t,:))>1);
-                    music.part(p).measure(m).note(n).pitch.step = pitch(s);
-                    music.part(p).measure(m).note(n).pitch.octave = octave(s);
-%                         nend = find(~kerndatamp(t:end,s),1)-1;
-                    music.part(p).measure(m).note(n).duration = 1;
-                    music.part(p).measure(m).note(n).type = durtype;
-                    music.part(p).measure(m).note(n).dot = dots;
-                    music.part(p).measure(m).note(n).staff = staff{p}(s);
-                    n = n + 1;
+                for s=1:size(kerndatamp,2)
+                    if kerndatamp(t,s)
+                        music.part(p).measure(m).note(n).chord = double(sum(kerndatamp(t,:))>1 & s>find(kerndatamp(t,:),1));
+                        music.part(p).measure(m).note(n).pitch.step = pitch(s);
+                        music.part(p).measure(m).note(n).pitch.octave = octave(s);
+                        music.part(p).measure(m).note(n).duration = 1;
+                        music.part(p).measure(m).note(n).type = durtype;
+                        music.part(p).measure(m).note(n).dot = double(dots);
+                        n = n + 1;
+                    end
                 end
-%                 for s=spiked
-%                     if ~any(didspike(:,s)) && any(kerndatamp(:,s))
-%                         music.part(p).measure(m).note(n).chord = double(length(spiked)>1);
-%                         music.part(p).measure(m).note(n).pitch.step = pitch(s);
-%                         music.part(p).measure(m).note(n).pitch.octave = octave(s);
-%                         music.part(p).measure(m).note(n).duration = sum(kerndatamp(:,s));
-%                         music.part(p).measure(m).note(n).type = durtype(sum(kerndatamp(:,s)));
-%                         music.part(p).measure(m).note(n).dot = dots(sum(kerndatamp(:,s)));
-%                         music.part(p).measure(m).note(n).staff = staff{p}(s);
-%                         n = n + 1;
-%                     end
-%                 end
             else
-                for c=1:length(unique(staff{p}))
-                    music.part(p).measure(m).note(n).rest = 1;
-                    music.part(p).measure(m).note(n).duration = 1;
-                    music.part(p).measure(m).note(n).type = durtype;
-                    music.part(p).measure(m).note(n).dot = dots;
-                    music.part(p).measure(m).note(n).staff = c;
-                    n = n + 1;
-                end
+                music.part(p).measure(m).note(n).rest = 1;
+                music.part(p).measure(m).note(n).duration = 1;
+                music.part(p).measure(m).note(n).type = durtype;
+                music.part(p).measure(m).note(n).dot = double(dots);
+                n = n + 1;
             end
         end
     end
@@ -2813,6 +2781,7 @@ fstr = replace(fstr,'<?xml version="1.0" encoding="UTF-8"?>',...
 fid = fopen([file '.musicxml'],'w');
 fprintf(fid,'%s',fstr);
 fclose(fid);
+disp(['wrote:   ' file '.musicxml'])
 
 function note = makesound(freq,dur,fs,nharm)
 % distinguishable and pleasurable range 70 - 500 Hz
