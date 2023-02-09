@@ -3227,13 +3227,14 @@ figure;
 subplot(2,1,1)
 colors = parula(length(sidx));
 for h=1:length(sidx)
-    histogram(imdata(:,:,h),'FaceColor',colors(h,:));hold on
+    histogram(imdata(:,:,h),'BinEdges',0:100:max(imdata(:)) ,'FaceColor',colors(h,:));hold on
 end
 legend(string((round(sidx*sr,2))'))
 
 subplot(2,1,2)
 ims = imtile(imdata);
 imagesc(ims)
+colorbar
 
 %% misc methods
 function note(hObject,eventdata)
