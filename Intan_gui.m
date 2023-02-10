@@ -395,7 +395,11 @@ if vid
                 p = p + 1;
             end
         end
-        vsdprops.matprops.video = video;
+        if exist('video','var')
+            vsdprops.matprops.video = video;
+        else
+            warning(['No associated video file called ' imfn])
+        end
     end
 end
 
