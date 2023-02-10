@@ -1963,12 +1963,105 @@ if redo
     props.video.fun = fun;
     props.video.fparam = fparam;
     props.video.reference = 1;
+    slidepos = 10;
+    inv = 1;
+    climv = [-0.02 0.02];
+    props.video.climv = climv;
+    alphathr = climv(1);
+    props.video.alphathr = alphathr;
+    
+    % props.kernsize = diff([props.kernpos ; length(props.det)]);
+    % [~,idx] = sort(props.kernsize,'descend');
+    idx = (1:length(props.kernpos))';
+    vsdidx = string(idx);
+    height = 0.027;
+    ninstr = 13;
+    instrumento = struct();
+    % instruments panel ---------------
+    for i=1:ninstr
+        y = 0.96-height*(i-1);
+        if i==1
+            instr = 51;
+        else
+            instr = i;
+        end
+        rng = instr_range(instr,:);
+        inotes = find(contains(notes,rng{1})):find(contains(notes,rng{2}));
+        if ~isempty(vsdidx)
+            lastone = length(inotes);
+            lastone(lastone>length(vsdidx)) = length(vsdidx);
+            vstr = join([vsdidx(1), vsdidx(lastone)],'-');
+    %         vstr = join(vsdidx(1:lastone),',');
+            nstr = [notes{inotes(1)} '-' notes{inotes(lastone)}];
+            vsdidx(1:lastone) = [];
+    
+    
+            chkv = 1;
+            enable = 'on';
+        else
+            vstr = '-';
+            chkv = 0;
+            enable = 'off';
+            nstr = join(instr_range(instr,:),'-');
+        end
+        instrumento(i).enable = strcmp(enable,'on');
+        instrumento(i).vstr = vstr;
+        instrumento(i).nstr = nstr;
+    end
+    props.video.instrumento = instrumento;
+else
+    slidepos = props.video.frame;
+    inv = props.video.inv;
+    climv = props.video.climv;
+    alphathr = props.video.alphathr;
+    if isfield(props.video,'instrumento')
+        instrumento = props.video.instrumento;
+    else
+        % props.kernsize = diff([props.kernpos ; length(props.det)]);
+        % [~,idx] = sort(props.kernsize,'descend');
+        idx = (1:length(props.kernpos))';
+        vsdidx = string(idx);
+        height = 0.027;
+        ninstr = 13;
+        instrumento = struct();
+        % instruments panel ---------------
+        for i=1:ninstr
+            y = 0.96-height*(i-1);
+            if i==1
+                instr = 51;
+            else
+                instr = i;
+            end
+            rng = instr_range(instr,:);
+            inotes = find(contains(notes,rng{1})):find(contains(notes,rng{2}));
+            if ~isempty(vsdidx)
+                lastone = length(inotes);
+                lastone(lastone>length(vsdidx)) = length(vsdidx);
+                vstr = join([vsdidx(1), vsdidx(lastone)],'-');
+        %         vstr = join(vsdidx(1:lastone),',');
+                nstr = [notes{inotes(1)} '-' notes{inotes(lastone)}];
+                vsdidx(1:lastone) = [];
+        
+        
+                chkv = 1;
+                enable = 'on';
+            else
+                vstr = '-';
+                chkv = 0;
+                enable = 'off';
+                nstr = join(instr_range(instr,:),'-');
+            end
+            instrumento(i).enable = strcmp(enable,'on');
+            instrumento(i).vstr = vstr;
+            instrumento(i).nstr = nstr;
+        end
+        props.video.instrumento = instrumento;
+    end
 end
 
 
 figure(vfig)
 % props.video.tm = props.video.tm + diff(props.video.tm(1:2))*5;
-slidepos = 10;
 sf = diff(props.video.tm(1:2));
 
 % initializing video image ----------------------
@@ -1978,15 +2071,12 @@ props.video.img = image(props.im);
 iaxr.XTick = [];
 iaxr.YTick = [];
 
-inv = 1;
 imult = [1,-1];
 iax = axes('Units','normalized','Position',iaxr.Position,'Tag','imgax');
 props.video.iax = iax;
 iaxpos = iax.Position;
-climv = [-0.02 0.02];
-props.video.img = imagesc(props.video.imdata(:,:,slidepos)*imult(inv+1),'AlphaData',props.video.imdata(:,:,slidepos)>climv(1));
+props.video.img = imagesc(props.video.imdata(:,:,slidepos)*imult(inv+1),'AlphaData',props.video.imdata(:,:,slidepos)>alphathr);
 caxis(iax, climv)
-props.video.climv = climv;
 iax.Tag = 'imgax';
 
 iax.XTick = [];
@@ -2020,9 +2110,7 @@ end
 
 idur = size(props.video.imdata,3);
 
-% -------------------
-% row, pix, invert, timestamp
-% -------------------
+% ---row, pix, invert, timestamp----------------
 for a=1
 uicontrol('Units','normalized','Position',[iaxpos(1) sum(iaxpos([2 4])) 0.03 0.03],...
     'Style','togglebutton','Tag','Raw','String','Raw','Callback',@chframe,'Enable','on');
@@ -2110,15 +2198,13 @@ uicontrol('Units','normalized','Position',[0.46 0.21 0.1 0.03],'Style','pushbutt
     'Tag','reference','String','Set reference frame','Callback',@setreference,'Enable','on');
 end
 
-% ------------------------------
-% colormap
-% ------------------------------
+% ----colormap--alphathr------------------------
 for a=1
 uicontrol('Units','normalized','Position',[0.45 0.16 0.11 0.03],'Style','text',...
     'String','Colormap axis','HorizontalAlignment','center','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.5 0.06 0.06 0.03],'Style','edit',...
-    'Tag','alphathr','String',num2str(climv(1)),'HorizontalAlignment','center',...
+    'Tag','alphathr','String',num2str(alphathr),'HorizontalAlignment','center',...
     'Callback',@chframe,'Enable','on');
 
 uicontrol('Units','normalized','Position',[0.44 0.045 0.05 0.05],'Style','text',...
@@ -2139,9 +2225,7 @@ uicontrol('Units','normalized','Position',[0.45 0.135 0.04 0.03],'Style','text',
     'String','upper','HorizontalAlignment','right','Enable','on');
 end
 
-% ------------------------------
-% ROI params
-% ------------------------------
+% ----ROI params--------------------------
 for a=1
 uicontrol('Units','normalized','Position',[0.45 0.00 0.04 0.03],'Style','text',...
     'String','text color','HorizontalAlignment','right','Enable','on');
@@ -2150,9 +2234,7 @@ uicontrol('Units','normalized','Position',[0.5 0.0 0.06 0.03],'Style','popupmenu
     'Max',5,'Min',1,'String',["black","white","red","green","blue"],'Tag','textcolor','Value',1,'Callback',@txtcolor);
 end
 
-% ------------------------------
-% video params
-% ------------------------------
+% -----video params-------------------------
 for a=1
 uicontrol('Units','normalized','Position',[0.29 0.31 0.07 0.03],'Style','text',...
     'String','Frame interval (ms)','HorizontalAlignment','right','Enable','on');
@@ -2163,9 +2245,7 @@ uicontrol('Units','normalized','Position',[0.37 0.32 0.06 0.03],'Style','edit',.
 end
 
 
-% ------------------------------
-% movie parameters
-% ------------------------------
+% -----movie params-------------------
 
 % setting notes and intruments --------------
 for a=1
@@ -2197,39 +2277,40 @@ instr_range = ["D5","C8"; "C4","A6"; "B3","E6"; "D3","B6"; "B1","B5";...
          "",""; "",""; "",""];
 end
 
-props.kernsize = diff([props.kernpos ; length(props.det)]);
-[~,idx] = sort(props.kernsize,'descend');
-idx = (1:length(props.kernpos))';
-vsdidx = string(idx);
-height = 0.027;
-ninstr = 13;
-% instruments panel ---------------
-for i=1:ninstr
-    y = 0.96-height*(i-1);
-    if i==1
-        instr = 51;
-    else
-        instr = i;
-    end
-    rng = instr_range(instr,:);
-    inotes = find(contains(notes,rng{1})):find(contains(notes,rng{2}));
-    if ~isempty(vsdidx)
-        lastone = length(inotes);
-        lastone(lastone>length(vsdidx)) = length(vsdidx);
-        vstr = join([vsdidx(1), vsdidx(lastone)],'-');
-%         vstr = join(vsdidx(1:lastone),',');
-        nstr = [notes{inotes(1)} '-' notes{inotes(lastone)}];
-        vsdidx(1:lastone) = [];
-
-
-        chkv = 1;
-        enable = 'on';
-    else
-        vstr = '-';
-        chkv = 0;
-        enable = 'off';
-        nstr = join(instr_range(instr,:),'-');
-    end
+% % props.kernsize = diff([props.kernpos ; length(props.det)]);
+% % [~,idx] = sort(props.kernsize,'descend');
+% idx = (1:length(props.kernpos))';
+% vsdidx = string(idx);
+% height = 0.027;
+% ninstr = 13;
+% 
+% % instruments panel ---------------
+% for i=1:ninstr
+%     y = 0.96-height*(i-1);
+%     if i==1
+%         instr = 51;
+%     else
+%         instr = i;
+%     end
+%     rng = instr_range(instr,:);
+%     inotes = find(contains(notes,rng{1})):find(contains(notes,rng{2}));
+%     if ~isempty(vsdidx)
+%         lastone = length(inotes);
+%         lastone(lastone>length(vsdidx)) = length(vsdidx);
+%         vstr = join([vsdidx(1), vsdidx(lastone)],'-');
+% %         vstr = join(vsdidx(1:lastone),',');
+%         nstr = [notes{inotes(1)} '-' notes{inotes(lastone)}];
+%         vsdidx(1:lastone) = [];
+% 
+% 
+%         chkv = 1;
+%         enable = 'on';
+%     else
+%         vstr = '-';
+%         chkv = 0;
+%         enable = 'off';
+%         nstr = join(instr_range(instr,:),'-');
+%     end
     
     uicontrol('Units','normalized','Position',[0.01 y 0.02 height],'Style','checkbox',...
         'Tag',['instrument' num2str(i)],'HorizontalAlignment','center','Value',chkv,...
@@ -2456,10 +2537,13 @@ while ~isempty(instrumento)
 end
 
 function use_instrument(hObject,eventdata)
+intan = findobj('Tag',guidata(hObject));
+props = guidata(intan);
 idx = regexp(hObject.Tag,'\d+','match');
 seten = ["off","on"];
 obj = findobj(hObject.Parent,'Tag',['instrument' idx{1}]);
 set(obj(1:3),'Enable',seten(hObject.Value+1))
+props.video.instrumento(idx,4) = hObject.Value;
 
 function saveframe(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -3078,6 +3162,11 @@ idur = size(props.video.imdataroi,3);
 sfr = diff(props.video.tm(1:2));
 props.video.txtframe.String = sprintf('Frame: %i',frame);
 props.video.txttm.String = sprintf('Time: %0.2f s',(length(props.video.tm)*frame/idur)*sfr);
+
+props.video.frame = frame;
+props.video.alphathr = alphathr;
+props.video.inv = logical(inv-1);
+
 guidata(intan,props)
 
 function chimch(hObject,eventdata)
