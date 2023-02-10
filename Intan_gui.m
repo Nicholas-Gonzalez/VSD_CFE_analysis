@@ -1999,18 +1999,23 @@ cb = colorbar('Units','normalized','Position',[iax.Position(1) iax.Position(2)-0
 cb.Label.String = '-\DeltaF/F';
 
 corridx = find(contains(props.ch,'V-'),1) - 1;
-for r=1:4
-    strv = props.showlist(r);
-    idx = props.showidx(r) - corridx;
-    if contains(strv,'V-')
-        props.video.roi(r) = text(iax,props.kern_center(idx,1),...
-            props.kern_center(idx,2), num2str(idx),'Color','k',...
-            'HorizontalAlignment','center','FontSize',20, 'Clipping','on','Tag',['rois' num2str(r)]);
-    else
-        props.video.roi(r) = text(iax,1,1, ' ','Color','k',...
-            'HorizontalAlignment','center','FontSize',20, 'Clipping','on','Tag',['rois' num2str(r)]);
-    end
+for r=1:length(props.kern_center)
+    props.video.roi(r) = text(iax,props.kern_center(r,1),...
+        props.kern_center(r,2), num2str(r),'Color','k',...
+        'HorizontalAlignment','center','FontSize',13, 'Clipping','on','Tag',['rois' num2str(r)]);
 end
+% for r=1:4
+%     strv = props.showlist(r);
+%     idx = props.showidx(r) - corridx;
+%     if contains(strv,'V-')
+%         props.video.roi(r) = text(iax,props.kern_center(idx,1),...
+%             props.kern_center(idx,2), num2str(idx),'Color','k',...
+%             'HorizontalAlignment','center','FontSize',20, 'Clipping','on','Tag',['rois' num2str(r)]);
+%     else
+%         props.video.roi(r) = text(iax,1,1, ' ','Color','k',...
+%             'HorizontalAlignment','center','FontSize',20, 'Clipping','on','Tag',['rois' num2str(r)]);
+%     end
+% end
 end
 
 idur = size(props.video.imdata,3);
@@ -2176,7 +2181,7 @@ props.video.notes = notes;
 props.video.pitch = pitch;
 props.video.octave = octave;
 
-instr_range = ["D5","C8"; "C4","C7"; "B3","E6"; "D3","B6"; "B1","B5";...
+instr_range = ["D5","C8"; "C4","A6"; "B3","E6"; "D3","B6"; "B1","B5";...
          "A3","E6"; "D3","A5"; "A2","E5"; "C2","A4"; "B1","G5";...
          "F3","A6"; "E2","E4"; "E2","E4"; "","";"","";...
          "",""; "",""; "",""; "","";"","";...
@@ -2192,7 +2197,10 @@ instr_range = ["D5","C8"; "C4","C7"; "B3","E6"; "D3","B6"; "B1","B5";...
          "",""; "",""; "",""];
 end
 
-vsdidx = string((1:length(vch))');
+props.kernsize = diff([props.kernpos ; length(props.det)]);
+[~,idx] = sort(props.kernsize,'descend');
+idx = (1:length(props.kernpos))';
+vsdidx = string(idx);
 height = 0.027;
 ninstr = 13;
 % instruments panel ---------------
@@ -2209,6 +2217,7 @@ for i=1:ninstr
         lastone = length(inotes);
         lastone(lastone>length(vsdidx)) = length(vsdidx);
         vstr = join([vsdidx(1), vsdidx(lastone)],'-');
+%         vstr = join(vsdidx(1:lastone),',');
         nstr = [notes{inotes(1)} '-' notes{inotes(lastone)}];
         vsdidx(1:lastone) = [];
 
@@ -3079,11 +3088,11 @@ ax = findobj(hObject.Parent,'Tag',['plt' num2str(hObject.Tag(end))]);
 set(ax,'YData',props.data(idx,:))
 txt = findobj(hObject.Parent,'Tag',['rois' hObject.Tag(end)]);
 corridx = find(contains(props.ch,'V-'),1) - 1;
-if contains(props.ch(idx),'V-')
-    set(txt,'String',num2str(idx-corridx),'Position',[props.kern_center(idx-corridx,1:2) 0])
-else
-    set(txt,'String',' ')
-end
+% if contains(props.ch(idx),'V-')
+%     set(txt,'String',num2str(idx-corridx),'Position',[props.kern_center(idx-corridx,1:2) 0])
+% else
+%     set(txt,'String',' ')
+% end
 
 function setreference(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
