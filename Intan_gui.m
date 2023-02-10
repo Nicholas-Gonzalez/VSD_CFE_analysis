@@ -3187,7 +3187,7 @@ else
 end
 % props.imsh.Parent.XLim = [0 size(props.im,2)];
 for r=1:length(props.kernpos)
-    if any(roidx==r)
+    if any(roidx==r) || r>length(props.roi)
        props.roi(r) = text(props.imsh.Parent,props.kern_center(r,1),props.kern_center(r,2), ...
                 num2str(r),'Color','k','HorizontalAlignment','center','Clipping','on');
     else
