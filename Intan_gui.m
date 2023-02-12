@@ -1969,6 +1969,7 @@ if redo
     props.video.climv = climv;
     alphathr = -0.02;
     props.video.alphathr = alphathr;
+    props.video.xlim = [min(tm) max(tm)];
     % [~,idx] = sort(props.kernsize,'descend');
     makenewinstr = true;
     ninstr = 13;
@@ -2003,9 +2004,13 @@ else
     else
         makenewinstr = true;
     end
+
+    if ~isfield(props.video,'xlim')
+        props.video.xlim = [min(props.video.tm) max(props.video.tm)];
+    end    
     ninstr = 13;
 end
-makenewinstr = true;
+
 
 % setting notes and intruments --------------
 for a=1
@@ -2067,7 +2072,7 @@ if makenewinstr
             nstr = join(instr_range(instr,:),'-');
         end
         instrumento(i).chkv = chkv;
-        instrumento(i).enable = strcmp(enable,'on');
+        instrumento(i).enable = enable;
         instrumento(i).vstr = vstr;
         instrumento(i).nstr = nstr;
         instrumento(i).instr = instr;
@@ -2184,7 +2189,7 @@ rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 1 0.5],'EdgeColor',[0.5 1 0.5],
 rectangle('Position',[max(props.video.tm) 0 sf 1],'FaceColor',[1 0.5 0.5],...
     'EdgeColor',[1 0.5 0.5],'Tag','stopframe1');
 rectangle('Position',[0 0 sf 1],'FaceColor',[0.5 0.5 0.5],'Tag','cframe');
-set(ax,'XLim',[min(props.tm) max(props.video.tm)]);
+set(ax,'XLim',props.video.xlim);
 ax(end).YLim = [0 1];
 ax(end).Toolbar.Visible = 'off';
 linkaxes(ax,'x')
@@ -2280,13 +2285,13 @@ for i=1:ninstr
         'Enable','on','callback',@use_instrument);
     uicontrol('Units','normalized','Position',[0.03 y 0.09 height],'Style','edit',...
         'Tag',['instrument' num2str(i)],'String',instrumento(i).nstr,'HorizontalAlignment','center',...
-        'Enable',enable,'callback',@update_notes);
+        'Enable',instrumento(i).enable,'callback',@update_notes);
     uicontrol('Units','normalized','Position',[0.12 y 0.09 height],'Style','edit',...
         'Tag',['instrument' num2str(i)],'String',instrumento(i).vstr,'HorizontalAlignment','center',...
-        'Enable',enable,'callback',@update_notes);
+        'Enable',instrumento(i).enable,'callback',@update_notes);
     uicontrol('Units','normalized','Position',[0.21 y 0.09 height],'Style','popupmenu',...
         'Tag',['instrument' num2str(i)],'String',instruments,'Value',instrumento(i).instr,'HorizontalAlignment','center',...
-        'Enable',enable,'callback',@update_notes);
+        'Enable',instrumento(i).enable,'callback',@update_notes);
 end
 
 % notes axis-----------
@@ -3133,6 +3138,9 @@ props.video.txttm.String = sprintf('Time: %0.2f s',(length(props.video.tm)*frame
 props.video.frame = frame;
 props.video.alphathr = alphathr;
 props.video.inv = logical(inv-1);
+
+plt = findobj(hObject.Parent,'Tag','plt1');
+props.video.xlim = get(plt.Parent,'XLim');
 
 guidata(intan,props)
 
