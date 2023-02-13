@@ -1972,6 +1972,7 @@ if redo
     props.video.xlim = [min(tm) max(tm)];
     % [~,idx] = sort(props.kernsize,'descend');
     makenewinstr = true;
+    props.video.ch = props.showidx(1:4);
     ninstr = 13;
 else
     if isfield(props.video,'frame')
@@ -2007,7 +2008,12 @@ else
 
     if ~isfield(props.video,'xlim')
         props.video.xlim = [min(props.video.tm) max(props.video.tm)];
-    end    
+    end  
+
+    if ~isfield(props.video,'ch')
+        props.video.ch = props.showidx(1:4);disp('here')
+    end
+
     ninstr = 13;
 end
 
@@ -2167,12 +2173,12 @@ axheight = 0.085;
 topax = 0.91;
 for a=1:length(ax)
     ax(a) = axes('Units','normalized','Position',[0.71 topax-axheight*(a-1) 0.285 0.085]);
-    plt(a) = plot(props.tm,props.data(props.showidx(a),:),'Tag',['plt' num2str(a)]);
+    plt(a) = plot(props.tm,props.data(props.video.ch(a),:),'Tag',['plt' num2str(a)]);
     ax(a).YLabel.String = '\DeltaF/F';
     ax(a).XTick = [];
 
     uicontrol('Units','normalized','Position',[0.63 topax-axheight*(a-1) 0.05 0.05],'Style','popupmenu',...
-        'Max',length(ch),'Min',1,'String',str','Tag',['channels' num2str(a)],'Value',showidx(a),'Callback',@chimch);
+        'Max',length(ch),'Min',1,'String',str','Tag',['channels' num2str(a)],'Value',props.video.ch(a),'Callback',@chimch);
 end
 ax(5) = axes('Units','normalized','Position',[ax(end).Position(1) 0.05 ax(end).Position(3) 0.605]);
 props.video.kimg = imagesc(props.video.tm, 1:size(props.video.kerndata,2), props.video.kerndata'*imult(inv+1));
@@ -2890,6 +2896,8 @@ vals(idx) = str2double(hObject.String);
 caxis(imgax,vals)
 caxis(kimgax,vals)
 props.video.climv = vals;
+plt = findobj(hObject.Parent,'Tag','plt1');
+props.video.xlim = get(plt.Parent,'XLim');
 guidata(intan,props)
 
 function raw(hObject,eventdata)
@@ -3148,15 +3156,17 @@ function chimch(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
 props = guidata(intan);
 idx = hObject.Value;
-ax = findobj(hObject.Parent,'Tag',['plt' num2str(hObject.Tag(end))]);
+objidx = num2str(hObject.Tag(end));
+ax = findobj(hObject.Parent,'Tag',['plt' objidx]);
 set(ax,'YData',props.data(idx,:))
 txt = findobj(hObject.Parent,'Tag',['rois' hObject.Tag(end)]);
 corridx = find(contains(props.ch,'V-'),1) - 1;
-% if contains(props.ch(idx),'V-')
-%     set(txt,'String',num2str(idx-corridx),'Position',[props.kern_center(idx-corridx,1:2) 0])
-% else
-%     set(txt,'String',' ')
-% end
+
+
+plt = findobj(hObject.Parent,'Tag','plt1');
+props.video.xlim = get(plt.Parent,'XLim');
+props.video.ch(str2double(objidx)) = idx;
+guidata(intan,props)
 
 function setreference(hObject,eventdata)
 intan = findobj('Tag',guidata(hObject));
@@ -3190,6 +3200,9 @@ props.video.kerndata = props.video.kerndata - repmat(f0,size(props.video.kerndat
 inv = get(findobj(vfig,'Tag','invert'),'Value')+1;
 imult = [1,-1];
 set(props.video.kimg,'CData',props.video.kerndata'*imult(inv))
+
+plt = findobj(hObject.Parent,'Tag','plt1');
+props.video.xlim = get(plt.Parent,'XLim');
 
 guidata(intan,props)
 
