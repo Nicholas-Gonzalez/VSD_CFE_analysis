@@ -378,7 +378,8 @@ if vid
                 imfn1 = replace(imfn,'imdata11.',['imdata' num2str(n) num2str(p) '.']);
                 if ~exist(imfn1,'file'); break; end
                 video1 = load(imfn1);     
-                fields = {'climv',['d2uint' num2str(n)],'fparam','fun',['min' num2str(n)],'reference','tm','chunks'};
+                fields = {'climv','xlim','alphathr','ch','frame','instrumento','inv',...
+                    ['d2uint' num2str(n)],'fparam','fun',['min' num2str(n)],'reference','tm','chunks'};
                 if p==1
                     video.(fieldname{n}) = video1.([fieldname{n} 'p']);
                     if n==1
@@ -2011,7 +2012,7 @@ else
     end  
 
     if ~isfield(props.video,'ch')
-        props.video.ch = props.showidx(1:4);disp('here')
+        props.video.ch = props.showidx(1:4);
     end
 
     ninstr = 13;
@@ -3379,6 +3380,13 @@ if isfield(props,'video')
     fparam = props.video.fparam;
     reference = props.video.reference;
     climv = props.video.climv;
+    xlim = props.video.xlim;
+    alphathr = props.video.alphathr;
+    instrumento = props.video.instrumento;
+    frame = props.video.frame;
+    inv = props.video.inv;
+    ch = props.video.ch;
+
     kerndata = props.video.kerndata;
 %     save(fullfile(path,replace(file,'.','_imdata.')),'minp','d2uint','imdata',...
 %         'tm','fun','fparam','reference','climv')
@@ -3396,21 +3404,22 @@ if isfield(props,'video')
 
     numchunk = ceil((numel(imdata)/9e8));
     chunks = round(linspace(0,size(imdata,3),numchunk+1));
+    mfields = {'xlim','alphathr','instrumento','frame','inv','ch'};
     for n=1:numchunk
         imdatap = imdata(:,:,chunks(n)+1:chunks(n+1));
         save(fullfile(path,replace(file,'.',['_imdata1' num2str(n) '.'])),'min1','d2uint1',...
-            'imdatap','tm','fun','fparam','reference','climv','chunks','kerndata')
+            'imdatap','tm','fun','fparam','reference','climv','chunks','kerndata',mfields{:})
         disp(fullfile(path,replace(file,'.',['_imdata1' num2str(n) '.'])))
 
         imdataroip = imdataroi(:,:,chunks(n)+1:chunks(n+1));
         save(fullfile(path,replace(file,'.',['_imdata2' num2str(n) '.'])),'min2','d2uint2',...
-            'imdataroip','tm','fun','fparam','reference','climv','chunks')
+            'imdataroip','tm','fun','fparam','reference','climv','chunks',mfields{:})
         disp(fullfile(path,replace(file,'.',['_imdata2' num2str(n) '.'])))
         
         if exist('d2uint3','var')
             imdatarp = imdatar(:,:,chunks(n)+1:chunks(n+1));
             save(fullfile(path,replace(file,'.',['_imdata3' num2str(n) '.'])),'min3','d2uint3',...
-                'imdatarp','tm','fun','fparam','reference','climv','chunks')
+                'imdatarp','tm','fun','fparam','reference','climv','chunks',mfields{:})
             disp(fullfile(path,replace(file,'.',['_imdata3' num2str(n) '.'])))
         end
     end
