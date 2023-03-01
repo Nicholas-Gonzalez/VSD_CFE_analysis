@@ -1177,6 +1177,20 @@ guidata(hObject,props)
 
 function remove_artifact(hObject,eventdata)
 props = guidata(hObject);
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
+str(props.hideidx,2) = "gray";
+str(:,4) = string(props.ch);
+str = join(str,'');
+idx = listdlg('liststring',str);
+[x,~] = ginput(2);
+tm1 = find(props.tm>x(1),1);
+tm2 = find(props.tm>x(2),1);
+props.data(idx,tm1:tm2) = 0;
+guidata(hObject,props)
+plotdata(hObject)
+
+function remove_artifact_depricated(hObject,eventdata)
+props = guidata(hObject);
 idx = listdlg('liststring',props.showlist);
 props.databackup = props.data;
 
@@ -1782,8 +1796,8 @@ guidata(bfig,intan_tag)
 ds = 20000;%downsample
 
 opts = optimset('Display','off','Algorithm','levenberg-marquardt');
-p0 = ones(1,15);
-flimits = inf([1,15]);
+p0 = ones(1,50);
+flimits = inf(size(p0));
 
 fparam = lsqcurvefit(fun,p0,tm(1:ds:end),data(1:ds:end),-flimits,flimits,opts);
 
@@ -1879,7 +1893,7 @@ fun = makefun(coef);
 flimits = props.blapp.flimits;
 p0 = props.blapp.p0;
 
-props.blapp.applyparam = nan(length(idx),15);
+props.blapp.applyparam = nan(length(idx),50);
 props.blapp.applyidx = idx;
 props.blapp.fun = fun;
 props.blapp.coef = coef;
@@ -3202,7 +3216,7 @@ inv = get(findobj(vfig,'Tag','invert'),'Value')+1;
 imult = [1,-1];
 set(props.video.kimg,'CData',props.video.kerndata'*imult(inv))
 
-plt = findobj(hObject.Parent,'Tag','plt1');
+plt = findobj(vfig,'Tag','plt1');
 props.video.xlim = get(plt.Parent,'XLim');
 
 guidata(intan,props)
