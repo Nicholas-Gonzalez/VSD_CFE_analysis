@@ -1569,6 +1569,8 @@ props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16')
 for d=idx
     disp(num2str(d))
     props.data(d,:) = filter(Hd,props.data(d,:));
+    idx = find(props.tm>1,1);
+    props.data(d,1:idx) = 0;
 end
 
 if ~isfield(props,'filter')
@@ -1616,7 +1618,10 @@ end
 try
     Hd = design(h, meth{midx}, 'MatchExactly', 'passband', 'SOSScaleNorm', 'Linf');
     plt2 = findobj(hObject.Parent,'Tag','fdata_filt');
-    plt2.YData = filter(Hd,props.data(val,:));
+    fdata = filter(Hd,props.data(val,:));
+    idx = find(props.tm>1,1);
+    fdata(1:idx) = 0;
+    plt2.YData = fdata;
     set(findobj(hObject.Parent,'Tag','errorcode'),'String','')
 catch ME
     set(findobj(hObject.Parent,'Tag','errorcode'),'String',ME.message)
