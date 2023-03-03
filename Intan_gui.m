@@ -1667,6 +1667,7 @@ props = guidata(hObject);
 win = 379;% window for calculating the cross correlation
 nch = length(props.showidx);
 showidx = props.showidx;
+
 ch = props.ch;
 idx = nchoosek(1:nch,2);
 props.xcorr = nan(nch);
@@ -1703,6 +1704,7 @@ end
 fprintf(newline)
 
 props.xcorr(find(eye(size(props.xcorr,1)))) = 1;
+
 Z = linkage(props.xcorr);
 
 figure('Position',[100 100 1108 782])
@@ -1716,7 +1718,7 @@ ax(1).XLim = [0.5 size(props.xcorr,1)+0.5];
 ax(1).Color = 'none';
 
 axes(ax(2))
-imagesc(props.xcorr(didx,didx),'AlphaData', 1-isnan(props.xcorr))
+imagesc(props.xcorr(didx,didx),'AlphaData', 1-isnan(props.xcorr(didx,didx)))
 
 % tcmap = [(0:0.02:2)', (0:0.01:1)' , (1:-0.01:0)'];
 % tcmap(tcmap>1) = 1;
@@ -1732,7 +1734,7 @@ caxis([0 0.6])
 colorbar
 
 ax(3) = subplot(2,2,4);
-imagesc(props.xcorr_lag,'AlphaData', 1-isnan(props.xcorr_lag))
+imagesc(props.xcorr_lag(didx,didx),'AlphaData', 1-isnan(props.xcorr_lag(didx,didx)))
 colorbar
 set(ax,'YTick',1:length(props.showlist),'YTickLabel',props.showlist(didx),'XTick',1:length(props.showlist),'XTickLabel',props.showlist(didx),'XTickLabelRotation',90)
 ax(1).XTick = [];
