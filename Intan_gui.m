@@ -1706,7 +1706,7 @@ fprintf(newline)
 props.xcorr(find(eye(size(props.xcorr,1)))) = 1;
 
 Z = linkage(props.xcorr);
-
+assignin('base','Z',Z)
 figure('Position',[100 100 1108 782])
 
 ax(2) = subplot(2,2,3);
@@ -1736,7 +1736,7 @@ colorbar
 ax(3) = subplot(2,2,4);
 imagesc(props.xcorr_lag(didx,didx),'AlphaData', 1-isnan(props.xcorr_lag(didx,didx)))
 colorbar
-set(ax,'YTick',1:length(props.showlist),'YTickLabel',props.showlist(didx),'XTick',1:length(props.showlist),'XTickLabel',props.showlist(didx),'XTickLabelRotation',90)
+set(ax,'YTick',1:length(didx),'YTickLabel',props.showlist(didx),'XTick',1:length(props.showlist),'XTickLabel',props.showlist(didx),'XTickLabelRotation',90)
 ax(1).XTick = [];
 ax(1).YTick = [];
 ax(3).Title.String = 'Time lag';
