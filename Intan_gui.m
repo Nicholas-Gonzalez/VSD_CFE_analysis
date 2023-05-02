@@ -44,7 +44,8 @@ mi(3) = uimenu(m,'Text','Generate Tiffs','Callback',@all_kframe,'Enable','on','T
 mi(4) = uimenu(m,'Text','Average Image','Callback',@avgtsm,'Enable','on');
 mi(5) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
 mi(6) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
-mi(7) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
+mi(7) = uimenu(m,'Text','Print file log','Callback',@printlog,'Enable','off','Tag','savem');
+mi(8) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
 
 % ---- formatting parameters --------
 fontsz = 10;
@@ -342,6 +343,9 @@ vsdprops.matprops.showidx = matprops.props.showidx;
 vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
+if isfield(matprops.props,'log')
+    vsdprops.matprops.log = matprops.props.log;
+end
 if isfield(matprops.props,'video')
     vsdprops.matprops.video = matprops.props.video;
 end
@@ -652,6 +656,7 @@ if intch && vsdch
         props.finfo.files = vsdprops.files;
         props.notes = vsdprops.intan.notes;
         props.note = vsdprops.note;
+        props.log = string(['loaded data on ',char(datetime)]);
     else
         if isfield(vsdprops,'vsd')
             intan = convert_uint(vsdprops.matprops.intan.data, vsdprops.matprops.intan.d2uint,...
@@ -682,6 +687,11 @@ if intch && vsdch
             props.finfo = vsdprops.matprops.intan.finfo;
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.intan.notes;
+            if isfield(vsdprops.matprops,'log')
+                props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
+            else
+                props.log = string(['loaded data on ',char(datetime)]);
+            end
             if isfield(vsdprops.matprops,'note')
                 props.note = vsdprops.matprops.note;
             end
@@ -710,6 +720,11 @@ if intch && vsdch
             props.finfo = vsdprops.matprops.finfo;
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.notes;
+            if isfield(vsdprops.matprops,'log')
+                props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
+            else
+                props.log = string(['loaded data  ',char(datetime)]);
+            end
             if isfield(vsdprops.matprops,'note')
                 props.note = vsdprops.matprops.note;
             end
@@ -755,6 +770,7 @@ elseif vsdch
     props.finfo.duration = max(props.tm);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
+    props.log = string(['loaded data on ',char(datetime)]);
 else
     nch = length(vsdprops.intan.ch);
     props.ch = vsdprops.intan.ch;
@@ -768,6 +784,7 @@ else
     props.finfo.files = vsdprops.files;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.im = ones(512,512,3);
+    props.log = string(['loaded data on ',char(datetime)]);
 end
 props.files = vsdprops.files;
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
@@ -1173,6 +1190,7 @@ props.data = convert_uint(props.databackup, props.bd2uint, props.bmin, 'double')
 for c=1:length(props.showidx)
     props.ax(c).Children.YData = props.data(props.showidx(c),:);pause(0.01)
 end
+props.log = [props.log; 'replaced data with backup'];
 guidata(hObject,props)
 
 function remove_artifact(hObject,eventdata)
@@ -1564,7 +1582,7 @@ filterp.idx = idx;
 props.bmin = min(props.data,[],2);
 props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
 props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
-
+props.log = [props.log; 'updated backup of data'];
 
 for d=idx
     disp(num2str(d))
@@ -1578,6 +1596,11 @@ if ~isfield(props,'filter')
 else
     props.filter(end+1) = filterp;
 end
+
+str = ['filtered: idx = '  char(join(string(filterp.idx),',')),...
+    ' fr = ' num2str(fr) ' fatt = ' char(join(string(fatt),','))  ' fpass = ' char(join(string(fpass),',')),...
+    ' fstop = ' char(join(string(fstop),',')), ' meth = ', meth{midx}];
+props.log = [props.log; str];
 
 guidata(findobj('Tag',props.intan_tag),props)
 close(hObject.Parent)
@@ -1781,9 +1804,25 @@ uicontrol('Units','normalized','Position',[0.002 0.23 0.07 0.73],'Style','listbo
     'Max',length(ch),'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@chchannel);
 
 cpanel = uipanel('Title','Controls','Units','normalized','FontSize',12,'Position',[0.75 0 0.25 1],'Tag','cpanel');
-uicontrol(cpanel,'Units','normalized','Position',[0.31 0.8 0.1 0.05],'Style','edit',...
-    'String','2','Callback',@fitequation,'Enable','on','TooltipString','Number of coefficients','Tag','coeff');
-uicontrol(cpanel,'Units','normalized','Position',[0 0.79 0.3 0.05],'Style','text','String','Coefficients','HorizontalAlignment','right');
+
+
+uicontrol(cpanel,'Units','normalized','Position',[0.05 0.80 0.05 0.05],'Style','radiobutton',...
+    'Callback',@radio, 'Tag','Fit_','Value',1);
+uicontrol(cpanel,'Units','normalized','Position',[0.1 0.78 0.1 0.05],'Style','text',...
+    'String','Fit equation','HorizontalAlignment','left','Enable','on','Tag','Fit');
+uicontrol(cpanel,'Units','normalized','Position',[0.25 0.78 0.1 0.05],'Style','text',...
+    'String','Coefficients','HorizontalAlignment','right','Enable','on','Tag','Fit');
+uicontrol(cpanel,'Units','normalized','Position',[0.41 0.8 0.1 0.05],'Style','edit',...
+    'String','2','Callback',@fitequation,'Enable','on','TooltipString','Number of coefficients','Tag','Fit');
+
+uicontrol(cpanel,'Units','normalized','Position',[0.05 0.70 0.05 0.05],'Style','radiobutton',...
+    'Callback',@radio,'Tag','Spline_','Value',0);
+uicontrol(cpanel,'Units','normalized','Position',[0.1 0.68 0.1 0.05],'Style','text',...
+    'String','Spline','HorizontalAlignment','left','Enable','off','Tag','Spline');
+uicontrol(cpanel,'Units','normalized','Position',[0.31 0.7 0.1 0.05],'Style','pushbutton',...
+    'String','Add points','Callback',@addpoints,'Enable','off','TooltipString','Add points for spline','Tag','Spline');
+uicontrol(cpanel,'Units','normalized','Position',[0.41 0.7 0.1 0.05],'Style','pushbutton',...
+    'String','redo','Callback',@addpoints,'Enable','off','TooltipString','start over adding points for spline','Tag','Spline');
 
 uicontrol(cpanel,'Units','normalized','Position',[0.60 0.9 0.3 0.05],'Style','text','String','Select channel');
 uicontrol(cpanel,'Units','normalized','Position',[0.60 0.1 0.3 0.8],'Style','listbox','Max',length(ch),...
@@ -1810,13 +1849,54 @@ fparam = lsqcurvefit(fun,p0,tm(1:ds:end),data(1:ds:end),-flimits,flimits,opts);
 
 fplt = plot(props.tm,fun(fparam,props.tm));
 
+scplt = scatter([],[]);
+
 ax.YLim = [min(data) max(data)];
 
 props.blapp = struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                     'fplt',fplt,        'fun',fun,...
                     'p0',p0,            'flimits',flimits,   'tm',tm,...
-                    'splt',splt,        'intan_tag',intan_tag);
+                    'splt',splt,        'scplt',scplt,          'intan_tag',intan_tag);
 guidata(hObject,props)
+
+function addpoints(hObject,eventdata)
+intan_tag = guidata(hObject);
+intan_fig = findobj('Tag',intan_tag);
+fig = hObject.Parent.Parent;
+idx = get(findobj(fig,'Tag','channels'),'Value');
+props = guidata(intan_fig);
+if strcmp(hObject.String,'redo')
+    set(props.blapp.scplt,'XData',[],'YData',[])
+end
+
+while 1==1
+    [x,y,button] = ginput(1);
+    if button~=1
+        break
+    end
+    x = [props.blapp.scplt.XData x];
+    y = [props.blapp.scplt.YData y];
+    set(props.blapp.scplt,'XData',x,'YData',y)
+    if length(x)>1
+        yy = spline(x,y,props.blapp.fplt.XData);
+        set(props.blapp.fplt,'YData',yy)
+        sdata = props.data(idx,:) - yy;
+        sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
+        set(props.blapp.splt,'YData',sdata)
+    end
+end
+guidata(intan_fig,props)
+
+function radio(hObject,eventdata)
+panel = hObject.Parent;
+tags = ["Fit","Spline"];
+tagidx = contains(tags,hObject.Tag(1:end-1));
+set(findobj(panel,'Tag',tags{tagidx}),'Enable','on')
+set(findobj(panel,'Tag',tags{~tagidx}),'Enable','off')
+set(findobj(panel,'Tag',[tags{~tagidx} '_']),'Value',0)
+if find(tagidx)==1
+    fitequation(hObject.Parent)
+end
 
 function chchannel(hObject,eventdata)
 intan_tag = guidata(hObject);
@@ -1859,7 +1939,7 @@ buf = uicontrol(fig,'Units','normalized','Position',[0.3 , 0.9, 0.4 0.1],...
 pause(0.1)
 
 idx = get(findobj(fig,'Tag','channels'),'Value');
-coef = str2double(get(findobj(fig,'Tag','coeff'),'String'));
+coef = str2double(get(findobj(fig,'Tag','Fit','Style','edit'),'String'));
 props.blapp.fun = makefun(coef);
 
 tm = props.tm;
@@ -1873,6 +1953,11 @@ fun = props.blapp.fun;
 
 opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 ds = 20000;%downsample
+sdata = data(1:ds:end);
+stm = tm(1:ds:end);
+stm(sdata==sdata(1)) = [];
+sdata(sdata==sdata(1)) = [];
+
 tic
 fparam = lsqcurvefit(fun, p0, tm(1:ds:end), data(1:ds:end),-flimits, flimits,opts);
 toc
@@ -1894,7 +1979,7 @@ hObject.String = 'Applying...';
 hObject.BackgroundColor = [0.6 1 0.6];
 pause(0.1)
 idx = get(findobj(panel,'Tag','chapply'),'Value');
-coef = str2double(get(findobj(panel,'Tag','coeff'),'String'));
+coef = str2double(get(findobj(panel,'Tag','Fit','Style','edit'),'String'));
 fun = makefun(coef);
 
 flimits = props.blapp.flimits;
@@ -1910,6 +1995,7 @@ ds = 20000;%downsample
 props.bmin = min(props.data,[],2);
 props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
 props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16');
+props.log = [props.log; 'updated backup of data'];
 
 for i=1:length(idx)
     hObject.String = ['Applying..' num2str(i)];
@@ -1927,6 +2013,9 @@ for i=1:length(idx)
     sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
     props.data(idx(i),:) = sdata;
 end
+
+props.log = [props.log; 'Removed baseline using ' num2str(props.blapp.coef),...
+    ' coefficients, downsample = ' num2str(ds) ',  idx = ' char(join(string(idx),','))];
 
 guidata(findobj('Tag',intan_tag),props)
 close(panel.Parent)
@@ -2464,9 +2553,6 @@ props.video.knotes = getnotes(hObject,props);
 setnotes(props.video.notesgraph, props.video.knotes)
 props = update_instrumento(props);
 guidata(intan,props)
-
-function props = update_instrumento(props)
-a = 1;
 
 function setnotes(notesgraph,knotes)
 showg = false(1,0);
@@ -3352,6 +3438,12 @@ imagesc(ims)
 colorbar
 
 %% misc methods
+function printlog(hObject,eventdata)
+props = guidata(hObject);
+disp('============= File Log =============')
+disp(props.log)
+disp('====================================')
+
 function note(hObject,eventdata)
 props = guidata(hObject);
 props.notes.(hObject.Tag) = hObject.String;
@@ -3380,6 +3472,8 @@ end
 if ~isfield(props,'hidelist')
     props.hidelist = get(findobj('Tag','hidegraph'),'String');
 end
+
+props.log = [props.log; string(['saved data on ',char(datetime)])];
 
 fields = ["plt","txt","chk","ax"];
 for f=1:length(fields)

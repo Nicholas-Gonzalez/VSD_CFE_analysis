@@ -199,23 +199,36 @@ W = -300:500;
 W0 = round(min(W)*sf/sr); 
 idur = round(length(W)*sf/sr);
 
+% ------------ Average spike graph --------------------
 
-sax = axes('Position',[0.08 0.65 0.12 0.25]);
+ht = 0.2; % height of axes
+sp = 0.02; % space between graphs
+
+sax = axes('Position',[0.08 0.72 0.12 ht]);
 aplt = plot(W*sf*1000,nan(size(W)));
 sax.XTick = [];
 sax.Title.String = 'Average detected spike';
 
-vax = axes('Position',sax.Position + [0 -0.3 0 0]);
-tempx = -20:34;
-vax.XLabel.String = 'Time (ms)';
+vax = axes('Position',sax.Position + [0 -(ht+sp) 0 0]);
+vax.XTick = [];
 vax.Title.String = 'ROI average';
+
+nax = axes('Position',sax.Position + [0 -2*(ht+sp) 0 0]);
+aplt2 = plot(W*sf*1000,nan(size(W)));
+nax.XLabel.String = 'Time (ms)';
+nax.Title.String = 'Channel average';
+
+
+uicontrol('Units','normalized','Position',[0.08 0.2 0.05 0.03],'Style','text','String','Select channel');
+uicontrol('Units','normalized','Position',[0.13 0.2 0.05 0.03],'Style','popupmenu',...
+    'Max',length(ch),'Min',1,'String',str','Tag','avgchannels','Value',showidx(1),'Callback',@chchannel);
 
 saxover = axes('Position',vax.Position);% so that the rectangle always exceed ylimits
 pos = [(W(1) + length(W)*slidepos/idur)*sf*1000,  -1,   length(W)/idur*sf*1000,  2];
 frame = rectangle('Position',pos,'EdgeColor','none','FaceColor',[0 0 0 0.2]);
 set(saxover,'ytick',[],'xtick',[],'color','none','Ylim',[-0.5 0.5])
 
-linkaxes([sax, saxover,vax],'x')
+linkaxes([sax, saxover,vax,nax],'x')
 sax.XLim = [min(W) max(W)]*sf*1000;
 
 aspike = repelem({zeros(2,length(W))},size(data,1));
@@ -261,7 +274,8 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'W',W,               'data',data,        'ch',ch,...
                    'hideidx',hideidx,   'showidx',showidx,  'tm',tm,...
                    'str',str,           'ckup',true,        'ckdwn',false,...
-                   'gidx',showidx(1),   'aspike',{aspike},  'spikes',{spikes},...
+                   'gidx',showidx(1),   'aspike',{aspike},  'aspike2',{aspike},...
+                   'aplt2',aplt2,       'spikes',{spikes},...
                    'inc',inc,           'files',files,      'frame',frame,...
                    'helps',helps,       'vax',vax,          'panel',panel,...
                    'rawim',2,           'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+40),...
@@ -571,6 +585,7 @@ props = guidata(hObject);
 function plotdata(hObject)
 props = guidata(hObject);
 idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value');
+idx2 = get(findobj('Tag','avgchannels','Parent',findobj('Tag',props.apptag)),'Value');
 set(props.plt,'YData', props.data(idx,:));
 
 stdata = std(props.data(idx,:));
@@ -587,6 +602,7 @@ spikes = props.spikes{idx};
 set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*stdata)
 
 set(props.aplt,'YData',mean(props.aspike{idx},1))
+set(props.aplt2,'YData',mean(props.aspike2{idx2},1))
 guidata(hObject,props)
 
 function activatethr(hObject,eventdata)
@@ -669,6 +685,9 @@ tm = props.tm;
 stdata = std(data,"omitnan");
 sf = diff(tm(1:2));
 
+idx2 = get(findobj('Tag','avgchannels','Parent',fig),'Value');
+data2 = props.data(idx2,:);
+
 updur = round(props.params(idx).updur/1000/sf);% convert from time to # indices
 dwndur = round(props.params(idx).dwndur/1000/sf);% convert from time to # indices
 gapdur = round(props.params(idx).gapdur/1000/sf);% convert from time to # indices
@@ -733,10 +752,13 @@ if ~isempty(spikes)
     W = props.W;
     spikes(spikes+W(1)<0 | spikes+W(end)>length(data)) = [];
     aspike = zeros(length(spikes),length(W));
+    aspike2 = zeros(length(spikes),length(W));% for averaging of channel2
     for i = 1:length(spikes)
         aspike(i,:) = data(W+spikes(i));
+        aspike2(i,:) = data2(W+spikes(i));
     end
     props.aspike{idx} = aspike;
+    props.aspike2{idx2} = aspike2;
 end
 
 props.spikes{idx} = spikes;
