@@ -700,7 +700,8 @@ if props.params(idx).ckup
     sdata(sidx) = 'u';
     logic(sidx) = 1;
     set(props.tplt(1),'YData',[1 1]*props.params(idx).upthr*stdata)
-    pattern = repelem('u',updur);
+    pattern = ['u{' num2str(updur) ',}' ];
+%     pattern = repelem('u',updur);
 else
     set(props.tplt(1),'YData',nan(2,1))
 end
@@ -710,6 +711,9 @@ if props.params(idx).ckup && props.params(idx).ckuprej
     sdata(sidx) = 'r';
     logic(sidx) = 2;
     set(props.tplt(3),'YData',[1 1]*props.params(idx).uprej*stdata)
+    pattern = ['u{' num2str(updur) ',}'];
+    rpattern1 = ['r' pattern];
+    rpattern2 = [pattern 'r'];
 else
     set(props.tplt(3),'YData',nan(2,1))
 end
@@ -719,7 +723,8 @@ if props.params(idx).ckdwn
     sdata(sidx) = 'd';
     logic(sidx) = -1;
     set(props.tplt(2),'YData',[1 1]*props.params(idx).dwnthr*stdata)
-    pattern = repelem('d',dwndur);
+    pattern = ['d{' num2str(dwndur) ',}' ];
+%     pattern = repelem('d',dwndur);
 else
     set(props.tplt(2),'YData',nan(2,1))
 end
@@ -729,24 +734,37 @@ if props.params(idx).ckdwn && props.params(idx).ckdwnrej
     sdata(sidx) = 'r';
     logic(sidx) = -2;
     set(props.tplt(4),'YData',[1 1]*props.params(idx).dwnrej*stdata)
+    pattern = ['d{' num2str(dwndur) ',}' ];
+    rpattern1 = ['r' pattern];
+    rpattern2 = [pattern 'r'];
 else
     set(props.tplt(4),'YData',nan(2,1))
 end
 
 set(props.Lplt,'YData',logic)
 
-
 if props.params(idx).ckup && props.params(idx).ckdwn
+    warning('haven''t fixed this condition for rejection')
     if gapdur>=0
-        eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '";'])
+        pattern = ['u{' num2str(updur) ',}' '[udn]{' num2str(gapdur-updur) '}' 'd{' num2str(dwndur) ',}'];
+%         eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '";'])
     else
-        eval(['pattern = "' repelem('d',dwndur) '"' repmat(' + ("u"|"d"|"n")',1,abs(gapdur)-dwndur) ' + "' repelem('u',updur) '";'])
+        pattern = ['d{' num2str(dwndur) ',}' '[udn]{' num2str(abs(gapdur)-dwndur) '}' 'u{' num2str(updur) ',}'];
+%         eval(['pattern = "' repelem('d',dwndur) '"' repmat(' + ("u"|"d"|"n")',1,abs(gapdur)-dwndur) ' + "' repelem('u',updur) '";'])
     end
 end
+disp(pattern)
 
-
-
-spikes = strfind(sdata,pattern);
+spikes = regexp(sdata,pattern);
+if props.params(idx).ckdwnrej || props.params(idx).ckuprej
+    rej = regexp(sdata,rpattern1);
+    rejlog = arrayfun(@(x) any(rej==x-1),spikes);
+    spikes(rejlog) = [];
+    rej = regexp(sdata,rpattern2);
+    rejlog = arrayfun(@(x) any(rej==x),spikes);
+    spikes(rejlog) = [];
+end
+% spikes = strfind(sdata,pattern);
 if ~isempty(spikes)
     spikes = spikes([true, diff(spikes)>ra]);% remove values that are separated by < re-arm (prevents dection of same spike).  The value is idices;
     W = props.W;
