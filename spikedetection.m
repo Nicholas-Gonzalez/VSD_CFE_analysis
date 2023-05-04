@@ -193,6 +193,9 @@ ax2.YLim = [-2 2];
 ax2.Toolbar.Visible = 'off';
 ax2.XLim = [min(tm),max(tm)];
 
+uicontrol('Units','normalized','Position',[0.23 0.04 0.05 0.03],'Style','text','String','Add channel');
+uicontrol('Units','normalized','Position',[0.28 0.04 0.05 0.03],'Style','popupmenu',...
+    'Max',length(ch),'Min',1,'String',str','Tag','addchannels','Value',showidx(1),'Callback',@addchannel);
 
 
 W = -300:500;
@@ -284,6 +287,90 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'txttm',txttm,       'cpanel',cpanel,    'cdata',{cell(0,3)}))
 
 detsp(fig)
+
+function addchannel(hObject,eventdata)
+props = guidata(hObject);
+nch = length(props.ax) + 1;
+lowerY = props.ax(end).Position(2);
+totalh = sum(props.ax(1).Position([2 4]));
+gap = 0.02;
+height = (totalh-lowerY)/nch - gap*(nch-1)/nch;
+Ys = fliplr(lowerY:height+gap:totalh-lowerY);
+for p=1:length(props.ax)
+    props.ax(p).Position([2 4]) = [Ys(p) height];
+    obj = findobj(hObject.Parent,'Tag',['addchannels' num2str(p)]);
+    if ~isempty(obj)
+        obj.Position(2) = Ys(p)+height-0.03;
+    end
+    obj = findobj(hObject.Parent,'Tag',['rmchannels' num2str(p)]);
+    if ~isempty(obj)
+        obj.Position(2) = Ys(p)+height-0.025;
+    end
+end
+% plot new axis
+props.ax(nch) = axes('Position',[props.ax(1).Position(1) , Ys(end) , props.ax(1).Position(3) , height]);
+props.addplt(nch) = plot(props.tm,props.data(hObject.Value,:));
+set(props.ax,'XLim',props.ax(1).XLim)
+set(props.ax,'XLabel',[])
+set(props.ax(1:end-1),'XTick',[])
+props.ax(end).XLabel.String = 'Time (s)';
+linkaxes(props.ax,'x')
+
+uicontrol('Units','normalized','Position',[props.ax(1).Position(1)+0.01 , Ys(end)+height-0.03 , 0.05 , 0.03],...
+    'Style','popupmenu','Max',length(props.ch),'Min',1,'String',props.str','Tag',['addchannels' num2str(p+1)],...
+    'Value',hObject.Value,'Callback',@chaddchannel,'TooltipString','Change this channel');
+uicontrol('Units','normalized','Position',[props.ax(1).Position(1)+0.06 , Ys(end)+height-0.025 , 0.01 , 0.025],...
+    'Style','pushbutton','String','X','Callback',@rmaddchannel,'Tag',['rmchannels' num2str(p+1)],'TooltipString','Remove this channel')
+
+guidata(hObject,props)
+
+function chaddchannel(hObject,eventdata)
+props = guidata(hObject);
+idx = double(string(regexp(hObject.Tag,'\d+','match')));
+set(props.addplt(idx),'YData',props.data(hObject.Value,:))
+guidata(hObject,props)
+
+function rmaddchannel(hObject,eventdata)
+props = guidata(hObject);
+fig = hObject.Parent;
+lowerY = props.ax(end).Position(2);
+totalh = sum(props.ax(1).Position([2 4]));
+
+idx = double(string(regexp(hObject.Tag,'\d+','match')));
+delete(props.ax(idx));
+props.ax(idx) = [];
+props.addplt(idx) = [];
+delete(findobj(hObject.Parent,'Tag',replace(hObject.Tag,'rm','add')));
+
+% update numbering of the tags
+nidx = idx + 1;
+addch = findobj(fig,'Tag',['addchannels' num2str(nidx)]);
+while ~isempty(addch)
+    addch.Tag = ['addchannels' num2str(nidx-1)];
+    nidx = nidx + 1;
+    addch = findobj(fig,'Tag',['addchannels' num2str(nidx)]);
+end
+delete(findobj(fig,'Tag',['rmchannels' num2str(nidx-1)]))
+
+nch = length(props.ax);
+gap = 0.02;
+height = (totalh-lowerY)/nch - gap*(nch-1)/nch;
+Ys = fliplr(lowerY:height+gap:totalh-lowerY);
+if isempty(Ys)
+    Ys = lowerY;
+end
+for p=1:length(props.ax)
+    props.ax(p).Position([2 4]) = [Ys(p) height];
+    obj = findobj(fig,'Tag',['addchannels' num2str(p)]);
+    if ~isempty(obj)
+        obj.Position(2) = Ys(p)+height-0.03;
+    end
+    obj = findobj(fig,'Tag',['rmchannels' num2str(p)]);
+    if ~isempty(obj)
+        obj.Position(2) = Ys(p)+height-0.025;
+    end
+end
+guidata(fig,props)
 
 function showcompare(hObject,eventdata)
 props = guidata(hObject);
@@ -480,9 +567,9 @@ set(findobj('Tag','processing','Parent',hObject.Parent),'String',' ')
 set(allbut,'Enable','on')
 
 guidata(hObject,props)
-assignin('base', 'roi', roi);
-assignin('base', 'pixels', pixels);
-assignin('base', 'props', props);
+% assignin('base', 'roi', roi);
+% assignin('base', 'pixels', pixels);
+% assignin('base', 'props', props);
 
 function chframe(hObject,eventdata)
 props = guidata(hObject);
@@ -560,8 +647,6 @@ set(findobj('-regexp','Tag','^up\w*rej$','Parent',props.panel)     ,'Enable',ena
 set(findobj('-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)','Parent',props.panel),'Enable',enable(props.params(idx).ckdwn+1))
 set(findobj('-regexp','Tag','^dwn\w*rej$','Parent',props.panel)    ,'Enable',enable((props.params(idx).ckdwn & props.params(idx).ckdwnrej)+1))
 
-% set(findobj('-regexp','Tag','^up','Parent',props.panel),'Enable',enable(props.params(idx).ckup+1))
-% set(findobj('-regexp','Tag','^dwn','Parent',props.panel),'Enable',enable(props.params(idx).ckdwn+1))
 if props.params(idx).ckup && props.params(idx).ckdwn
     set(findobj('-regexp','Tag','^gap','Parent',props.panel),'Enable','on')
 else
@@ -585,8 +670,7 @@ props = guidata(hObject);
 function plotdata(hObject)
 props = guidata(hObject);
 idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value');
-idx2 = get(findobj('Tag','avgchannels','Parent',findobj('Tag',props.apptag)),'Value');
-set(props.plt,'YData', props.data(idx,:));
+set(props.plt(1),'YData', props.data(idx,:));
 
 stdata = std(props.data(idx,:));
 if props.params(idx).ckup
@@ -602,7 +686,7 @@ spikes = props.spikes{idx};
 set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*stdata)
 
 set(props.aplt,'YData',mean(props.aspike{idx},1))
-set(props.aplt2,'YData',mean(props.aspike2{idx2},1))
+set(props.aplt2,'YData',mean(props.aspike2{idx},1))
 guidata(hObject,props)
 
 function activatethr(hObject,eventdata)
@@ -753,7 +837,7 @@ if props.params(idx).ckup && props.params(idx).ckdwn
 %         eval(['pattern = "' repelem('d',dwndur) '"' repmat(' + ("u"|"d"|"n")',1,abs(gapdur)-dwndur) ' + "' repelem('u',updur) '";'])
     end
 end
-disp(pattern)
+
 
 spikes = regexp(sdata,pattern);
 if props.params(idx).ckdwnrej || props.params(idx).ckuprej
@@ -776,7 +860,7 @@ if ~isempty(spikes)
         aspike2(i,:) = data2(W+spikes(i));
     end
     props.aspike{idx} = aspike;
-    props.aspike2{idx2} = aspike2;
+    props.aspike2{idx} = aspike2;
 end
 
 props.spikes{idx} = spikes;
