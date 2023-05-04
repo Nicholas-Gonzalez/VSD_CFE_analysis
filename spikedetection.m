@@ -198,7 +198,7 @@ uicontrol('Units','normalized','Position',[0.28 0.04 0.05 0.03],'Style','popupme
     'Max',length(ch),'Min',1,'String',str','Tag','addchannels','Value',showidx(1),'Callback',@addchannel);
 
 
-W = -300:500;
+W = -1000:1000;
 W0 = round(min(W)*sf/sr); 
 idur = round(length(W)*sf/sr);
 
@@ -221,7 +221,6 @@ aplt2 = plot(W*sf*1000,nan(size(W)));
 nax.XLabel.String = 'Time (ms)';
 nax.Title.String = 'Channel average';
 
-
 uicontrol('Units','normalized','Position',[0.08 0.2 0.05 0.03],'Style','text','String','Select channel');
 uicontrol('Units','normalized','Position',[0.13 0.2 0.05 0.03],'Style','popupmenu',...
     'Max',length(ch),'Min',1,'String',str','Tag','avgchannels','Value',showidx(1),'Callback',@chchannel);
@@ -232,7 +231,7 @@ frame = rectangle('Position',pos,'EdgeColor','none','FaceColor',[0 0 0 0.2]);
 set(saxover,'ytick',[],'xtick',[],'color','none','Ylim',[-0.5 0.5])
 
 linkaxes([sax, saxover,vax,nax],'x')
-sax.XLim = [min(W) max(W)]*sf*1000;
+sax.XLim = [min(-300) max(500)]*sf*1000;
 
 aspike = repelem({zeros(2,length(W))},size(data,1));
 spikes = repelem({zeros(1,0)},size(data,1));
@@ -591,7 +590,7 @@ props = guidata(hObject);
 tag = get(hObject,'Tag');
 change = regexp(tag,'(up|dwn|UP|DWN|thr|dur|gap|rej)','match');
 dir = contains(tag,'UP')*2 - 1;
-obj = findobj('Tag',[change{1},change{3}],'Parent',hObject.Parent);
+obj = findobj(hObject.Parent,'Tag',[change{1},change{3}]);
 val = str2double(obj.String);
 if contains(tag,'thr') || contains(tag,'rej')
     val = val + dir*props.inc;% increment of change 
@@ -627,30 +626,30 @@ props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
 enable = ["off","on"];
-set(findobj('Tag','ckup','Parent',props.panel),'Value',props.params(idx).ckup)
-set(findobj('Tag','ckdwn','Parent',props.panel),'Value',props.params(idx).ckdwn)
-set(findobj('Tag','ckuprej','Parent',props.panel),'Value',props.params(idx).ckuprej)
-set(findobj('Tag','ckdwnrej','Parent',props.panel),'Value',props.params(idx).ckdwnrej)
-set(findobj('Tag','updur','Parent',props.panel),'String',num2str(props.params(idx).updur,2));
-set(findobj('Tag','upthr','Parent',props.panel),'String',props.params(idx).upthr);
+set(findobj(props.panel,'Tag','ckup'),'Value',props.params(idx).ckup)
+set(findobj(props.panel,'Tag','ckdwn'),'Value',props.params(idx).ckdwn)
+set(findobj(props.panel,'Tag','ckuprej'),'Value',props.params(idx).ckuprej)
+set(findobj(props.panel,'Tag','ckdwnrej'),'Value',props.params(idx).ckdwnrej)
+set(findobj(props.panel,'Tag','updur'),'String',num2str(props.params(idx).updur,2));
+set(findobj(props.panel,'Tag','upthr'),'String',props.params(idx).upthr);
 
-set(findobj('Tag','uprej','Parent',props.panel),'String',props.params(idx).uprej);
-set(findobj('Tag','dwnrej','Parent',props.panel),'String',props.params(idx).dwnrej);
+set(findobj(props.panel,'Tag','uprej'),'String',props.params(idx).uprej);
+set(findobj(props.panel,'Tag','dwnrej'),'String',props.params(idx).dwnrej);
 
-set(findobj('Tag','dwndur','Parent',props.panel),'String',num2str(props.params(idx).dwndur,2));
-set(findobj('Tag','dwnthr','Parent',props.panel),'String',props.params(idx).dwnthr);
-set(findobj('Tag','gapdur','Parent',props.panel),'String',num2str(props.params(idx).gapdur,2));
-set(findobj('Tag','rearm','Parent',props.panel),'String',num2str(props.params(idx).ra,2));
+set(findobj(props.panel,'Tag','dwndur'),'String',num2str(props.params(idx).dwndur,2));
+set(findobj(props.panel,'Tag','dwnthr'),'String',props.params(idx).dwnthr);
+set(findobj(props.panel,'Tag','gapdur'),'String',num2str(props.params(idx).gapdur,2));
+set(findobj(props.panel,'Tag','rearm'),'String',num2str(props.params(idx).ra,2));
 
-set(findobj('-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)','Parent',props.panel) ,'Enable',enable(props.params(idx).ckup+1))
-set(findobj('-regexp','Tag','^up\w*rej$','Parent',props.panel)     ,'Enable',enable((props.params(idx).ckup & props.params(idx).ckuprej)+1))
-set(findobj('-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)','Parent',props.panel),'Enable',enable(props.params(idx).ckdwn+1))
-set(findobj('-regexp','Tag','^dwn\w*rej$','Parent',props.panel)    ,'Enable',enable((props.params(idx).ckdwn & props.params(idx).ckdwnrej)+1))
+set(findobj(props.panel,'-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(props.params(idx).ckup+1))
+set(findobj(props.panel,'-regexp','Tag','^up\w*rej$')     ,'Enable',enable((props.params(idx).ckup & props.params(idx).ckuprej)+1))
+set(findobj(props.panel,'-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(props.params(idx).ckdwn+1))
+set(findobj(props.panel,'-regexp','Tag','^dwn\w*rej$')    ,'Enable',enable((props.params(idx).ckdwn & props.params(idx).ckdwnrej)+1))
 
 if props.params(idx).ckup && props.params(idx).ckdwn
-    set(findobj('-regexp','Tag','^gap','Parent',props.panel),'Enable','on')
+    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','on')
 else
-    set(findobj('-regexp','Tag','^gap','Parent',props.panel),'Enable','off')
+    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','off')
 end
 detsp(hObject)
 
@@ -681,7 +680,7 @@ if props.params(idx).ckup
 else
     tag = 'dwnthr';
 end
-thr = str2double(get(findobj('Tag',tag,'Parent',props.panel),'String'));
+thr = str2double(get(findobj(props.panel,'Tag',tag),'String'));
 spikes = props.spikes{idx};
 set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*stdata)
 
@@ -691,28 +690,28 @@ guidata(hObject,props)
 
 function activatethr(hObject,eventdata)
 props = guidata(hObject);
-vals = [get(findobj('Tag','ckup','Parent',props.panel),'Value') , get(findobj('Tag','ckdwn','Parent',props.panel),'Value')];
+vals = [get(findobj(props.panel,'Tag','ckup'),'Value') , get(findobj(props.panel,'Tag','ckdwn'),'Value')];
 if ~hObject.Value && ~any(vals)
     hObject.Value = true;
     return
 end
 enable = ["off","on"];
-ckup = findobj('Tag','ckup','Parent',props.panel);
-ckdwn = findobj('Tag','ckdwn','Parent',props.panel);
-ckuprej = findobj('Tag','ckuprej','Parent',props.panel);
-ckdwnrej = findobj('Tag','ckdwnrej','Parent',props.panel);
+ckup = findobj(props.panel,'Tag','ckup');
+ckdwn = findobj(props.panel,'Tag','ckdwn');
+ckuprej = findobj(props.panel,'Tag','ckuprej');
+ckdwnrej = findobj(props.panel,'Tag','ckdwnrej');
 
 disp(enable((get(ckdwn,'Value') & get(ckdwnrej,'Value'))+1))
-set(findobj('-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)','Parent',props.panel) ,'Enable',enable(get(ckup,'Value')+1))
-set(findobj('-regexp','Tag','^up\w*rej$','Parent',props.panel)     ,'Enable',enable((get(ckup,'Value') & get(ckuprej,'Value'))+1))
-set(findobj('-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)','Parent',props.panel),'Enable',enable(get(ckdwn,'Value')+1))
-set(findobj('-regexp','Tag','^dwn\w*rej$','Parent',props.panel)    ,'Enable',enable((get(ckdwn,'Value') & get(ckdwnrej,'Value'))+1))
+set(findobj(props.panel,'-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(get(ckup,'Value')+1))
+set(findobj(props.panel,'-regexp','Tag','^up\w*rej$')     ,'Enable',enable((get(ckup,'Value') & get(ckuprej,'Value'))+1))
+set(findobj(props.panel,'-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(get(ckdwn,'Value')+1))
+set(findobj(props.panel,'-regexp','Tag','^dwn\w*rej$')    ,'Enable',enable((get(ckdwn,'Value') & get(ckdwnrej,'Value'))+1))
 
 ischecked = string(get(findobj('-regexp','Tag','ck(up|dwn)$'),'Value'))=="1";
 if all(ischecked)
-    set(findobj('-regexp','Tag','^gap','Parent',props.panel),'Enable','on')
+    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','on')
 else
-    set(findobj('-regexp','Tag','^gap','Parent',props.panel),'Enable','off')
+    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','off')
 end
     
 chparam(hObject)
@@ -732,20 +731,20 @@ function chparam(hObject,eventdata)
 props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
-props.params(idx).ckup = get(findobj('Tag','ckup','Parent',props.panel),'Value');
-props.params(idx).ckdwn = get(findobj('Tag','ckdwn','Parent',props.panel),'Value');
-props.params(idx).ckuprej = get(findobj('Tag','ckuprej','Parent',props.panel),'Value');
-props.params(idx).ckdwnrej = get(findobj('Tag','ckdwnrej','Parent',props.panel),'Value');
-props.params(idx).updur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'));
-props.params(idx).upthr = str2double(get(findobj('Tag','upthr','Parent',props.panel),'String'));
+props.params(idx).ckup = get(findobj(props.panel,'Tag','ckup'),'Value');
+props.params(idx).ckdwn = get(findobj(props.panel,'Tag','ckdwn'),'Value');
+props.params(idx).ckuprej = get(findobj(props.panel,'Tag','ckuprej'),'Value');
+props.params(idx).ckdwnrej = get(findobj(props.panel,'Tag','ckdwnrej'),'Value');
+props.params(idx).updur = str2double(get(findobj(props.panel,'Tag','updur'),'String'));
+props.params(idx).upthr = str2double(get(findobj(props.panel,'Tag','upthr'),'String'));
 
-props.params(idx).uprej = str2double(get(findobj('Tag','uprej','Parent',props.panel),'String'));
-props.params(idx).dwnrej = str2double(get(findobj('Tag','dwnrej','Parent',props.panel),'String'));
+props.params(idx).uprej = str2double(get(findobj(props.panel,'Tag','uprej'),'String'));
+props.params(idx).dwnrej = str2double(get(findobj(props.panel,'Tag','dwnrej'),'String'));
 
-props.params(idx).dwndur = str2double(get(findobj('Tag','dwndur','Parent',props.panel),'String'));
-props.params(idx).dwnthr = str2double(get(findobj('Tag','dwnthr','Parent',props.panel),'String'));
-props.params(idx).gapdur = str2double(get(findobj('Tag','gapdur','Parent',props.panel),'String'));
-props.params(idx).ra = str2double(get(findobj('Tag','rearm','Parent',props.panel),'String'));
+props.params(idx).dwndur = str2double(get(findobj(props.panel,'Tag','dwndur'),'String'));
+props.params(idx).dwnthr = str2double(get(findobj(props.panel,'Tag','dwnthr'),'String'));
+props.params(idx).gapdur = str2double(get(findobj(props.panel,'Tag','gapdur'),'String'));
+props.params(idx).ra = str2double(get(findobj(props.panel,'Tag','rearm'),'String'));
 guidata(hObject.Parent,props)
 detsp(hObject)
 
