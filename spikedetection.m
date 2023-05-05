@@ -39,6 +39,8 @@ if isstruct(inputdata)
     warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
     info = fitsinfo(nvsd);
     warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
+
+    vsd = nvsd;
     
     xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
     ysize = info.PrimaryData.Size(1);
@@ -298,7 +300,7 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'hideidx',hideidx,   'showidx',showidx,  'tm',tm,...
                    'str',str,           'ckup',true,        'ckdwn',false,...
                    'gidx',showidx(1),   'aspike',{aspike},  'aspike2',{aspike},...
-                   'aplt2',aplt2,       'spikes',{spikes},...
+                   'aplt2',aplt2,       'spikes',{spikes},  'vsd',vsd,...
                    'inc',inc,           'files',files,      'frame',frame,...
                    'helps',helps,       'vax',vax,          'panel',panel,...
                    'rawim',2,           'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+40),...
@@ -906,10 +908,8 @@ if isempty(props.files)
 end
 idx = get(findobj('Tag','channels','Parent',hObject.Parent.Parent),'Value');
 
-vsd = props.files(contains(props.files(:,2),'tsm'),2);
-
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
-info = fitsinfo(vsd);
+info = fitsinfo(props.vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
 
 xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
