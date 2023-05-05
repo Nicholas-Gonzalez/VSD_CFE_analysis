@@ -14,9 +14,30 @@ if isstruct(inputdata)
     ofigsize = inputdata.figsize;
 
     vsd = files(contains(files(:,2),'tsm'),2);
+    [folder, filenm, ext] = fileparts(vsd);
+    fvsd = [filenm{1},ext{1}];
+
+    if exist(fullfile(inputdata.curdir,fvsd),'file')
+        nvsd = fullfile(inputdata.curdir,fvsd);
+    else
+        if exist(vsd,'file')
+            nvsd = vsd;
+        else
+            answer = questdlg('Could not find file?  Would you like to search another folder?', 'Oops!','Yes','No','Cancel','Yes');
+            if strcmp(answer,'Yes')
+                [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select file','MultiSelect','off');
+                nvsd = fullfile(path,file);
+            elseif strcmp(answer,'No')
+                nvsd = vsd;
+            else
+                warning(['Could not find ' char(vsd)])
+                return
+            end
+        end
+    end
 
     warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
-    info = fitsinfo(vsd);
+    info = fitsinfo(nvsd);
     warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
     
     xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.

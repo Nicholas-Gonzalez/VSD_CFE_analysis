@@ -367,6 +367,7 @@ vsdprops.matprops.im = matprops.props.im;
 vsdprops.matprops.det = matprops.props.det;
 vsdprops.matprops.kern_center = matprops.props.kern_center;
 vsdprops.matprops.kernpos = matprops.props.kernpos;
+vsdprops.matprops.curdir = path;
 
 vid = get(findobj(hObject.Parent,'Tag','loadvid'),'Value')==1;
 if vid
@@ -657,6 +658,7 @@ if intch && vsdch
         props.notes = vsdprops.intan.notes;
         props.note = vsdprops.note;
         props.log = string(['loaded data on ',char(datetime)]);
+        props.curdir = fileparts(vsdprops.files{1,2});
     else
         if isfield(vsdprops,'vsd')
             intan = convert_uint(vsdprops.matprops.intan.data, vsdprops.matprops.intan.d2uint,...
@@ -720,6 +722,7 @@ if intch && vsdch
             props.finfo = vsdprops.matprops.finfo;
             props.finfo.files = vsdprops.files;
             props.notes = vsdprops.matprops.notes;
+            props.curdir = vsdprops.matprops.curdir;
             if isfield(vsdprops.matprops,'log')
                 props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
             else
@@ -771,6 +774,7 @@ elseif vsdch
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.log = string(['loaded data on ',char(datetime)]);
+    props.curdir = fileparts(filename);
 else
     nch = length(vsdprops.intan.ch);
     props.ch = vsdprops.intan.ch;
@@ -785,6 +789,7 @@ else
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.im = ones(512,512,3);
     props.log = string(['loaded data on ',char(datetime)]);
+    props.curdir = fileparts(vsdprops.files{1,2});
 end
 props.files = vsdprops.files;
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
