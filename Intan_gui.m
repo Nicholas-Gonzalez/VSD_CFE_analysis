@@ -98,10 +98,12 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.25 0.9 0.05 0.1],'Style','p
               'Callback',@autoscale,'String','y','Enable','off');
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.8 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@centerbl,'String','center zeros','Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0 0.7 0.3 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@zoom,'String','increase y-scale','Enable','off');
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.7 0.15 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@zoom,'String',[char(8593) ' y-scale'],'Enable','off');
+uicontrol(cmpanel,'Units','normalized','Position',[0.15 0.7 0.15 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@zoom,'String',[char(8595) ' y-scale'],'Enable','off');
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.3 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@zoom,'String','decrease y-scale','Enable','off');
+              'Callback',@setylim,'String','set y-limits','Enable','off');
 
           
 uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
@@ -247,13 +249,20 @@ end
 
 function scalebar(hObject,eventdata)
 props = guidata(hObject);
-xlim = props.ax(1).XLim;
-pos = xlim(1)+range(xlim)*0.05;
 delete(findobj('Tag','scaleb'));
 if contains(hObject.String,'Add')
-    for a = 1:length(props.ax)
-        line(props.ax(a),[pos pos],-[0.0005 0.0015],'Color','k','Tag','scaleb')
+    xlim = props.ax(1).XLim;
+    pos = xlim(1)+range(xlim)*0.05;
+    ylim = cell2mat(get(props.ax,'YLim'));
+    idx = find(ylim(:,2)<2)';
+    ylim(~idx) = [];
+    sz = min(range(ylim,2))/2;
+    sz = round(sz,1,'significant');
+    for a = idx
+        lw = props.ax(a).YLim(1);
+        line(props.ax(a),[pos pos],[lw lw+sz],'Color','k','Tag','scaleb')
     end
+    disp(['scale bar added with size ' num2str(sz)])
 end
 
 %% loading methods
@@ -1167,6 +1176,149 @@ delete(buf)
 guidata(gcf,props)
 set(allbut(isvalid(allbut)),'Enable','on');
 
+%% YLimit app
+function setylim(hObject,eventdata)
+props = guidata(hObject);
+aprops.intan_tag = props.intan_tag;
+
+str = string(props.showlist);
+YLim = get(props.ax,'YLim');
+lw = zeros(size(YLim));
+up = zeros(size(YLim));
+for p=1:length(str)
+    str{p} = [str{p} ' ' '[' num2str(YLim{p}) ']'];
+    lw(p) = YLim{p}(1);
+    up(p) = YLim{p}(2);
+end
+aprops.lw = lw;
+aprops.up = up;
+
+fig = figure('Name','Set Y-axis Limits','NumberTitle','off');
+fig.Position(3:4) = [420 420];
+
+uicontrol('Units','normalized','Position',[0.002 0.95 0.5 0.05],'Style','text','String','Select channel [cur lower, cur upper]');
+uicontrol('Units','normalized','Position',[0.002 0.05 0.45 0.9],'Style','listbox',...
+    'Max',length(str),'Min',1,'String',str,'Tag','channelslim','Value',props.showidx(1));
+
+
+mlw = min(lw(lw>-1));
+uicontrol('Units','normalized','Position',[0.5 0.95 0.15 0.05],'Style','text','String','Lower');
+uicontrol('Units','normalized','Position',[0.5 0.9 0.15 0.05],'Style','edit',...
+    'String',num2str(mlw),'Tag','lowerlim');
+mup = max(up(up<1));
+aprops.mlw = mlw;
+aprops.mup = mup;
+uicontrol('Units','normalized','Position',[0.65 0.95 0.15 0.05],'Style','text','String','Upper');
+uicontrol('Units','normalized','Position',[0.65 0.90 0.15 0.05],'Style','edit',...
+    'String',num2str(mup),'Tag','upperlim');
+uicontrol('Units','normalized','Position',[0.8 0.90 0.15 0.05],'Style','pushbutton','String','Apply','Callback',@setlim);
+
+
+uicontrol('Units','normalized','Position',[0.5 0.7  0.2 0.06],'Style','pushbutton','String','Auto (ind)','Callback',@autolimind);
+uicontrol('Units','normalized','Position',[0.5 0.64 0.2 0.06],'Style','pushbutton','String','Auto (comb)','Callback',@autolimcomb);
+
+uicontrol('Units','normalized','Position',[0.50 0.05 0.15 0.07],'Style','pushbutton','String','Reset','Callback',@resetval,'Tooltip','Reset values back to original');
+uicontrol('Units','normalized','Position',[0.65 0.05 0.15 0.07],'Style','pushbutton','String','Keep','Callback',@closeit);
+uicontrol('Units','normalized','Position',[0.80 0.05 0.15 0.07],'Style','pushbutton','String','Cancel','Callback',@cancelout,'Tooltip','Reset values back to original and close window.');
+
+guidata(fig,aprops)
+
+function closeit(hObject,eventdata)
+close(hObject.Parent)
+
+function autolimcomb(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+tm = props.tm;
+idx = props.showidx;
+cidx = get(findobj(hObject.Parent,'Tag','channelslim'),'Value');
+channelslim = findobj(hObject.Parent,'Tag','channelslim');
+str = get(channelslim,'String');
+
+xlim = get(props.ax(1),'XLim');
+xidx = [find(tm>xlim(1),1), find(tm>xlim(2),1)];
+data = props.data(idx(cidx),xidx(1):xidx(2));
+rng = max(range(data,2));
+lw = min(data,[],2) - rng*0.1;
+rng = rng*1.2;
+
+
+for a=1:length(cidx)
+    ylim = [lw(a) lw(a)+rng];
+    set(props.ax(cidx(a)),'YLim',ylim)
+    str{a} = regexprep(str{a},'\[.+\]',[ '[' num2str(ylim) ']']);
+end
+set(channelslim,'String',str)
+guidata(intan,props)
+
+function autolimind(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+tm = props.tm;
+idx = props.showidx;
+cidx = get(findobj(hObject.Parent,'Tag','channelslim'),'Value');
+channelslim = findobj(hObject.Parent,'Tag','channelslim');
+str = get(channelslim,'String');
+for a=cidx
+    xlim = get(props.ax(a),'XLim');
+    xidx = [find(tm>xlim(1),1), find(tm>xlim(2),1)];
+    data = props.data(idx(a),xidx(1):xidx(2));
+    rng = range(data);
+    lw = round(min(data) - rng*0.1,5);
+    up = round(max(data) + rng*0.1,5);
+    set(props.ax(a),'YLim',[lw up])
+    str{a} = regexprep(str{a},'\[.+\]',[ '[' num2str([lw up]) ']']);
+end
+set(channelslim,'String',str)
+guidata(intan,props)
+
+function setlim(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+
+lw = str2double(get(findobj(hObject.Parent,'Tag','lowerlim'),'String'));
+up = str2double(get(findobj(hObject.Parent,'Tag','upperlim'),'String'));
+idx = get(findobj(hObject.Parent,'Tag','channelslim'),'Value');
+
+channelslim = findobj(hObject.Parent,'Tag','channelslim');
+str = get(channelslim,'String');
+for i=idx
+    set(props.ax(i),'YLim',[lw , up])
+    str{i} = regexprep(str{i},'\[.+\]',[ '[' num2str([lw up]) ']']);
+end
+set(channelslim,'String',str)
+guidata(intan,props)
+
+function resetval(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+
+channelslim = findobj(hObject.Parent,'Tag','channelslim');
+str = get(channelslim,'String');
+for a=1:length(props.ax)
+    set(props.ax(a),'YLim',[aprops.lw(a) aprops.up(a)])
+    str{a} = regexprep(str{a},'\[.+\]',[ '[' num2str([aprops.lw(a) aprops.up(a)]) ']']);
+end
+set(channelslim,'String',str)
+set(findobj(hObject.Parent,'Tag','lowerlim'),'String',aprops.mlw)
+set(findobj(hObject.Parent,'Tag','upperlim'),'String',aprops.mup)
+guidata(intan,props)
+
+function cancelout(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+for a=1:length(props.ax)
+    set(props.ax(a),'YLim',[aprops.lw(a) aprops.up(a)])
+end
+guidata(intan,props)
+close(hObject.Parent)
+
+%% cosmetic stuff
 function adjylim(hObject,eventdata)
 props = guidata(hObject);
 tag = hObject.Tag;
