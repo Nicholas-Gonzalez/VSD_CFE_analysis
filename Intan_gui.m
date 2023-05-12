@@ -1906,6 +1906,8 @@ ax(1).Title.String = 'Correlation';
 ax(1).XLim = [0.5 size(props.xcorr,1)+0.5];
 ax(1).Color = 'none';
 
+props.didx = didx;
+
 props.xcorr_fulltrace = props.xcorr_fulltrace(didx,didx,:);
 
 axes(ax(2))
@@ -1958,22 +1960,53 @@ props.xcorr_rect = rectangle('Position',[rect(1:2)-0.5 rect(3:4)],'EdgeColor','r
 
 figure('Name','Correlation traces for region','NumberTitle','off')
 cnt = 1;
-disp(rect)
-yidx = rect(1):rect(1)+rect(3)-1;disp(yidx)
-xidx = rect(2):rect(2)+rect(4)-1;disp(xidx)
+
+xidx = rect(1):rect(1)+rect(3)-1;
+yidx = rect(2):rect(2)+rect(4)-1;
 minv = min(props.xcorr_fulltrace(yidx,xidx,:),[],'all');
 maxv = max(props.xcorr_fulltrace(yidx,xidx,:),[],'all');
-for i=xidx
-    for j=yidx
-        ax = subplot(length(xidx),length(yidx),cnt);
+ax = gobjects(length(yidx)*length(xidx),1);
+for j=yidx
+    for i=xidx
+        ax(cnt) = subplot(length(yidx),length(xidx),cnt);
         y = squeeze(props.xcorr_fulltrace(j,i,:));
         x  = ((1:length(y))-length(y)/2)*diff(props.tm(1:2)); 
-        plot(x,y); hold on
-        plot([0 0],[-1 1]);hold on
-        ax.YLim = [minv-0.05 maxv+0.05];
+
+        yp = y(y>=0);
+        xp = x(y>=0);
+
+        yn = y(y<0);
+        xn = x(y<0);
+
+        yp = [yp ; zeros(size(yp))];
+        xp = [xp'; flipud(xp')];
+
+        yn = [yn ; zeros(size(yn))];
+        xn = [xn'; flipud(xn')];
+
+        fill(xp,yp,[1 0.5 0]);hold on
+        fill(xn,yn,'blue');hold on
+        plot([0 0],[-1 1],'k');hold on
+        if i==j
+            rectangle('Position',[-1 -1 2 2],'FaceColor',[0.6 0.6 0.6])
+        end
+
+        if i~=xidx(1)
+            ax(cnt).YTick = [];
+        else
+            ax(cnt).YLabel.String = props.showlist(props.didx(j));
+        end
+
+        if j~=yidx(end)
+            ax(cnt).XTick = [];
+        else
+            ax(cnt).XLabel.String = props.showlist(props.didx(i));
+        end
         cnt = cnt + 1;
     end
 end
+linkaxes(ax,'y')
+set(ax,'YLim',[minv-0.05 maxv+0.05])
 
 guidata(intan,props)
 
