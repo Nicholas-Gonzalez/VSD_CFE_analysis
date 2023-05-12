@@ -1852,7 +1852,7 @@ ch = props.ch;
 idx = nchoosek(1:nch,2);
 props.xcorr = nan(nch);
 props.xcorr_lag = nan(nch);
-props.xcorr_fulltrace = nan(length(idx),win*2+1);
+props.xcorr_fulltrace = nan(nch,nch,win*2+1);
 signit = [1,-1];
 sr = diff(props.tm([1 100]))/100*1000;
 
@@ -1860,10 +1860,18 @@ disp('running xcorr')
 disp(['          ' repelem('_',round(length(idx)/10))])
 fprintf('Progress: ')
 
+pos = get(findobj('Tag',props.intan_tag),'Position');
+fig = figure('Name','Progress...','NumberTitle','off','MenuBar','none',...
+    'Position',[pos(1)+pos(3)/2, pos(2)+pos(4)/2 300 75]);
+pax = axes('Position',[0.1 0.2 0.8 0.7],'XLim',[0 1],'YLim',[0 1],'YTick',[]);
+rec = rectangle('Position',[0 0 0 1],'FaceColor','b');
+
 for i=1:length(idx)
 %     disp([num2str(i) ' of ' num2str(length(idx)) '    ' num2str(idx(i,1)) 'x' num2str(idx(i,2))])
     if mod(i,10)==0
         fprintf('|')
+        set(rec,'Position',[0 0 i/length(idx) 1])
+        pause(0.01)
     end
     x = props.data(showidx(idx(i,1)),:)*signit(contains(props.ch(showidx(idx(i,1))),'V')+1);
     y = props.data(showidx(idx(i,2)),:)*signit(contains(props.ch(showidx(idx(i,2))),'V')+1);
@@ -1879,15 +1887,16 @@ for i=1:length(idx)
     props.xcorr(idx(i,1),idx(i,2)) = val;
     props.xcorr_lag(idx(i,2),idx(i,1)) = (id-win)*sr;
     props.xcorr_lag(idx(i,1),idx(i,2)) = (id-win)*sr;
-    props.xcorr_fulltrace(i,:) = r;
+    props.xcorr_fulltrace(idx(i,2),idx(i,1),:) = r;
+    props.xcorr_fulltrace(idx(i,1),idx(i,2),:) = r;
 end
+close(fig)
 fprintf(newline)
 
 props.xcorr(find(eye(size(props.xcorr,1)))) = 1;
 
 Z = linkage(props.xcorr);
-assignin('base','Z',Z)
-figure('Position',[100 100 1108 782])
+fig = figure('Position',[100 100 1108 782]);
 
 ax(2) = subplot(2,2,3);
 
@@ -1897,8 +1906,11 @@ ax(1).Title.String = 'Correlation';
 ax(1).XLim = [0.5 size(props.xcorr,1)+0.5];
 ax(1).Color = 'none';
 
+props.xcorr_fulltrace = props.xcorr_fulltrace(didx,didx,:);
+
 axes(ax(2))
 imagesc(props.xcorr(didx,didx),'AlphaData', 1-isnan(props.xcorr(didx,didx)))
+ax(2).Tag = 'corrplot';
 
 % tcmap = [(0:0.02:2)', (0:0.01:1)' , (1:-0.01:0)'];
 % tcmap(tcmap>1) = 1;
@@ -1921,7 +1933,49 @@ ax(1).XTick = [];
 ax(1).YTick = [];
 ax(3).Title.String = 'Time lag';
 
+uicontrol('Units','normalized','Position',[0.05 0.8 0.15 0.05],'Style','pushbutton',...
+    'String','plot correlation','Callback',@plotcorrelation,'Tooltip','Plots the correlation of the selected region');
+
+
 guidata(hObject,props)
+guidata(fig,props.intan_tag)
+
+function plotcorrelation(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops);
+props = guidata(intan);
+if isfield(props,'xcorr_rect')
+    delete(props.xcorr_rect)
+end
+
+axes(findobj(hObject.Parent,'Tag','corrplot'))
+
+rect = getrect();
+rect = floor(rect);
+rect(1:2) = rect(1:2)+1;
+
+props.xcorr_rect = rectangle('Position',[rect(1:2)-0.5 rect(3:4)],'EdgeColor','r');
+
+figure('Name','Correlation traces for region','NumberTitle','off')
+cnt = 1;
+disp(rect)
+yidx = rect(1):rect(1)+rect(3)-1;disp(yidx)
+xidx = rect(2):rect(2)+rect(4)-1;disp(xidx)
+minv = min(props.xcorr_fulltrace(yidx,xidx,:),[],'all');
+maxv = max(props.xcorr_fulltrace(yidx,xidx,:),[],'all');
+for i=xidx
+    for j=yidx
+        ax = subplot(length(xidx),length(yidx),cnt);
+        y = squeeze(props.xcorr_fulltrace(j,i,:));
+        x  = ((1:length(y))-length(y)/2)*diff(props.tm(1:2)); 
+        plot(x,y); hold on
+        plot([0 0],[-1 1]);hold on
+        ax.YLim = [minv-0.05 maxv+0.05];
+        cnt = cnt + 1;
+    end
+end
+
+guidata(intan,props)
 
 function spiked(hObject,eventdata)% spike detection 
 props = guidata(hObject);
