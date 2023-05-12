@@ -1,9 +1,9 @@
-function spikedetection(inputdata,tm)
-% data can either be a 2D array or the structure properties from the intan
-% GUI. Each row is each channel.  If array, then time can optionally be
+function spikedetection(inputinfo,tm)
+% data can either be a 2D array or intan tag. Each row is each channel.  If array, then time can optionally be
 % included as a second input.
 
-if isstruct(inputdata)
+if ischar(inputinfo)
+    inputdata = guidata(findobj('Tag',inputinfo));
     data = inputdata.data;
     data(isnan(data)) = 0;
     ch = inputdata.ch;
@@ -86,7 +86,14 @@ default.updur = sf*default.updur*1000;
 default.dwndur = sf*default.dwndur*1000;
 default.gapdur = sf*default.gapdur*1000;
 default.ra = sf*default.ra*1000;
-params = repmat(default,length(ch),1);%<-----just changed these values
+
+if isfield(inputdata,'spikedetection')
+    params = inputdata.spikedetection.params;
+    spikes = inputdata.spikedetection.spikes;
+else
+    params = repmat(default,length(ch),1);
+    spikes = repelem({zeros(1,0)},size(data,1));
+end
 
 apptag = ['apptag' num2str(randi(1e4,1))];
 % fig = figure('Position',[10 80 1900 600],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
@@ -97,7 +104,8 @@ m = uimenu('Text','Spike Tools');
 mi(1) = uimenu(m,'Text','Open Parameters','Callback',@opensaveparams,'Enable','on','Tag','open');
 mi(3) = uimenu(m,'Text','Save Parameters','Callback',@opensaveparams,'Enable','on','Tag','save');
 mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','on','Tag','savem');
-mi(4) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
+mi(5) = uimenu(m,'Text','Send to Intan_Gui','Callback',@tointan,'Enable','on','Tag','savem');
+mi(6) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
 
 
 oppos = [120 327 40 20];
@@ -257,7 +265,6 @@ linkaxes([sax, saxover,vax,nax],'x')
 sax.XLim = [min(-300) max(500)]*sf*1000;
 
 aspike = repelem({zeros(2,length(W))},size(data,1));
-spikes = repelem({zeros(1,0)},size(data,1));
 
 iax = axes('Position', [0.75 0.1 0.2 0.2*ysize/xsize*fig.Position(3)/fig.Position(4)],'YTick',[],'XTick',[],'Box','on','Tag','roiax');
 img = imagesc(zeros(ysize,xsize));
@@ -293,6 +300,10 @@ helps = ["To detect spikes the data value has to be above this threshold consecu
 color = makecolor(-0.2);
 color(2,:) = color(2,:)*0.7;
 
+if ~ischar(inputinfo)
+    inputinfo = [];
+end
+
 guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'tplt',tplt,         'splt',splt,        'sax',sax,...
                    'aplt',aplt,         'iax',iax,          'img',img,...
@@ -306,9 +317,35 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'rawim',2,           'origim',origim,    'imdata',zeros(ysize,xsize,slidepos+40),...
                    'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color,...
                    'params',params,     'Lplt',Lplt,        'txtframe',txtframe,...
-                   'txttm',txttm,       'cpanel',cpanel,    'cdata',{cell(0,3)}))
+                   'txttm',txttm,       'cpanel',cpanel,    'cdata',{cell(0,3)},...
+                   'intan_tag',inputinfo))
 
 detsp(fig)
+
+function tointan(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+props.spikedetection.params = aprops.params;
+sf = diff(props.tm(1:2));
+
+pos = get(findobj('Tag',props.intan_tag),'Position');
+fig = figure('Name','Progress...','NumberTitle','off','MenuBar','none',...
+    'Position',[pos(1)+pos(3)/2, pos(2)+pos(4)/2 300 75]);
+pax = axes('Position',[0.1 0.2 0.8 0.7],'XLim',[0 1],'YLim',[0 1],'YTick',[]);
+rec = rectangle('Position',[0 0 0 1],'FaceColor','b');
+
+for d=1:length(props.ch)
+    set(rec,'Position',[0 0 d/length(props.ch) 1])
+    pause(0.01)
+    [aprops.spikes{d}] = detection_algorithm(aprops.params(d), aprops.W, props.data(d,:), [], sf);
+    disp(d)
+end
+close(fig)
+
+props.spikedetection.spikes = aprops.spikes;
+disp('sent to intan_gui')
+guidata(intan,props)
 
 function addchannel(hObject,eventdata)
 props = guidata(hObject);
@@ -788,68 +825,81 @@ idx = get(findobj('Tag','channels','Parent',fig),'Value');
 
 data = props.data(idx,:);
 tm = props.tm;
-stdata = std(data,"omitnan");
 sf = diff(tm(1:2));
 
 idx2 = get(findobj('Tag','avgchannels','Parent',fig),'Value');
 data2 = props.data(idx2,:);
 
-updur = round(props.params(idx).updur/1000/sf);% convert from time to # indices
-dwndur = round(props.params(idx).dwndur/1000/sf);% convert from time to # indices
-gapdur = round(props.params(idx).gapdur/1000/sf);% convert from time to # indices
-ra = round(props.params(idx).ra/1000/sf);% convert from time to # indices
+[spikes,aspike,aspike2,logic] = detection_algorithm(props.params(idx),props.W,data,data2,sf,props.tplt);
 
-sdata = repelem('n',length(data));
-logic = int8(zeros(length(data),1));
-if props.params(idx).ckup
-    sidx = data>props.params(idx).upthr*stdata;% find all values > threshold
-    sdata(sidx) = 'u';
-    logic(sidx) = 1;
-    set(props.tplt(1),'YData',[1 1]*props.params(idx).upthr*stdata)
-    pattern = ['u{' num2str(updur) ',}' ];
-%     pattern = repelem('u',updur);
-else
-    set(props.tplt(1),'YData',nan(2,1))
-end
-
-if props.params(idx).ckup && props.params(idx).ckuprej
-    sidx = data>props.params(idx).uprej*stdata;% find all values > threshold
-    sdata(sidx) = 'r';
-    logic(sidx) = 2;
-    set(props.tplt(3),'YData',[1 1]*props.params(idx).uprej*stdata)
-    pattern = ['u{' num2str(updur) ',}'];
-    rpattern1 = ['r' pattern];
-    rpattern2 = [pattern 'r'];
-else
-    set(props.tplt(3),'YData',nan(2,1))
-end
-
-if props.params(idx).ckdwn
-    sidx = data<props.params(idx).dwnthr*stdata;% find all values > threshold
-    sdata(sidx) = 'd';
-    logic(sidx) = -1;
-    set(props.tplt(2),'YData',[1 1]*props.params(idx).dwnthr*stdata)
-    pattern = ['d{' num2str(dwndur) ',}' ];
-%     pattern = repelem('d',dwndur);
-else
-    set(props.tplt(2),'YData',nan(2,1))
-end
-
-if props.params(idx).ckdwn && props.params(idx).ckdwnrej
-    sidx = data<props.params(idx).dwnrej*stdata;% find all values > threshold
-    sdata(sidx) = 'r';
-    logic(sidx) = -2;
-    set(props.tplt(4),'YData',[1 1]*props.params(idx).dwnrej*stdata)
-    pattern = ['d{' num2str(dwndur) ',}' ];
-    rpattern1 = ['r' pattern];
-    rpattern2 = [pattern 'r'];
-else
-    set(props.tplt(4),'YData',nan(2,1))
-end
+props.aspike{idx} = aspike;
+props.aspike2{idx} = aspike2;
+props.spikes{idx} = spikes;
 
 set(props.Lplt,'YData',logic)
 
-if props.params(idx).ckup && props.params(idx).ckdwn
+guidata(hObject,props)
+
+set(findobj('Tag','nspikes','Parent',findobj('Tag',props.apptag)),'String',num2str(length(spikes)));
+plotdata(hObject)
+set(allbut,'Enable','on')
+
+function [spikes, aspike, aspike2,logic] = detection_algorithm(params,W,data,data2,sf,tplt)
+updur = round(params.updur/1000/sf);% convert from time to # indices
+dwndur = round(params.dwndur/1000/sf);% convert from time to # indices
+gapdur = round(params.gapdur/1000/sf);% convert from time to # indices
+ra = round(params.ra/1000/sf);% convert from time to # indices
+
+sdata = repelem('n',length(data));
+stdata = std(data,"omitnan");
+logic = int8(zeros(length(data),1));
+if params.ckup
+    sidx = data>params.upthr*stdata;% find all values > threshold
+    sdata(sidx) = 'u';
+    logic(sidx) = 1;
+    if nargin>5; set(tplt(1),'YData',[1 1]*params.upthr*stdata);end
+    pattern = ['u{' num2str(updur) ',}' ];
+%     pattern = repelem('u',updur);
+elseif nargin>5
+    set(tplt(1),'YData',nan(2,1))
+end
+
+if params.ckup && params.ckuprej
+    sidx = data>params.uprej*stdata;% find all values > threshold
+    sdata(sidx) = 'r';
+    logic(sidx) = 2;
+    if nargin>5; set(tplt(3),'YData',[1 1]*params.uprej*stdata);end
+    pattern = ['u{' num2str(updur) ',}'];
+    rpattern1 = ['r' pattern];
+    rpattern2 = [pattern 'r'];
+elseif nargin>5
+    set(tplt(3),'YData',nan(2,1))
+end
+
+if params.ckdwn
+    sidx = data<params.dwnthr*stdata;% find all values > threshold
+    sdata(sidx) = 'd';
+    logic(sidx) = -1;
+    if nargin>5; set(tplt(2),'YData',[1 1]*params.dwnthr*stdata);end
+    pattern = ['d{' num2str(dwndur) ',}' ];
+%     pattern = repelem('d',dwndur);
+elseif nargin>5
+    set(tplt(2),'YData',nan(2,1))
+end
+
+if params.ckdwn && params.ckdwnrej
+    sidx = data<params.dwnrej*stdata;% find all values > threshold
+    sdata(sidx) = 'r';
+    logic(sidx) = -2;
+    if nargin>5; set(tplt(4),'YData',[1 1]*params.dwnrej*stdata);end
+    pattern = ['d{' num2str(dwndur) ',}' ];
+    rpattern1 = ['r' pattern];
+    rpattern2 = [pattern 'r'];
+elseif nargin>5
+    set(tplt(4),'YData',nan(2,1))
+end
+
+if params.ckup && params.ckdwn
     warning('haven''t fixed this condition for rejection')
     if gapdur>=0
         pattern = ['u{' num2str(updur) ',}' '[udn]{' num2str(gapdur-updur) '}' 'd{' num2str(dwndur) ',}'];
@@ -860,9 +910,8 @@ if props.params(idx).ckup && props.params(idx).ckdwn
     end
 end
 
-
 spikes = regexp(sdata,pattern);
-if props.params(idx).ckdwnrej || props.params(idx).ckuprej
+if params.ckdwnrej || params.ckuprej
     rej = regexp(sdata,rpattern1);
     rejlog = arrayfun(@(x) any(rej==x-1),spikes);
     spikes(rejlog) = [];
@@ -871,26 +920,20 @@ if props.params(idx).ckdwnrej || props.params(idx).ckuprej
     spikes(rejlog) = [];
 end
 % spikes = strfind(sdata,pattern);
+aspike = [];
+aspike2 = [];
 if ~isempty(spikes)
     spikes = spikes([true, diff(spikes)>ra]);% remove values that are separated by < re-arm (prevents dection of same spike).  The value is idices;
-    W = props.W;
     spikes(spikes+W(1)<0 | spikes+W(end)>length(data)) = [];
     aspike = zeros(length(spikes),length(W));
     aspike2 = zeros(length(spikes),length(W));% for averaging of channel2
     for i = 1:length(spikes)
         aspike(i,:) = data(W+spikes(i));
-        aspike2(i,:) = data2(W+spikes(i));
+        if ~isempty(data2)
+            aspike2(i,:) = data2(W+spikes(i));
+        end
     end
-    props.aspike{idx} = aspike;
-    props.aspike2{idx} = aspike2;
 end
-
-props.spikes{idx} = spikes;
-guidata(hObject,props)
-
-set(findobj('Tag','nspikes','Parent',findobj('Tag',props.apptag)),'String',num2str(length(spikes)));
-plotdata(hObject)
-set(allbut,'Enable','on')
 
 function avgim(hObject,eventdata)
 props = guidata(hObject);
@@ -982,7 +1025,6 @@ toc
 set(allbut,'Enable','on')
 guidata(hObject,props)
 
-    
 
 
 

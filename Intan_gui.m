@@ -122,9 +122,15 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.6 0.3 0.1],'Style','pus
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@xcorrelation,'String','XCorr','Enable','off',...
               'Tag','filter','TooltipString','Calculates the cross correlation');
-uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.8 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.8 0.2 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@spiked,'String','spike detection','Enable','off',...
-              'Tag','filter','TooltipString','detect');
+              'Tag','filter','Tooltip','detect spike activity in the traces');
+uicontrol(cmpanel,'Units','normalized','Position',[0.8 0.8 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@plotspikes,'String','show','Enable','off',...
+              'Tag','filter','Tooltip','Add spikes to the graphs');
+uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.8 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@hidespikes,'String','hide','Enable','off',...
+              'Tag','filter','Tooltip','Add spikes to the graphs');
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.2 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','scale bar Add','Enable','off',...
               'Tag','filter','TooltipString','add scale bar');
@@ -1527,6 +1533,7 @@ else
     props.showidx = [props.showidx   props.hideidx(choose)];
     props.hideidx(choose) = [];
 end
+disp(sort(props.showidx))
 guidata(hObject,props)
 plotdata(hObject)
 updateroi(hObject)
@@ -1840,11 +1847,17 @@ obj = findobj(hObject.Parent,'Tag','fripple','-or','Tag','fattlower','-or','Tag'
 set(obj,'ForegroundColor','k','TooltipString','')
 preview(hObject)
 
-%%
+%% correlation
 function xcorrelation(hObject,eventdata)% calculates the cross correlation of the channels shown
 props = guidata(hObject);
 
-win = 379;% window for calculating the cross correlation
+if isfield(props,'spikedetection')
+    answer = questdlg('How do you want to process data?','Question?','Binary','Continuous','Binary');
+else
+    answer = 'Continuous';
+end
+
+win = 700;% 379 window for calculating the cross correlation
 nch = length(props.showidx);
 showidx = props.showidx;
 
@@ -1865,6 +1878,7 @@ fig = figure('Name','Progress...','NumberTitle','off','MenuBar','none',...
     'Position',[pos(1)+pos(3)/2, pos(2)+pos(4)/2 300 75]);
 pax = axes('Position',[0.1 0.2 0.8 0.7],'XLim',[0 1],'YLim',[0 1],'YTick',[]);
 rec = rectangle('Position',[0 0 0 1],'FaceColor','b');
+pause(0.01)
 
 for i=1:length(idx)
 %     disp([num2str(i) ' of ' num2str(length(idx)) '    ' num2str(idx(i,1)) 'x' num2str(idx(i,2))])
@@ -1873,8 +1887,16 @@ for i=1:length(idx)
         set(rec,'Position',[0 0 i/length(idx) 1])
         pause(0.01)
     end
-    x = props.data(showidx(idx(i,1)),:)*signit(contains(props.ch(showidx(idx(i,1))),'V')+1);
-    y = props.data(showidx(idx(i,2)),:)*signit(contains(props.ch(showidx(idx(i,2))),'V')+1);
+    
+    if strcmp(answer,'Binary')
+        x = zeros(size(props.tm));
+        x(props.spikedetection.spikes{idx(i,1)}) = 1;
+        y = zeros(size(props.tm));
+        y(props.spikedetection.spikes{idx(i,2)}) = 1;
+    else
+        x = props.data(showidx(idx(i,1)),:)*signit(contains(props.ch(showidx(idx(i,1))),'V')+1);
+        y = props.data(showidx(idx(i,2)),:)*signit(contains(props.ch(showidx(idx(i,2))),'V')+1);
+    end
     x(isnan(x)) = 0;
     y(isnan(y)) = 0;
 %     x = abs(x);
@@ -1885,9 +1907,9 @@ for i=1:length(idx)
     [val,id] = max(r);
     props.xcorr(idx(i,2),idx(i,1)) = val;
     props.xcorr(idx(i,1),idx(i,2)) = val;
-    props.xcorr_lag(idx(i,2),idx(i,1)) = (id-win)*sr;
+    props.xcorr_lag(idx(i,2),idx(i,1)) = -(id-win)*sr;
     props.xcorr_lag(idx(i,1),idx(i,2)) = (id-win)*sr;
-    props.xcorr_fulltrace(idx(i,2),idx(i,1),:) = r;
+    props.xcorr_fulltrace(idx(i,2),idx(i,1),:) = fliplr(r);
     props.xcorr_fulltrace(idx(i,1),idx(i,2),:) = r;
 end
 close(fig)
@@ -1907,6 +1929,8 @@ ax(1).XLim = [0.5 size(props.xcorr,1)+0.5];
 ax(1).Color = 'none';
 
 props.didx = didx;
+props.corr_list = props.showlist(didx);
+props.corr_idx = props.showidx(didx);
 
 props.xcorr_fulltrace = props.xcorr_fulltrace(didx,didx,:);
 
@@ -1994,13 +2018,13 @@ for j=yidx
         if i~=xidx(1)
             ax(cnt).YTick = [];
         else
-            ax(cnt).YLabel.String = props.showlist(props.didx(j));
+            ax(cnt).YLabel.String = props.corr_list(j);
         end
 
         if j~=yidx(end)
             ax(cnt).XTick = [];
         else
-            ax(cnt).XLabel.String = props.showlist(props.didx(i));
+            ax(cnt).XLabel.String = props.corr_list(i);
         end
         cnt = cnt + 1;
     end
@@ -2010,9 +2034,59 @@ set(ax,'YLim',[minv-0.05 maxv+0.05])
 
 guidata(intan,props)
 
+%% spike detection
 function spiked(hObject,eventdata)% spike detection 
+validatech(hObject);
 props = guidata(hObject);
-spikedetection(props)
+spikedetection(props.intan_tag)
+
+function validatech(hObject)
+props = guidata(hObject);
+for p=1:length(props.showlist)
+    truth = props.showlist{p};
+    if p<=length(props.showidx)
+        checkit = props.ch(props.showidx(p));
+        if ~strcmp(truth,checkit)
+            warning(['Showidx ' num2str(p) ' does not match showlist, replacing idx value with showlist'])
+        end
+    end
+end
+
+for p=1:length(props.hidelist)
+    truth = props.hidelist{p};
+    if p<=length(props.hideidx)
+        checkit = props.ch(props.hideidx(p));
+        if ~strcmp(truth,checkit)
+            warning(['Hideidx ' num2str(p) ' does not match hidelist, replacing idx value with hidelist'])
+        end
+    end
+end
+
+props.showidx = arrayfun(@(x) find(contains(props.ch,x)),props.showlist);
+props.hideidx = arrayfun(@(x) find(contains(props.ch,x)),props.hidelist);
+guidata(hObject, props)
+
+function plotspikes(hObject,eventdata)% adds the spike times to the graphs
+props = guidata(hObject);
+showidx = props.showidx;
+data = props.data(showidx,:);
+spikes = props.spikedetection.spikes(showidx);
+ax = props.ax;
+if strcmp(hObject.String,'show')
+    for p=1:length(ax)
+        if ~isempty(spikes{p})
+            axes(ax(p))
+            hold on
+            scatter(props.tm(spikes{p}), data(p,spikes{p}),'rd','filled')
+        end
+    end
+else
+    scobj = findobj(ax,'Type','scatter');
+    if ~isempty(scobj)
+        delete(findobj(ax,'Type','scatter'))
+    end
+end
+guidata(hObject,props)
 
 %% baseline app
 function baseline(hObject,eventdata)
@@ -3558,8 +3632,6 @@ props.video.xlim = get(plt.Parent,'XLim');
 
 guidata(intan,props)
 
-
-
 %% vsd frame image and ROI methods
 
 function updateroi(hObject,eventdata)
@@ -3698,6 +3770,7 @@ props = guidata(hObject);
 fidx = find(props.files(:,2)~="",1,'first');
 nn = regexprep(props.files{fidx,2},'.(tif|mat|det|rhs|tsm|xlsx)','.mat');
 
+warning('for some stupid reason it does not save spike detection stuff')
 [file,path,indx] = uiputfile(nn);
 
 if ~file
