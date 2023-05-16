@@ -492,6 +492,9 @@ end
 fname = fullfile(folder,'spike_parameters.mat');
 if strcmp(hObject.Tag,'open')
     [file,path] = uigetfile(fname,'Select spike_parameter file');
+    if ~isempty(file)
+        return
+    end
     filedata = load(fullfile(path,file));
     assignin('base','filedata',filedata)
     props.params = filedata.params;

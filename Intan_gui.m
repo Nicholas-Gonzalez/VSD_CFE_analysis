@@ -129,7 +129,7 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.8 0.8 0.05 0.1],'Style','pu
               'Callback',@plotspikes,'String','show','Enable','off',...
               'Tag','filter','Tooltip','Add spikes to the graphs');
 uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.8 0.05 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@hidespikes,'String','hide','Enable','off',...
+              'Callback',@plotspikes,'String','hide','Enable','off',...
               'Tag','filter','Tooltip','Add spikes to the graphs');
 uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.2 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','scale bar Add','Enable','off',...
@@ -358,12 +358,19 @@ vsdprops.matprops.showidx = matprops.props.showidx;
 vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
+
 if isfield(matprops.props,'log')
     vsdprops.matprops.log = matprops.props.log;
 end
+
 if isfield(matprops.props,'video')
     vsdprops.matprops.video = matprops.props.video;
 end
+
+if isfield(matprops.props,'spikedetection')
+    vsdprops.matprops.spikedetection = matprops.props.spikedetection;
+end
+
 if isfield(matprops.props,'note')
     vsdprops.matprops.note = matprops.props.note;
 else    
@@ -724,28 +731,20 @@ if intch && vsdch
                 end
             end
         else
-            props.d2uint = vsdprops.matprops.d2uint;
-            props.min = vsdprops.matprops.min;
-            props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');  
-            props.tm = vsdprops.matprops.tm;
-            props.ch = vsdprops.matprops.ch;
-            props.showlist = vsdprops.matprops.showlist;
-            props.hidelist = vsdprops.matprops.hidelist;
-            props.showidx = vsdprops.matprops.showidx;
-            props.hideidx = vsdprops.matprops.hideidx;  
-            props.Max = vsdprops.matprops.Max;
-            props.finfo = vsdprops.matprops.finfo;
+            fields = fieldnames(vsdprops.matprops);
+            fields(ismember(fields,{'video','data'})) = [];
+            for f=1:length(fields)
+                props.(fields{f}) = vsdprops.matprops.(fields{f});
+            end
             props.finfo.files = vsdprops.files;
-            props.notes = vsdprops.matprops.notes;
-            props.curdir = vsdprops.matprops.curdir;
+            props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');
+
             if isfield(vsdprops.matprops,'log')
                 props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
             else
                 props.log = string(['loaded data  ',char(datetime)]);
             end
-            if isfield(vsdprops.matprops,'note')
-                props.note = vsdprops.matprops.note;
-            end
+
             if isfield(vsdprops.matprops,'video')
                 props.video = vsdprops.matprops.video;disp('added video')
                 fieldn = ["imdata","imdataroi","imdatar"];
@@ -757,18 +756,6 @@ if intch && vsdch
                     end
                 end
             end
-            props.im = vsdprops.matprops.im;
-            props.det = vsdprops.matprops.det;
-            props.kern_center = vsdprops.matprops.kern_center;
-            props.kernpos = vsdprops.matprops.kernpos;
-            if isfield(vsdprops.matprops,'filter')
-                props.filter = vsdprops.matprops.filter;
-            end
-            if isfield(vsdprops.matprops,'backup')
-                props.backup = vsdprops.matprops.backup;
-            end
-            vsdprops.intan = vsdprops.matprops.intan;
-            vsdprops.vsd = vsdprops.matprops.vsd;
         end
     end
 elseif vsdch
@@ -1857,7 +1844,11 @@ else
     answer = 'Continuous';
 end
 
-win = 700;% 379 window for calculating the cross correlation
+if isempty(answer)
+    return
+end
+
+win = 1500;%700 379 window for calculating the cross correlation
 nch = length(props.showidx);
 showidx = props.showidx;
 
@@ -1869,10 +1860,6 @@ props.xcorr_fulltrace = nan(nch,nch,win*2+1);
 signit = [1,-1];
 sr = diff(props.tm([1 100]))/100*1000;
 
-disp('running xcorr')
-disp(['          ' repelem('_',round(length(idx)/10))])
-fprintf('Progress: ')
-
 pos = get(findobj('Tag',props.intan_tag),'Position');
 fig = figure('Name','Progress...','NumberTitle','off','MenuBar','none',...
     'Position',[pos(1)+pos(3)/2, pos(2)+pos(4)/2 300 75]);
@@ -1882,28 +1869,47 @@ pause(0.01)
 
 for i=1:length(idx)
 %     disp([num2str(i) ' of ' num2str(length(idx)) '    ' num2str(idx(i,1)) 'x' num2str(idx(i,2))])
-    if mod(i,10)==0
-        fprintf('|')
+    if mod(i,5)==0
+        if ~isvalid(rec)
+            disp('operation terminated')
+            return
+        end
         set(rec,'Position',[0 0 i/length(idx) 1])
         pause(0.01)
     end
     
+    sidx = showidx(idx(i,:));
     if strcmp(answer,'Binary')
         x = zeros(size(props.tm));
-        x(props.spikedetection.spikes{idx(i,1)}) = 1;
+        x(props.spikedetection.spikes{sidx(1)}) = 1;
         y = zeros(size(props.tm));
-        y(props.spikedetection.spikes{idx(i,2)}) = 1;
+        y(props.spikedetection.spikes{sidx(2)}) = 1;
+
+        wf = gausswin(1e5,1000);
+        
+        xf = conv(x,wf);
+        dl = round((length(xf)-length(x))/2); 
+        xf = xf(dl+1:end-dl);
+    
+        yf = conv(y,wf);
+        dl = round((length(yf)-length(y))/2); 
+        yf = yf(dl+1:end-dl);
+        keyboard
     else
-        x = props.data(showidx(idx(i,1)),:)*signit(contains(props.ch(showidx(idx(i,1))),'V')+1);
-        y = props.data(showidx(idx(i,2)),:)*signit(contains(props.ch(showidx(idx(i,2))),'V')+1);
+        xf = props.data(sidx(1),:)*signit(contains(props.ch(sidx(1)),'V')+1);
+        yf = props.data(sidx(2),:)*signit(contains(props.ch(sidx(2)),'V')+1);
     end
-    x(isnan(x)) = 0;
-    y(isnan(y)) = 0;
+    xf(isnan(xf)) = 0;
+    yf(isnan(yf)) = 0;
+    
+    r = xcorr(xf,yf,win,'normalized');
+
 %     x = abs(x);
 %     y = abs(y);
 %     x = decimate(x,20);
 %     y = decimate(y,20);
-    r = xcorr(x,y,win,'normalized');
+    
+
     [val,id] = max(r);
     props.xcorr(idx(i,2),idx(i,1)) = val;
     props.xcorr(idx(i,1),idx(i,2)) = val;
@@ -1913,7 +1919,6 @@ for i=1:length(idx)
     props.xcorr_fulltrace(idx(i,1),idx(i,2),:) = r;
 end
 close(fig)
-fprintf(newline)
 
 props.xcorr(find(eye(size(props.xcorr,1)))) = 1;
 
@@ -2026,11 +2031,15 @@ for j=yidx
         else
             ax(cnt).XLabel.String = props.corr_list(i);
         end
+
+        if ~isempty(xp)
+            xlim = [min([xn;xp]) max([xn;xp])];
+        end
         cnt = cnt + 1;
     end
 end
 linkaxes(ax,'y')
-set(ax,'YLim',[minv-0.05 maxv+0.05])
+set(ax,'YLim',[minv-0.05 maxv+0.05],'XLim',xlim)
 
 guidata(intan,props)
 
@@ -2063,28 +2072,35 @@ for p=1:length(props.hidelist)
 end
 
 props.showidx = arrayfun(@(x) find(contains(props.ch,x)),props.showlist);
+props.showidx = reshape(props.showidx,1,[]);
 props.hideidx = arrayfun(@(x) find(contains(props.ch,x)),props.hidelist);
+props.hideidx = reshape(props.hideidx,1,[]);
+
 guidata(hObject, props)
 
 function plotspikes(hObject,eventdata)% adds the spike times to the graphs
 props = guidata(hObject);
 showidx = props.showidx;
 data = props.data(showidx,:);
-spikes = props.spikedetection.spikes(showidx);
-ax = props.ax;
-if strcmp(hObject.String,'show')
-    for p=1:length(ax)
-        if ~isempty(spikes{p})
-            axes(ax(p))
-            hold on
-            scatter(props.tm(spikes{p}), data(p,spikes{p}),'rd','filled')
+if isfield(props,'spikedetection')
+    spikes = props.spikedetection.spikes(showidx);
+    ax = props.ax;
+    if strcmp(hObject.String,'show')
+        for p=1:length(ax)
+            if ~isempty(spikes{p})
+                axes(ax(p))
+                hold on
+                scatter(props.tm(spikes{p}), data(p,spikes{p}),'rd','filled')
+            end
+        end
+    else
+        scobj = findobj(ax,'Type','scatter');
+        if ~isempty(scobj)
+            delete(findobj(ax,'Type','scatter'))
         end
     end
 else
-    scobj = findobj(ax,'Type','scatter');
-    if ~isempty(scobj)
-        delete(findobj(ax,'Type','scatter'))
-    end
+    msgbox('You have not run spike detection for this data yet')
 end
 guidata(hObject,props)
 
@@ -3770,7 +3786,7 @@ props = guidata(hObject);
 fidx = find(props.files(:,2)~="",1,'first');
 nn = regexprep(props.files{fidx,2},'.(tif|mat|det|rhs|tsm|xlsx)','.mat');
 
-warning('for some stupid reason it does not save spike detection stuff')
+
 [file,path,indx] = uiputfile(nn);
 
 if ~file
