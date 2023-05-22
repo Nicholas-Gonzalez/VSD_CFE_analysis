@@ -339,12 +339,12 @@ for d=1:length(props.ch)
     set(rec,'Position',[0 0 d/length(props.ch) 1])
     pause(0.01)
     [aprops.spikes{d}] = detection_algorithm(aprops.params(d), aprops.W, props.data(d,:), [], sf);
-    disp(d)
 end
 close(fig)
 
 props.spikedetection.spikes = aprops.spikes;
 disp('sent to intan_gui')
+guidata(hObject,aprops)
 guidata(intan,props)
 
 function addchannel(hObject,eventdata)

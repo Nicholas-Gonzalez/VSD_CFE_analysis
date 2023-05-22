@@ -345,10 +345,22 @@ set(matprog,'String','loading...','ForeGroundColor','b')
 pause(0.1)
 matprops = load(fullfile(path,file));
 set(matprog,'String','loaded','ForeGroundColor','k')
-vsdprops.matprops.intan = matprops.props.vsdprops.intan;
-vsdprops.matprops.intan.data = vsdprops.matprops.intan.data;
-vsdprops.matprops.vsd.data = matprops.props.vsdprops.vsd.data;
-vsdprops.matprops.vsd.tm = matprops.props.vsdprops.vsd.tm;
+if isfield(matprops.props.vsdprops,'intan')
+    vsdprops.matprops.intan = matprops.props.vsdprops.intan;
+end
+if isfield(matprops.props.vsdprops,'intan')% this tempfix for some improperly saved files
+    vsdprops.matprops.intan = matprops.props.vsdprops.intan;
+elseif isfield(matprops.props,'intan')
+    vsdprops.matprops.intan = matprops.props.intan;
+end
+% vsdprops.matprops.intan.data = vsdprops.matprops.intan.data;
+if isfield(matprops.props.vsdprops,'vsd')% this tempfix for some improperly saved files
+    vsdprops.matprops.vsd = matprops.props.vsdprops.vsd;
+    vsdprops.matprops.vsd.tm = matprops.props.vsdprops.vsd.tm;
+else
+    vsdprops.matprops.vsd.data = matprops.props.vsd.data;
+    vsdprops.matprops.vsd.tm = matprops.props.vsd.tm;
+end
 vsdprops.matprops.data = matprops.props.data;
 vsdprops.matprops.min = matprops.props.min;
 vsdprops.matprops.d2uint = matprops.props.d2uint;
@@ -1513,6 +1525,8 @@ listobj.String(choose) = [];
 % set(findobj('Tag','hidegraph'),'String',hstring(sidx));
 props.showlist = get(findobj(props.chpanel,'Tag','showgraph'),'String');
 props.hidelist = get(findobj(props.chpanel,'Tag','hidegraph'),'String');
+props.hideidx = reshape(props.hideidx,1,[]);
+props.showidx = reshape(props.showidx,1,[]);
 if strcmp(listobj.Tag,'showgraph')
     props.hideidx = [props.hideidx   props.showidx(choose)];
     props.showidx(choose) = [];
@@ -1520,7 +1534,6 @@ else
     props.showidx = [props.showidx   props.hideidx(choose)];
     props.hideidx(choose) = [];
 end
-disp(sort(props.showidx))
 guidata(hObject,props)
 plotdata(hObject)
 updateroi(hObject)
@@ -1894,7 +1907,6 @@ for i=1:length(idx)
         yf = conv(y,wf);
         dl = round((length(yf)-length(y))/2); 
         yf = yf(dl+1:end-dl);
-        keyboard
     else
         xf = props.data(sidx(1),:)*signit(contains(props.ch(sidx(1)),'V')+1);
         yf = props.data(sidx(2),:)*signit(contains(props.ch(sidx(2)),'V')+1);
@@ -2071,9 +2083,9 @@ for p=1:length(props.hidelist)
     end
 end
 
-props.showidx = arrayfun(@(x) find(contains(props.ch,x)),props.showlist);
+props.showidx = arrayfun(@(x) find(ismember(props.ch,x)),props.showlist);
 props.showidx = reshape(props.showidx,1,[]);
-props.hideidx = arrayfun(@(x) find(contains(props.ch,x)),props.hidelist);
+props.hideidx = arrayfun(@(x) find(ismember(props.ch,x)),props.hidelist);
 props.hideidx = reshape(props.hideidx,1,[]);
 
 guidata(hObject, props)
@@ -3786,7 +3798,6 @@ props = guidata(hObject);
 fidx = find(props.files(:,2)~="",1,'first');
 nn = regexprep(props.files{fidx,2},'.(tif|mat|det|rhs|tsm|xlsx)','.mat');
 
-
 [file,path,indx] = uiputfile(nn);
 
 if ~file
@@ -3875,7 +3886,11 @@ if isfield(props,'video')
 end
 
 if isfield(props,'databackup')
-    props.databackup = convert_uint(props.databackup, props.bd2uint, props.bmin, 'uint16');
+    try
+        props.databackup = convert_uint(props.databackup, props.bd2uint, props.bmin, 'uint16');
+    catch
+        warning('couldn''t save backup')
+    end
 end
 
 names = fieldnames(props);
