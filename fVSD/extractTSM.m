@@ -68,17 +68,31 @@ end
 
 % Iterate data extraction through chunks
 kernelData = nan(zsize,numKern);
-disp(['reading ' fpath])
-disp(['          ' repmat('|______________',1,4) '|']);
-fprintf('Progress: ')
+% disp(['reading ' fpath])
+% disp(['          ' repmat('|______________',1,4) '|']);
+% fprintf('Progress: ')
+
+fig = figure('Name','Progress...','NumberTitle','off','MenuBar','none',...
+    'Position',[500, 500 300 75]);
+pax = axes('Position',[0.1 0.2 0.8 0.7],'XLim',[0 1],'YLim',[0 1],'YTick',[]);
+rec = rectangle('Position',[0 0 0 1],'FaceColor','b');
+pause(0.01)
 
 imdata = nan(ysize,xsize,numChunks);
 imdataf = nan(ysize,xsize,numChunks);
 shutter = nan(zsize,1);
 tic
 for a = 1:numChunks
+%     if mod(a,round(numChunks/60))==0
+%         fprintf('|')
+%     end
     if mod(a,round(numChunks/60))==0
-        fprintf('|')
+        if ~isvalid(rec)
+            disp('operation terminated')
+            return
+        end
+        set(rec,'Position',[0 0 a/numChunks 1])
+        pause(0.01)
     end
     dataChunk = readTSM(info,chunkLength,a,false);
     alength = size(dataChunk,3);
@@ -114,8 +128,9 @@ for a = 1:numChunks
     end
     
 end
+close(fig)
 toc
-fprintf('\n')
+% fprintf('\n')
 data = kernelData;
 
 %% Data pre-processsing and normalization

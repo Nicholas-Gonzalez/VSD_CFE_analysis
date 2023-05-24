@@ -490,7 +490,7 @@ fex = false(1,size(vsdprops.files,1));
 for f=1:size(vsdprops.files,1)
     fn = vsdprops.files(f,2);
     if contains(fn,';')
-        fstr = split(fn,';  ');
+        fstr = split(fn,'; ');
         fexist = false(size(fstr));
         for e=1:length(fstr)
             fexist(e) = exist(fstr{e},'file');
@@ -568,7 +568,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         rfn = vsdprops.files{vsdprops.files(:,1)=="rhsfns",2};
         set(rhs_prog,'String',"loading...",'ForegroundColor','b');
         pause(0.1)
-        rfn = split(rfn,';  ');
+        rfn = split(rfn,'; ');
         for r=1:length(rfn)
             if r==1
                 [data, tm, stim, ~, notes, amplifier_channels] = read_Intan_RHS2000_file(rfn{r});
@@ -868,7 +868,7 @@ end
 fstr = get(findobj(hObject.Parent,'Tag',hstr),'String');
 fph = findobj(hObject.Parent,'Tag',replace(hstr,'fns','p'));
 
-fstr = split(fstr,';  ');
+fstr = split(fstr,'; ');
 fexist = false(size(fstr));
 for f=1:length(fstr)
     fexist(f) = exist(fstr{f},'file');
@@ -918,22 +918,28 @@ dfolder = dir(fullfile(fpath));
 fnames = string({dfolder.name});
 
 noten = fullfile(fpath,'notes.xlsx');
+cfexist = false;
 if exist(noten,"file")
     notes = readcell(fullfile(fpath,'notes.xlsx'));
-    cfename = notes{ismember(notes(:,1),fn),2};
-    if any(contains(fnames,cfename))
-       cfename = fullfile(fpath,cfename,[cfename '.rhs']);
-    else
-       for f=3:length(dfolder)
-           if dfolder(f).isdir
-                sf = dir(fullfile(dfolder(f).folder,dfolder(f).name));
-                idx = contains(string({sf.name}),cfename);
-                if any(idx)
-                    cfename = fullfile(sf(idx).folder,sf(idx).name);break
-                end
+    cfename = notes{ismember(string(notes(:,1)),fn),2};
+    rfn = split(cfename,'; ');
+    for r=1:length(rfn)
+        if any(contains(fnames,rfn{r}))
+           rfn{r} = fullfile(fpath,rfn{r},[rfn{r} '.rhs']);
+        else
+           for f=3:length(dfolder)
+               if dfolder(f).isdir
+                    sf = dir(fullfile(dfolder(f).folder,dfolder(f).name));
+                    idx = contains(string({sf.name}),rfn{r});
+                    if any(idx)
+                        rfn{r} = fullfile(sf(idx).folder,sf(idx).name);break
+                    end
+               end
            end
-       end
+        end
     end
+    cfename = join(rfn,'; ');
+    cfexist = true;
 end
 
 
@@ -942,7 +948,7 @@ for s=1:size(strs,2)
     fns = fullfile(fpath,[fn strs{2,s}]);
     if chk && exist(fns,'file')
         set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',fns);
-    elseif chk && strs(1,s)=="rhsfns" && exist("cfename",'var') && exist(cfename,'file')
+    elseif chk && strs(1,s)=="rhsfns" && cfexist 
         set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',cfename)
     elseif chk && strs(1,s)=="rhsfns" && exist(fullfile(fpath,fn),'dir')
         fstr = fullfile(fpath,fn);
