@@ -504,8 +504,18 @@ end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
     if fex(vsdprops.files(:,1)=="tiffns") && get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
-        im = imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2));
-        vsdprops.im = repmat(im,1,1,3/size(im,3));
+        for f=1:3
+            try
+                imp = imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2),'Index',f);
+                if f==1
+                    im = zeros([size(imp) 3]);
+                end
+                im(:,:,f) = imp/max(imp,[],'all');
+            catch
+                im(:,:,f) = im(:,:,1);
+            end
+        end
+        vsdprops.im = im;
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"loaded");
     elseif get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"not found",'ForegroundColor','r');
@@ -571,17 +581,26 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         rfn = split(rfn,'; ');
         for r=1:length(rfn)
             if r==1
-                [data, tm, stim, ~, notes, amplifier_channels] = read_Intan_RHS2000_file(rfn{r});
+                [data, tm, stim, ~, notes, amplifier_channels, ~ , analog] = read_Intan_RHS2000_file(rfn{r});
             else
-                [datap, tmp, stimp] = read_Intan_RHS2000_file(rfn{r});
+                [datap, tmp, stimp, ~,  ~, amplifier_channels, adc_channels , analogp] = read_Intan_RHS2000_file(rfn{r});
                 data = [data, datap];
                 tm = [tm, tmp];
                 stim = [stim, stimp];
+                analog = [analog, analogp];
             end
         end
         vsdprops.intan.tm = tm;
+        
+        if isempty(data)
+            data = zeros(0,length(tm));
+        end
 
-        vsdprops.intan.data = [data;stim];
+        if isempty(stim)
+            stim = zeros(0,length(tm));
+        end
+
+        vsdprops.intan.data = [data;stim;analog];
         
         sz = size(vsdprops.intan.data);
         vsdprops.intan.min = min(vsdprops.intan.data,[],2);
@@ -589,6 +608,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         vsdprops.intan.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'uint16');
 
         vsdprops.intan.ch = [string({amplifier_channels.native_channel_name})';...
+                            string({adc_channels.custom_channel_name})';...
                     join([string((1:size(data,1))'), repelem(" stim(uA)",size(data,1),1)])];
         [path,file] = fileparts(rfn);
 
@@ -913,43 +933,42 @@ fn = replace(fn,'_frame','');
 strs = ["tiffns"   ,"detfns","tsmfns","rhsfns","xlsxfns";...
         "_frame.tif",".det" ,".tsm"  ,".rhs",".xlsx"];
 
-
 dfolder = dir(fullfile(fpath));
 fnames = string({dfolder.name});
-
-noten = fullfile(fpath,'notes.xlsx');
-cfexist = false;
-if exist(noten,"file")
-    notes = readcell(fullfile(fpath,'notes.xlsx'));
-    cfename = notes{ismember(string(notes(:,1)),fn),2};
-    rfn = split(cfename,'; ');
-    for r=1:length(rfn)
-        if any(contains(fnames,rfn{r}))
-           rfn{r} = fullfile(fpath,rfn{r},[rfn{r} '.rhs']);
-        else
-           for f=3:length(dfolder)
-               if dfolder(f).isdir
-                    sf = dir(fullfile(dfolder(f).folder,dfolder(f).name));
-                    idx = contains(string({sf.name}),rfn{r});
-                    if any(idx)
-                        rfn{r} = fullfile(sf(idx).folder,sf(idx).name);break
-                    end
-               end
-           end
-        end
-    end
-    cfename = join(rfn,'; ');
-    cfexist = true;
-end
-
 
 for s=1:size(strs,2)
     chk = isempty(get(findobj(hObject.Parent,'Tag',strs{1,s}),'String'));
     fns = fullfile(fpath,[fn strs{2,s}]);
     if chk && exist(fns,'file')
         set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',fns);
-    elseif chk && strs(1,s)=="rhsfns" && cfexist 
-        set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',cfename)
+    elseif chk && strs(1,s)=="rhsfns"
+        noten = fullfile(fpath,'notes.xlsx');
+        cfexist = false;
+        if exist(noten,"file")
+            notes = readcell(fullfile(fpath,'notes.xlsx'));
+            cfename = notes{ismember(string(notes(:,1)),fn),2};
+            rfn = split(cfename,'; ');
+            for r=1:length(rfn)
+                if any(contains(fnames,rfn{r}))
+                   rfn{r} = fullfile(fpath,rfn{r},[rfn{r} '.rhs']);
+                else
+                   for f=3:length(dfolder)
+                       if dfolder(f).isdir
+                            sf = dir(fullfile(dfolder(f).folder,dfolder(f).name));
+                            idx = contains(string({sf.name}),rfn{r});
+                            if any(idx)
+                                rfn{r} = fullfile(sf(idx).folder,sf(idx).name);break
+                            end
+                       end
+                   end
+                end
+            end
+            cfename = join(rfn,'; ');
+            cfexist = true;
+        end
+        if cfexist
+            set(findobj(hObject.Parent,'Tag',strs{1,s}),'String',cfename)
+        end
     elseif chk && strs(1,s)=="rhsfns" && exist(fullfile(fpath,fn),'dir')
         fstr = fullfile(fpath,fn);
         sfolder = dir(fstr);
@@ -982,6 +1001,7 @@ for s=1:size(strs,2)
     validate(findobj(hObject.Parent,'Tag',strs(1,s)))
 end
 guidata(hObject,vsdprops)
+
 %% main app methods
 % does the plotting and the adjusting y axis
 function loadplotwidgets(hObject,eventdata)% sets up the widgets to contain all the traces and adds file information on bottom right
