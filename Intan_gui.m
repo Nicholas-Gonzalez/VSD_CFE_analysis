@@ -703,7 +703,7 @@ if intch && vsdch
         showidx = [(1:size(intan,1)/2)  (1:size(vsd,1))+size(intan,1)];
         props.showlist = props.ch(showidx);
         props.showidx = showidx;
-        hideidx = find(cellfun(@(x) contains(x,'stim'),out.ch));
+        hideidx = find(cellfun(@(x) contains(x,'stim'),props.ch));
         props.hidelist = props.ch(hideidx);
         props.hideidx = hideidx;
         props.Max = size(props.data,1);
