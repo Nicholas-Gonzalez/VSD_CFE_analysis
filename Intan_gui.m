@@ -506,7 +506,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
     if fex(vsdprops.files(:,1)=="tiffns") && get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
         for f=1:3
             try
-                imp = imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2),'Index',f);
+                imp = double(imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2),'Index',f));
                 if f==1
                     im = zeros([size(imp) 3]);
                 end
@@ -581,7 +581,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         rfn = split(rfn,'; ');
         for r=1:length(rfn)
             if r==1
-                [data, tm, stim, ~, notes, amplifier_channels, ~ , analog] = read_Intan_RHS2000_file(rfn{r});
+                [data, tm, stim, ~, notes, amplifier_channels, adc_channels , analog] = read_Intan_RHS2000_file(rfn{r});
             else
                 [datap, tmp, stimp, ~,  ~, amplifier_channels, adc_channels , analogp] = read_Intan_RHS2000_file(rfn{r});
                 data = [data, datap];
