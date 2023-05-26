@@ -1270,6 +1270,8 @@ str = get(channelslim,'String');
 
 xlim = get(props.ax(1),'XLim');
 xidx = [find(tm>xlim(1),1), find(tm>=xlim(2),1)];
+xidx(xidx>max(tm)) = max(tm);
+xidx(xidx<min(tm)) = min(tm);
 data = props.data(idx(cidx),xidx(1):xidx(2));
 
 rng = max(range(data,2));
