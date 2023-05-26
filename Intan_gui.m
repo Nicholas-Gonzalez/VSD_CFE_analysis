@@ -1209,6 +1209,7 @@ set(allbut(isvalid(allbut)),'Enable','on');
 
 %% YLimit app
 function setylim(hObject,eventdata)
+validatech(hObject)
 props = guidata(hObject);
 aprops.intan_tag = props.intan_tag;
 
@@ -1229,7 +1230,7 @@ fig.Position(3:4) = [420 420];
 
 uicontrol('Units','normalized','Position',[0.002 0.95 0.5 0.05],'Style','text','String','Select channel [cur lower, cur upper]');
 uicontrol('Units','normalized','Position',[0.002 0.05 0.45 0.9],'Style','listbox',...
-    'Max',length(str),'Min',1,'String',str,'Tag','channelslim','Value',props.showidx(1));
+    'Max',length(str),'Min',1,'String',str,'Tag','channelslim','Value',1)
 
 
 mlw = min(lw(lw>-1));
@@ -1268,8 +1269,9 @@ channelslim = findobj(hObject.Parent,'Tag','channelslim');
 str = get(channelslim,'String');
 
 xlim = get(props.ax(1),'XLim');
-xidx = [find(tm>xlim(1),1), find(tm>xlim(2),1)];
+xidx = [find(tm>xlim(1),1), find(tm>=xlim(2),1)];
 data = props.data(idx(cidx),xidx(1):xidx(2));
+
 rng = max(range(data,2));
 lw = min(data,[],2) - rng*0.1;
 rng = rng*1.2;
