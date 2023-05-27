@@ -61,9 +61,6 @@ inpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)
 ropanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-csz(3)        insz   csz(3)                  figsize(4)-insz-menusz],'Title','ROI','Tag','ropanel');
 
 
-guidata(f,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
-                 'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
-
 % text(1000,860,'Show','Parent',it)
 uicontrol(axpanel,'Units','pixels','Position',[0 axpanel.Position(4)-40 50 40],'Style','text','FontSize',fontsz,'String',["Show","Y-axis"])
 
@@ -157,8 +154,18 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.2 0.3 0.1],'Style','pus
 
 % ======== ROI panel ==========
 uicontrol(ropanel,'Units','pixels','Position',[0 0 50 20],'Style','togglebutton','Value',1,'Tag','fillroi',...
-            'Callback',@updateroi,'String','fill ROI','Enable','off','Visible','on','ForegroundColor','w')
+            'Callback',@updateroi,'String','fill ROI','Enable','off','Visible','off','ForegroundColor','w')
+uicontrol(ropanel,'Units','pixels','Position',[50 0 40 20],'Style','togglebutton','Value',1,'Tag','red',...
+            'Callback',@updateroi,'String','Red','Enable','off','Visible','off','ForegroundColor','w')
+uicontrol(ropanel,'Units','pixels','Position',[90 0 40 20],'Style','togglebutton','Value',1,'Tag','green',...
+            'Callback',@updateroi,'String','Green','Enable','off','Visible','off','ForegroundColor','w')
+uicontrol(ropanel,'Units','pixels','Position',[130 0 40 20],'Style','togglebutton','Value',1,'Tag','blue',...
+            'Callback',@updateroi,'String','Blue','Enable','off','Visible','off','ForegroundColor','w')
+uicontrol(ropanel,'Units','pixels','Position',[170 0 60 20],'Style','pushbutton','Value',1,'Tag','newim',...
+            'Callback',@loadim,'String','Load Image','Enable','off','Visible','off')
 
+guidata(f,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
+                 'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
 
 
 function all_kframe(hObject,eventdata)
@@ -601,7 +608,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         end
 
         vsdprops.intan.data = [data;stim;analog];
-        
+
         sz = size(vsdprops.intan.data);
         vsdprops.intan.min = min(vsdprops.intan.data,[],2);
         vsdprops.intan.d2uint = repelem(2^16,sz(1),1)./range(vsdprops.intan.data,2);
@@ -612,8 +619,8 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
                     join([string((1:size(data,1))'), repelem(" stim(uA)",size(data,1),1)])];
         [path,file] = fileparts(rfn);
 
-        vsdprops.intan.finfo.file = join(file,';  ');
-        vsdprops.intan.finfo.path = join(path,';  ');
+        vsdprops.intan.finfo.file = join(file,'; ');
+        vsdprops.intan.finfo.path = join(path,'; ');
         if isa(rfn,'cell')
             finfo = dir(rfn{1});
         end
@@ -700,7 +707,7 @@ if intch && vsdch
         
         props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
         props.tm = itm;
-        showidx = [(1:size(intan,1)/2)  (1:size(vsd,1))+size(intan,1)];
+        showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
         props.showlist = props.ch(showidx);
         props.showidx = showidx;
         hideidx = find(cellfun(@(x) contains(x,'stim'),props.ch));
@@ -1082,6 +1089,10 @@ end
 
 if isfield(props,'im')
     set(findobj(props.ropanel,'Tag','fillroi'),'Enable','on','Visible','on')
+    set(findobj(props.ropanel,'Tag','red'),'Enable','on','Visible','on')
+    set(findobj(props.ropanel,'Tag','green'),'Enable','on','Visible','on')
+    set(findobj(props.ropanel,'Tag','blue'),'Enable','on','Visible','on')
+    set(findobj(props.ropanel,'Tag','newim'),'Enable','on','Visible','on')
 end
 set(findobj(hObject.Parent,'Tag','savem'),'Enable','on');
 set(findobj(props.chpanel,'Tag','showgraph'),'Enable','on');
@@ -3691,25 +3702,128 @@ props.video.xlim = get(plt.Parent,'XLim');
 guidata(intan,props)
 
 %% vsd frame image and ROI methods
+function loadim(hObject,eventdata)
+props = guidata(hObject);
+[file, path, ~] = uigetfile({'*.tif';'.png';'.jpeg'},'Select file','MultiSelect','off');
+if ~any(file); return;end
+for f=1:3
+    try
+        imp = double(imread(fullfile(path,file),'Index',f));
+        if f==1
+            im = zeros([size(imp) 3]);
+        end
+        im(:,:,f) = imp/max(imp,[],'all');
+    catch
+        im(:,:,f) = im(:,:,1);
+    end
+end
+
+fig = figure('MenuBar','none');
+fig.Position([3 4]) = [700 200];
+
+axes('Position',[0.6 0 0.4 1])
+imex = imshow(im);
+
+[path0,file0,ext0] = fileparts(props.files{1,2});
+uicontrol(fig,"Units","normalized","Position",[0.1 0.8 0.17 0.1], "Style","text","String",[file0,ext0],"FontSize",8)
+uicontrol(fig,"Units","normalized","Position",[0.27 0.8 0.17 0.1], "Style","text","String",file,"FontSize",8)
+uicontrol(fig,"Units","normalized","Position",[0.44 0.8 0.16 0.1], "Style","text","String",'none',"FontSize",8)
+
+uicontrol(fig,"Units","normalized","Position",[0 0.55 0.1 0.2], "Style","text","String","Red","FontSize",10)
+Rg = uibuttongroup(fig,'Units','normalized','Position',[0.1 0.6 0.5 0.2],'BorderType','none','Tag','redchannel');
+uicontrol(Rg,"Units","normalized","Position",[0.16 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"String",[])
+uicontrol(Rg,"Units","normalized","Position",[0.49 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"Value",1,"String",[])
+uicontrol(Rg,"Units","normalized","Position",[0.82 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"String",[])
+
+uicontrol(fig,"Units","normalized","Position",[0 0.35 0.1 0.2], "Style","text","String","Green","FontSize",10)
+Gg = uibuttongroup(fig,'Units','normalized','Position',[0.1 0.4 0.5 0.2],'BorderType','none','Tag','greenchannel');
+uicontrol(Gg,"Units","normalized","Position",[0.16 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"String",[])
+uicontrol(Gg,"Units","normalized","Position",[0.49 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"Value",1,"String",[])
+uicontrol(Gg,"Units","normalized","Position",[0.82 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"String",[])
+
+uicontrol(fig,"Units","normalized","Position",[0 0.15 0.1 0.2], "Style","text","String","Blue","FontSize",10)
+Bg = uibuttongroup(fig,'Units','normalized','Position',[0.1 0.2 0.5 0.2],'BorderType','none','Tag','bluechannel');
+uicontrol(Bg,"Units","normalized","Position",[0.16 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"String",[])
+uicontrol(Bg,"Units","normalized","Position",[0.49 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"Value",1,"String",[])
+uicontrol(Bg,"Units","normalized","Position",[0.82 0 0.33 1], "Style","radiobutton",...
+    "Callback",@update_example,"String",[])
+
+uicontrol(fig,"Units","normalized","Position",[0.4 0 0.2 0.1], "Style","pushbutton","String","Update",...
+    "Callback",@replaceim,"FontSize",8)
+
+guidata(fig,struct('intan_tag',props.intan_tag,'im',im,'im0',props.im,'imex',imex));
+
+function update_example(hObject,eventdata)
+aprops = guidata(hObject);
+
+cim = cat(4,aprops.im0, aprops.im, zeros(size(aprops.im)));
+im = zeros(size(aprops.im));
+
+bg = get(get(findobj(hObject.Parent.Parent,'Tag','redchannel'),'Child'),'Value');
+bg = find(flipud(ismember(string(bg),'1')));
+im(:,:,1) = cim(:,:,1,bg);
+
+bg = get(get(findobj(hObject.Parent.Parent,'Tag','greenchannel'),'Child'),'Value');
+bg = find(flipud(ismember(string(bg),'1')));
+im(:,:,2) = cim(:,:,2,bg);
+
+bg = get(get(findobj(hObject.Parent.Parent,'Tag','bluechannel'),'Child'),'Value');
+bg = find(flipud(ismember(string(bg),'1')));
+im(:,:,3) = cim(:,:,3,bg);
+
+set(aprops.imex,'CData',im)
+
+
+function replaceim(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+props.im = get(aprops.imex,'CData');
+guidata(intan,props)
+close(hObject.Parent)
+updateroi(intan)
 
 function updateroi(hObject,eventdata)
-
 props = guidata(hObject);
-a = 0.7;
-b = 0.85;
-c = 0.95;
-props.color = [1    a   a;...
-               a    1   a;...
-               a    a   1;...
-               1    b   b;...
-               b    1   b;...
-               b    b   1;...
-               1    c   b;...
-               c	1   b;...
-               c    b   1;...
-               1    b   c;...
-               b    1   c;...
-               b    c   1];
+
+redch = get(findobj(hObject.Parent,'Tag','red'),'Value');
+greench = get(findobj(hObject.Parent,'Tag','green'),'Value');
+bluech = get(findobj(hObject.Parent,'Tag','blue'),'Value');
+
+imch = any(props.im,[1 2]);
+
+if ~all([redch, greench, bluech, squeeze(imch)'])
+    a = 0.10;
+    b = 0.10;
+    c = 0.10;
+    d = 0.3;
+else
+    a = 0.7;
+    b = 0.85;
+    c = 0.95;
+    d = 1;
+end
+
+props.color = [d    a   a;...
+               a    d   a;...
+               a    a   d;...
+               d    b   b;...
+               b    d   b;...
+               b    b   d;...
+               d    c   b;...
+               c	d   b;...
+               c    b   d;...
+               d    b   c;...
+               b    d   c;...
+               b    c   d];
 
 
 if ~isfield(props,'roi')
@@ -3727,11 +3841,28 @@ end
 roidx = props.showlist(contains(props.showlist,'V-'));
 roidx = str2double(replace(roidx,'V-',''));
 
-if get(findobj(props.ropanel,'Tag','fillroi'),'Value')
-    im = props.im;
+im = props.im;
+
+if redch
     R = im(:,:,1)';
+else
+    R = zeros(size(im,[1 2]));
+end
+
+if greench
     G = im(:,:,2)';
+else
+    G = zeros(size(im,[1 2]));
+end
+
+if bluech
     B = im(:,:,3)';
+else
+    B = zeros(size(im,[1 2]));
+end
+
+
+if get(findobj(props.ropanel,'Tag','fillroi'),'Value')
     cnt = 1;
     for r = roidx'
         if r<length(props.kernpos)
@@ -3743,16 +3874,22 @@ if get(findobj(props.ropanel,'Tag','fillroi'),'Value')
 
 
         cnt(cnt>size(props.color,1)) = 1; %#ok<AGROW>
-        R(pix) = R(pix).*props.color(cnt,1); 
-        G(pix) = G(pix).*props.color(cnt,2); 
-        B(pix) = B(pix).*props.color(cnt,3); 
+        if ~all([redch, greench, bluech, squeeze(imch)'])
+            R(pix) = R(pix) + props.color(cnt,1); 
+            G(pix) = G(pix) + props.color(cnt,2); 
+            B(pix) = B(pix) + props.color(cnt,3); 
+        else
+            R(pix) = R(pix).*props.color(cnt,1); 
+            G(pix) = G(pix).*props.color(cnt,2); 
+            B(pix) = B(pix).*props.color(cnt,3); 
+        end
         cnt = cnt+1;
 
     end
-    props.imsh.CData = cat(3,R',G',B');
-else
-    props.imsh.CData = props.im;
 end
+
+props.imsh.CData = cat(3,R',G',B');
+
 % props.imsh.Parent.XLim = [0 size(props.im,2)];
 for r=1:length(props.kernpos)
     if any(roidx==r) || r>length(props.roi)
