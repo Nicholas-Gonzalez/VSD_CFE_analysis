@@ -3822,6 +3822,9 @@ aprops = guidata(hObject);
 intan = findobj('Tag',aprops.intan_tag);
 props = guidata(intan);
 props.im = get(aprops.imex,'CData');
+props.imadj.imback = get(aprops.imex,'CData');
+props.imadj.params = [0 1;0 1; 0 1];
+props.imadj.params_back = [0 1;0 1; 0 1];
 guidata(intan,props)
 close(hObject.Parent)
 updateroi(intan)
@@ -3997,13 +4000,13 @@ for c=1:3
     ax(c) = axes('Units','normalized','Position',[0.05 (c-1)/3.2+0.06  0.9  0.23]);
     [N,edges] = histcounts(props.imadj.imback(:,:,4-c),linspace(0,1,129));
     bar(edges(1:end-1),N,'FaceColor',color(4-c),'EdgeColor','none');hold on
-    pos = [props.imadj.params(c,1),  1,  diff(props.imadj.params(c,:)),   max(N)];
+    pos = [props.imadj.params(4-c,1),  1,  diff(props.imadj.params(4-c,:)),   max(N)];
     rec(c) = rectangle("Position",pos,"FaceColor",[0.7 0.7 0.7 0.5]);hold on
     uicontrol('Units','normalized','Position',[0.02 (c-1)/3.2+0.03  0.96  0.03],'Style','slider',...
-        'Min',0,'Max',1,'Value',props.imadj.params(c,1),'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
+        'Min',0,'Max',1,'Value',props.imadj.params(4-c,1),'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
         "Callback",@adjrec,'Tag',[num2str(c) 'v1'])
     uicontrol('Units','normalized','Position',[0.02 (c-1)/3.2  0.96  0.03],'Style','slider',...
-        'Min',0,'Max',1,'Value',props.imadj.params(c,2),'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
+        'Min',0,'Max',1,'Value',props.imadj.params(4-c,2),'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
          "Callback",@adjrec,'Tag',[num2str(c) 'v2'])
 end
 set(ax,'XTick',[],'YTick',[])
@@ -4048,8 +4051,8 @@ im = (im - lw)/up;
 im(im>1) = 1;
 im(im<0) = 0;
 props.im(:,:,imch) = im;
-props.imadj.params(ch,:) = [lw up];
-aprops.rec(imch).Position([1 3]) = [lw,  diff([lw up])];
+props.imadj.params(imch,:) = [lw up];
+aprops.rec(ch).Position([1 3]) = [lw,  diff([lw up])];
 guidata(intan,props)
 updateroi(intan)
 
