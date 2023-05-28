@@ -382,10 +382,12 @@ vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
 
-if isfield(matprops.props,'imback')
-    vsdprops.matprops.imback = matprops.props.imback;
+if isfield(matprops.props,'imadj')
+    vsdprops.matprops.imadj = matprops.props.imadj;
 else
-    vsdprops.matprops.imback = matprops.props.im;
+    vsdprops.matprops.imadj.imback = matprops.props.im;
+    vsdprops.matprops.imadj.params = [0 1;0 1;0 1];
+    vsdprops.matprops.imadj.params_back = [0 1;0 1;0 1];
 end
 
 if isfield(matprops.props,'log')
@@ -786,10 +788,10 @@ if intch && vsdch
             for f=1:length(fields)
                 props.(fields{f}) = vsdprops.matprops.(fields{f});
             end
-            if ~isfield(props,'imback')
-                props.imback = props.im;
-            end
-
+%             if ~isfield(props,'imback')
+%                 props.imback = props.im;
+%             end
+ 
             props.finfo.files = vsdprops.files;
             props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');
 
@@ -855,6 +857,8 @@ props.newim = true;
 
 if isfield(vsdprops,'im')
     props.im = vsdprops.im;
+    props.imadj.imback = vsdprops.im;
+    props.imadj.params = [0 1;0 1;0 1];
 end
 
 if isfield(vsdprops,'det')
@@ -3981,56 +3985,71 @@ colorbar
 
 function adjcontrast(hObject,eventdata)
 props = guidata(hObject);
-% <--- need to load temp params ---------------------
 fig = figure('MenuBar','none');
 fig.Position([3 4]) = [500 400];
 
 uicontrol('Units','normalized','Position',[0.3 0.92 0.2 0.07],'Style','pushbutton','String','Reset',...
-    'Callback',@resetim,'Tooltip','Reset to the way it was when file was opened')
+    'Callback',@resetim,'Tag','resetim','Tooltip','Reset to the way it was when file was opened')
 uicontrol('Units','normalized','Position',[0.5 0.92 0.2 0.07],'Style','pushbutton','String','Undo',...
-    'Callback',@undoim,'Tooltip','Reset to the way it was before you opened this adjustment window')
+    'Callback',@resetim,'Tag','undoim','Tooltip','Reset to the way it was before you opened this adjustment window')
 color = 'rgb';
 for c=1:3
     ax(c) = axes('Units','normalized','Position',[0.05 (c-1)/3.2+0.06  0.9  0.23]);
-    [N,edges] = histcounts(props.im(:,:,4-c),linspace(0,1,129));
+    [N,edges] = histcounts(props.imadj.imback(:,:,4-c),linspace(0,1,129));
     bar(edges(1:end-1),N,'FaceColor',color(4-c),'EdgeColor','none');hold on
-    rec(c) = rectangle("Position",[0 0 1 max(N)],"FaceColor",[0.7 0.7 0.7 0.5]);hold on
+    pos = [props.imadj.params(c,1),  1,  diff(props.imadj.params(c,:)),   max(N)];
+    rec(c) = rectangle("Position",pos,"FaceColor",[0.7 0.7 0.7 0.5]);hold on
     uicontrol('Units','normalized','Position',[0.02 (c-1)/3.2+0.03  0.96  0.03],'Style','slider',...
-        'Min',0,'Max',1,'Value',0,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
-        "Callback",@adjrec,'Tag',[num2str(c) '1'])
+        'Min',0,'Max',1,'Value',props.imadj.params(c,1),'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
+        "Callback",@adjrec,'Tag',[num2str(c) 'v1'])
     uicontrol('Units','normalized','Position',[0.02 (c-1)/3.2  0.96  0.03],'Style','slider',...
-        'Min',0,'Max',1,'Value',1,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
-         "Callback",@adjrec,'Tag',[num2str(c) '2'])
+        'Min',0,'Max',1,'Value',props.imadj.params(c,2),'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
+         "Callback",@adjrec,'Tag',[num2str(c) 'v2'])
 end
 set(ax,'XTick',[],'YTick',[])
 guidata(fig,struct('rec',rec,'intan_tag',props.intan_tag,'im0',props.im))
 
-props.imtemp = props.im;% <------ need to save temp params ----------
+props.imadj.imtemp = props.im;
+props.imadj.params_temp = props.imadj.params;
 guidata(hObject,props)
+
+function resetim(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+
+if strcmp(hObject.Tag,'resetim')
+    props.imadj.params = props.imadj.params_back;
+    props.im = props.imadj.imback;
+else
+    props.imadj.params = props.imadj.params_temp;
+    props.im = props.imadj.imtemp;
+end
+
+for c=1:3
+    for v=1:2
+        set(findobj(hObject.Parent,'Tag',[num2str(c) 'v' num2str(v)]),'Value',props.imadj.params(4-c,v) )
+        aprops.rec(c).Position([1 3]) = [props.imadj.params(4-c,1),  diff(props.imadj.params(4-c,:))];
+    end
+end
+guidata(intan,props)
+updateroi(intan)
 
 function adjrec(hObject,eventdata)
 aprops = guidata(hObject);
 intan = findobj('Tag',aprops.intan_tag);
 props = guidata(intan);
 ch = str2double(hObject.Tag(1));
-vidx = str2double(hObject.Tag(2));
-val = hObject.Value;
+lw = get(findobj(hObject.Parent,'Tag',[num2str(ch) 'v1']),'Value');
+up = get(findobj(hObject.Parent,'Tag',[num2str(ch) 'v2']),'Value');
 imch = 4-ch;
-im = props.imback(:,:,imch);
-maxim = max(im,[],'all');
-if vidx==1
-    pos = aprops.rec(ch).Position([1 3]);
-    cw = pos(2) + (pos(1) - val);
-    aprops.rec(ch).Position([1 3]) = [val cw];
-    im = (im - val)*maxim/(maxim - val);
-else
-    pos = aprops.rec(ch).Position(1);
-    aprops.rec(ch).Position(3) = val - pos(1);
-    im = im*maxim/(maxim - val);
-end
+im = props.imadj.imback(:,:,imch);
+im = (im - lw)/up;
 im(im>1) = 1;
 im(im<0) = 0;
 props.im(:,:,imch) = im;
+props.imadj.params(ch,:) = [lw up];
+aprops.rec(imch).Position([1 3]) = [lw,  diff([lw up])];
 guidata(intan,props)
 updateroi(intan)
 
