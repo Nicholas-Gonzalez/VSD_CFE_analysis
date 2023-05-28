@@ -3832,9 +3832,10 @@ updateroi(intan)
 function updateroi(hObject,eventdata)
 props = guidata(hObject);
 
-redch = get(findobj(hObject.Parent,'Tag','red'),'Value');
-greench = get(findobj(hObject.Parent,'Tag','green'),'Value');
-bluech = get(findobj(hObject.Parent,'Tag','blue'),'Value');
+fig = ancestor(hObject,'figure','toplevel');
+redch = get(findobj(fig,'Tag','red'),'Value');
+greench = get(findobj(fig,'Tag','green'),'Value');
+bluech = get(findobj(fig,'Tag','blue'),'Value');
 
 imch = any(props.im,[1 2]);
 
@@ -4055,7 +4056,6 @@ props.imadj.params(imch,:) = [lw up];
 aprops.rec(ch).Position([1 3]) = [lw,  diff([lw up])];
 guidata(intan,props)
 updateroi(intan)
-
 
 %% misc methods
 function printlog(hObject,eventdata)
