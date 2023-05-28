@@ -382,6 +382,12 @@ vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
 
+if isfield(matprops.props,'imback')
+    vsdprops.matprops.imback = matprops.props.imback;
+else
+    vsdprops.matprops.imback = matprops.props.im;
+end
+
 if isfield(matprops.props,'log')
     vsdprops.matprops.log = matprops.props.log;
 end
@@ -775,10 +781,15 @@ if intch && vsdch
             end
         else
             fields = fieldnames(vsdprops.matprops);
-            fields(ismember(fields,{'video','data'})) = [];
+
+            fields(ismember(fields,{'video','data'})) = [];% set all fields
             for f=1:length(fields)
                 props.(fields{f}) = vsdprops.matprops.(fields{f});
             end
+            if ~isfield(props,'imback')
+                props.imback = props.im;
+            end
+
             props.finfo.files = vsdprops.files;
             props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');
 
@@ -3970,20 +3981,58 @@ colorbar
 
 function adjcontrast(hObject,eventdata)
 props = guidata(hObject);
-
+% <--- need to load temp params ---------------------
 fig = figure('MenuBar','none');
 fig.Position([3 4]) = [500 400];
 
+uicontrol('Units','normalized','Position',[0.3 0.92 0.2 0.07],'Style','pushbutton','String','Reset',...
+    'Callback',@resetim,'Tooltip','Reset to the way it was when file was opened')
+uicontrol('Units','normalized','Position',[0.5 0.92 0.2 0.07],'Style','pushbutton','String','Undo',...
+    'Callback',@undoim,'Tooltip','Reset to the way it was before you opened this adjustment window')
 color = 'rgb';
 for c=1:3
-    ax(c) = axes('Units','normalized','Position',[0.05 (c-1)/3+0.07  0.9  0.25]);
-    histogram(props.im(:,:,4-c),'FaceColor',color(4-c),'EdgeColor','none')
-    uicontrol('Units','normalized','Position',[0.05 (c-1)/3+0.04  0.9  0.03],'Style','slider',...
-        'Min',0,'Max',1,'Value',0,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7])
-    uicontrol('Units','normalized','Position',[0.05 (c-1)/3+0.01  0.9  0.03],'Style','slider',...
-        'Min',0,'Max',1,'Value',1,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7])
+    ax(c) = axes('Units','normalized','Position',[0.05 (c-1)/3.2+0.06  0.9  0.23]);
+    [N,edges] = histcounts(props.im(:,:,4-c),linspace(0,1,129));
+    bar(edges(1:end-1),N,'FaceColor',color(4-c),'EdgeColor','none');hold on
+    rec(c) = rectangle("Position",[0 0 1 max(N)],"FaceColor",[0.7 0.7 0.7 0.5]);hold on
+    uicontrol('Units','normalized','Position',[0.02 (c-1)/3.2+0.03  0.96  0.03],'Style','slider',...
+        'Min',0,'Max',1,'Value',0,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
+        "Callback",@adjrec,'Tag',[num2str(c) '1'])
+    uicontrol('Units','normalized','Position',[0.02 (c-1)/3.2  0.96  0.03],'Style','slider',...
+        'Min',0,'Max',1,'Value',1,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7],...
+         "Callback",@adjrec,'Tag',[num2str(c) '2'])
 end
 set(ax,'XTick',[],'YTick',[])
+guidata(fig,struct('rec',rec,'intan_tag',props.intan_tag,'im0',props.im))
+
+props.imtemp = props.im;% <------ need to save temp params ----------
+guidata(hObject,props)
+
+function adjrec(hObject,eventdata)
+aprops = guidata(hObject);
+intan = findobj('Tag',aprops.intan_tag);
+props = guidata(intan);
+ch = str2double(hObject.Tag(1));
+vidx = str2double(hObject.Tag(2));
+val = hObject.Value;
+imch = 4-ch;
+im = props.imback(:,:,imch);
+maxim = max(im,[],'all');
+if vidx==1
+    pos = aprops.rec(ch).Position([1 3]);
+    cw = pos(2) + (pos(1) - val);
+    aprops.rec(ch).Position([1 3]) = [val cw];
+    im = (im - val)*maxim/(maxim - val);
+else
+    pos = aprops.rec(ch).Position(1);
+    aprops.rec(ch).Position(3) = val - pos(1);
+    im = im*maxim/(maxim - val);
+end
+im(im>1) = 1;
+im(im<0) = 0;
+props.im(:,:,imch) = im;
+guidata(intan,props)
+updateroi(intan)
 
 
 %% misc methods
