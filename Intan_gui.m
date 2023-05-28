@@ -161,8 +161,12 @@ uicontrol(ropanel,'Units','pixels','Position',[90 0 40 20],'Style','togglebutton
             'Callback',@updateroi,'String','Green','Enable','off','Visible','off','ForegroundColor','w')
 uicontrol(ropanel,'Units','pixels','Position',[130 0 40 20],'Style','togglebutton','Value',1,'Tag','blue',...
             'Callback',@updateroi,'String','Blue','Enable','off','Visible','off','ForegroundColor','w')
-uicontrol(ropanel,'Units','pixels','Position',[170 0 60 20],'Style','pushbutton','Value',1,'Tag','newim',...
+uicontrol(ropanel,'Units','pixels','Position',[170 0 60 20],'Style','pushbutton','Tag','newim',...
             'Callback',@loadim,'String','Load Image','Enable','off','Visible','off')
+uicontrol(ropanel,'Units','pixels','Position',[230 0 80 20],'Style','pushbutton','Tag','adjcont',...
+            'Callback',@adjcontrast,'String','Contrast','Enable','off','Visible','off')
+
+
 
 guidata(f,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
                  'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
@@ -1093,6 +1097,7 @@ if isfield(props,'im')
     set(findobj(props.ropanel,'Tag','green'),'Enable','on','Visible','on')
     set(findobj(props.ropanel,'Tag','blue'),'Enable','on','Visible','on')
     set(findobj(props.ropanel,'Tag','newim'),'Enable','on','Visible','on')
+    set(findobj(props.ropanel,'Tag','adjcont'),'Enable','on','Visible','on')
 end
 set(findobj(hObject.Parent,'Tag','savem'),'Enable','on');
 set(findobj(props.chpanel,'Tag','showgraph'),'Enable','on');
@@ -3706,17 +3711,20 @@ function loadim(hObject,eventdata)
 props = guidata(hObject);
 [file, path, ~] = uigetfile({'*.tif';'.png';'.jpeg'},'Select file','MultiSelect','off');
 if ~any(file); return;end
-for f=1:3
-    try
-        imp = double(imread(fullfile(path,file),'Index',f));
-        if f==1
-            im = zeros([size(imp) 3]);
-        end
-        im(:,:,f) = imp/max(imp,[],'all');
-    catch
-        im(:,:,f) = im(:,:,1);
+
+im = loadit(path,file);
+while ~all(size(im)==size(props.im)) && ~isempty(file)
+    if size(im,1)/size(props.im,1)==size(im,2)/size(props.im,2)
+        im = imresize(im,size(props.im,1)/size(im,1));
+        disp('Changed the image size to size of VSD frames')
+    else
+        msgbox('Image not the same aspect ratio as the VSD file')
+        [file, path, ~] = uigetfile({'*.tif';'.png';'.jpeg'},'Select file','MultiSelect','off');
+        if isempty(file);return;end
+        im = loadit(path,file);
     end
 end
+
 
 fig = figure('MenuBar','none');
 fig.Position([3 4]) = [700 200];
@@ -3761,6 +3769,19 @@ uicontrol(fig,"Units","normalized","Position",[0.4 0 0.2 0.1], "Style","pushbutt
 
 guidata(fig,struct('intan_tag',props.intan_tag,'im',im,'im0',props.im,'imex',imex));
 
+function im = loadit(path,file)
+for f=1:3
+    try
+        imp = double(imread(fullfile(path,file),'Index',f));
+        if f==1
+            im = zeros([size(imp) 3]);
+        end
+        im(:,:,f) = imp/max(imp,[],'all');
+    catch
+        im(:,:,f) = im(:,:,1);
+    end
+end
+
 function update_example(hObject,eventdata)
 aprops = guidata(hObject);
 
@@ -3780,7 +3801,6 @@ bg = find(flipud(ismember(string(bg),'1')));
 im(:,:,3) = cim(:,:,3,bg);
 
 set(aprops.imex,'CData',im)
-
 
 function replaceim(hObject,eventdata)
 aprops = guidata(hObject);
@@ -3947,6 +3967,24 @@ subplot(2,1,2)
 ims = imtile(imdata);
 imagesc(ims)
 colorbar
+
+function adjcontrast(hObject,eventdata)
+props = guidata(hObject);
+
+fig = figure('MenuBar','none');
+fig.Position([3 4]) = [500 400];
+
+color = 'rgb';
+for c=1:3
+    ax(c) = axes('Units','normalized','Position',[0.05 (c-1)/3+0.07  0.9  0.25]);
+    histogram(props.im(:,:,4-c),'FaceColor',color(4-c),'EdgeColor','none')
+    uicontrol('Units','normalized','Position',[0.05 (c-1)/3+0.04  0.9  0.03],'Style','slider',...
+        'Min',0,'Max',1,'Value',0,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7])
+    uicontrol('Units','normalized','Position',[0.05 (c-1)/3+0.01  0.9  0.03],'Style','slider',...
+        'Min',0,'Max',1,'Value',1,'SliderStep',[0.004 0.016],'BackgroundColor',[0.7 0.7 0.7])
+end
+set(ax,'XTick',[],'YTick',[])
+
 
 %% misc methods
 function printlog(hObject,eventdata)
