@@ -627,7 +627,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         vsdprops.intan.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'uint16');
 
         vsdprops.intan.ch = [string({amplifier_channels.native_channel_name})';...
-                            string({adc_channels.custom_channel_name})';...
+                            string({adc_channels.native_channel_name})';...
                     join([string((1:size(data,1))'), repelem(" stim(uA)",size(data,1),1)])];
         [path,file] = fileparts(rfn);
 
@@ -639,7 +639,19 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         vsdprops.intan.finfo.date = finfo.date;
         vsdprops.intan.finfo.duration = max(vsdprops.intan.tm);
         
+        if isfield(vsdprops,'note') && exist('det','var')
+            [~, basefn, ~] = fileparts(det); 
+            note1 = vsdprops.note(vsdprops.note(:,1)==basefn,3);
+            nfn = fieldnames(notes);
+            for n=1:length(nfn)
+                if isempty(notes.(nfn{n}))
+                    notes.(nfn{n}) = note1;
+                    break
+                end
+            end
+        end
         vsdprops.intan.notes = notes;
+        
         set(rhs_prog,'String','loaded','ForegroundColor','k')
     elseif  get(findobj('Tag','rhsc'),'Value')==1
         set(findobj(hObject.Parent,'Tag','rhsp'),'String',"not found",'ForegroundColor','r');
@@ -711,8 +723,10 @@ if intch && vsdch
             for c=1:length(vsdprops.intan.ch)
                 nstr = replace(vsdprops.intan.ch(c),'A-','A');
                 idx = contains(vsdprops.note(:,1),nstr);
-                if any(idx) && ~ismissing(vsdprops.note(idx,2))           
-                    vsdprops.intan.ch(c) = join([replace(vsdprops.intan.ch(c),'-0','') vsdprops.note(idx,2)],'-');
+                if any(idx) && ~ismissing(vsdprops.note(idx,2))  
+                    nsp = replace(vsdprops.intan.ch(c),'-0','');
+                    nsp = replace(nsp,'ALOG-IN','');
+                    vsdprops.intan.ch(c) = join([nsp vsdprops.note(idx,2)],'-');
                 end
             end
         end
@@ -834,6 +848,17 @@ elseif vsdch
     props.log = string(['loaded data on ',char(datetime)]);
     props.curdir = fileparts(filename);
 else
+    if isfield(vsdprops,'note')
+        for c=1:length(vsdprops.intan.ch)
+            nstr = replace(vsdprops.intan.ch(c),'A-','A');
+            idx = contains(vsdprops.note(:,1),nstr);
+            if any(idx) && ~ismissing(vsdprops.note(idx,2))           
+                nsp = replace(vsdprops.intan.ch(c),'-0','');
+                nsp = replace(nsp,'ALOG-IN','');
+                vsdprops.intan.ch(c) = join([nsp vsdprops.note(idx,2)],'-');
+            end
+        end
+    end
     nch = length(vsdprops.intan.ch);
     props.ch = vsdprops.intan.ch;
     props.tm = vsdprops.intan.tm;
@@ -3782,7 +3807,8 @@ uicontrol(Bg,"Units","normalized","Position",[0.82 0 0.33 1], "Style","radiobutt
 uicontrol(fig,"Units","normalized","Position",[0.4 0 0.2 0.1], "Style","pushbutton","String","Update",...
     "Callback",@replaceim,"FontSize",8)
 
-guidata(fig,struct('intan_tag',props.intan_tag,'im',im,'im0',props.im,'imex',imex));
+guidata(fig,struct('intan_tag',props.intan_tag,'im',im,'im0',props.im,'imex',imex,...
+    'file',fullfile(path,file),'imsel',[2 2 2]));
 
 function im = loadit(path,file)
 for f=1:3
@@ -3806,15 +3832,19 @@ im = zeros(size(aprops.im));
 bg = get(get(findobj(hObject.Parent.Parent,'Tag','redchannel'),'Child'),'Value');
 bg = find(flipud(ismember(string(bg),'1')));
 im(:,:,1) = cim(:,:,1,bg);
+aprops.imsel(1) = bg;
 
 bg = get(get(findobj(hObject.Parent.Parent,'Tag','greenchannel'),'Child'),'Value');
 bg = find(flipud(ismember(string(bg),'1')));
 im(:,:,2) = cim(:,:,2,bg);
+aprops.imsel(2) = bg;
 
 bg = get(get(findobj(hObject.Parent.Parent,'Tag','bluechannel'),'Child'),'Value');
 bg = find(flipud(ismember(string(bg),'1')));
 im(:,:,3) = cim(:,:,3,bg);
+aprops.imsel(3) = bg;
 
+guidata(hObject,aprops)
 set(aprops.imex,'CData',im)
 
 function replaceim(hObject,eventdata)
@@ -3825,6 +3855,15 @@ props.im = get(aprops.imex,'CData');
 props.imadj.imback = get(aprops.imex,'CData');
 props.imadj.params = [0 1;0 1; 0 1];
 props.imadj.params_back = [0 1;0 1; 0 1];
+imsel = find(aprops.imsel==2);
+selstr = ["red","green","blue"];
+substr = char(join(selstr(imsel),' and '));
+str = [substr ' channels replaced with ' substr ' of ' fullfile(path,file)];
+imsel = find(aprops.imsel==3);
+selstr = ["red","green","blue"];
+substr = char(join(selstr(imsel),' and '));
+str = [substr ' channels replaced with zeros'];
+props.log = [props.log; str]
 guidata(intan,props)
 close(hObject.Parent)
 updateroi(intan)
