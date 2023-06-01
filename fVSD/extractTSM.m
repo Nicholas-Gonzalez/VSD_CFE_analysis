@@ -1,4 +1,4 @@
-function [data,tm,info,imdata,imtm,imdataf] = extractTSM(fpath, detpath, pixelparam,pixelfun)
+function [data,tm,info,imdata,imtm] = extractTSM(fpath, detpath, pixelparam,pixelfun)
 
 if nargin==0
     [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
@@ -79,7 +79,6 @@ rec = rectangle('Position',[0 0 0 1],'FaceColor','b');
 pause(0.01)
 
 imdata = nan(ysize,xsize,numChunks);
-imdataf = nan(ysize,xsize,numChunks);
 shutter = nan(zsize,1);
 tic
 for a = 1:numChunks
@@ -113,7 +112,6 @@ for a = 1:numChunks
         imdata(:,:,a) = reshape(dataChunk(:,1),ysize,xsize);   
         imdatafp = pixelfun(pixelparam(:,idx,1), pixelparam(:,idx,2), pixelparam(:,idx,3),...
             pixelparam(:,idx,4), chunktm(:,idx)+a*chunkLength*sr);
-        imdataf(:,:,a) = reshape(imdatafp(:,1),ysize,xsize); 
         dataChunk = dataChunk - imdatafp;
     end
     

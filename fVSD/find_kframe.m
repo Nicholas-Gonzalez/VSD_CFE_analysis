@@ -124,6 +124,12 @@ end
 idx=I+sum(dist_mean(1:I-1)==0);
 frame=real_frm(idx)*round(all_frm / numfrm);
 frame_pic=pic(:,:,idx);
+
+imwrite(pic(:,:,1),fullfile(folder,[fname  '_imstack.tif']))
+for i=2:size(pic,3)
+    imwrite(pic(:,:,i),fullfile(folder,[fname  '_imstack.tif']),'WriteMode','append')
+end
+
 imwrite(frame_pic,fullfile(folder, [fname  '_frame.tif']))
 save(fullfile(folder, [fname '_' date]),'frame','frame_pic')
 

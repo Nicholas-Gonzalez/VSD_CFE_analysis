@@ -61,9 +61,6 @@ inpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)
 ropanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-csz(3)        insz   csz(3)                  figsize(4)-insz-menusz],'Title','ROI','Tag','ropanel');
 
 
-% text(1000,860,'Show','Parent',it)
-uicontrol(axpanel,'Units','pixels','Position',[0 axpanel.Position(4)-40 50 40],'Style','text','FontSize',fontsz,'String',["Show","Y-axis"])
-
 % ======== channel panel ==========
 uicontrol(chpanel,'Units','normalized','Position',[0 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Show')
 uicontrol(chpanel,'Units','normalized','Position',[0 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
@@ -87,66 +84,66 @@ uicontrol(chpanel,'Units','normalized','Position',[0.45 0.45 0.1 0.04],'Style','
   
 % ======== control panel ==========
 
-uicontrol(cmpanel,'Units','normalized','Position',[0 0.9 0.20 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.9 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@autoscale,'String','autoscale xy','Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0.20 0.9 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.19 0.9 0.07 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@autoscale,'String','x','Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0.25 0.9 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.26 0.9 0.07 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@autoscale,'String','y','Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0 0.8 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.8 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@centerbl,'String','center zeros','Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0 0.7 0.15 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.7 0.165 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@zoom,'String',[char(8593) ' y-scale'],'Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0.15 0.7 0.15 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.165 0.7 0.165 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@zoom,'String',[char(8595) ' y-scale'],'Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@setylim,'String','set y-limits','Enable','off');
 
           
-uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@remove_artifact,'String','Remove Artifact','Enable','off',...
               'TooltipString','Attempts to remove artifact by stimulation.  Sometimes it is not effective');
-uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.8 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.8 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@edit_undo,'String','Edit undo','Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.7 0.3 0.1],'Style','pushbutton','Tag','adjust_not_finished',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.7 0.33 0.1],'Style','pushbutton','Tag','adjust_not_finished',...
               'Callback',@decimateit,'String','Reduce sampling','Enable','off',...
               'TooltipString','Reduces the number or samples by half using the decimate function');
-uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.6 0.3 0.1],'Style','pushbutton','Tag','filter',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.6 0.33 0.1],'Style','pushbutton','Tag','filter',...
               'Callback',@filterit,'String','Filter','Enable','off',...
               'Tag','filter','TooltipString','Filters the data');
 
 
-uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.9 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@xcorrelation,'String','XCorr','Enable','off',...
               'Tag','filter','TooltipString','Calculates the cross correlation');
-uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.8 0.2 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.8 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@spiked,'String','spike detection','Enable','off',...
               'Tag','filter','Tooltip','detect spike activity in the traces');
-uicontrol(cmpanel,'Units','normalized','Position',[0.8 0.8 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.8 0.07 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@plotspikes,'String','show','Enable','off',...
               'Tag','filter','Tooltip','Add spikes to the graphs');
-uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.8 0.05 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.92 0.8 0.07 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@plotspikes,'String','hide','Enable','off',...
               'Tag','filter','Tooltip','Add spikes to the graphs');
-uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.7 0.2 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.7 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','scale bar Add','Enable','off',...
               'Tag','filter','TooltipString','add scale bar');
-uicontrol(cmpanel,'Units','normalized','Position',[0.8 0.7 0.1 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.7 0.14 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','Remove','Enable','off',...
               'Tag','filter','TooltipString','remove scale bar');
-uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.6 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@baseline,'String','remove baseline','Enable','off',...
               'Tag','filter','TooltipString','detect');
-uicontrol(cmpanel,'Units','normalized','Position',[0.6 0.5 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.5 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@videoprompt,'String','Video','Enable','off',...
               'Tag','filter','TooltipString','generate a video of recording');
 
-uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.3 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@imhistogram,'String','Image histogram','Enable','off',...
               'Tag','filter','TooltipString','Filters the data');
 
 
-uicontrol(cmpanel,'Units','normalized','Position',[0.3 0.2 0.3 0.1],'Style','pushbutton','Tag','plotagain',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.2 0.33 0.1],'Style','pushbutton','Tag','plotagain',...
               'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
               'Tag','filter','TooltipString','Plots the data again');
 
@@ -574,8 +571,10 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
 %             vsdprops.vsd.fparam = fparam;
 %             fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
 %             save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
-            [data,tm,info,imdata,imtm,imdataf] = extractTSM(tsm{1}, det);
+            [data,tm,info,imdata,imtm] = extractTSM(tsm{1}, det);
 %             save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
+            
+
             data = data';
             vsdprops.vsd.min = min(data,[],2);
             vsdprops.vsd.d2uint = repelem(2^16,size(data,1),1)./range(data,2);
@@ -1175,8 +1174,12 @@ idx = cellfun(@(x) find(strcmp(props.ch,x)),showstr);
 nch = length(idx);
 
 tm = props.tm;
-gsize = props.axpanel.Position(4) - 100;
-posy = linspace(gsize - gsize/nch,0,nch) + 50;
+top = 60;
+bottom = 50;
+left = 85;
+right = 30;
+gsize = props.axpanel.Position(4) - (top + bottom);
+posy = linspace(gsize - gsize/nch,0,nch) + bottom;
 
 if isfield(props,'plt') && isgraphics(props.plt(1))
     xlim = props.ax(1).XLim;
@@ -1206,21 +1209,39 @@ props.ylim.dwn = gobjects(nch,1);
 
 disp('plotting')
 
+if isfield(props,'axbmp')
+    delete(props.axbmp)
+end
+props.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6]);
+props.axbmp.XTick = [];
+props.axbmp.YTick = [1 2 3];
+props.axbmp.YLim = [0 4.5];
+props.axbmp.YTickLabel = ["Protraction","Retraction","Closure"];
+props.axbmp.TickLength = [0 0];
+line([5 10] , [1 1],'Color','b');hold on
+props.sc(1) = scatter(5,1,'ob','filled','ButtonDownFcn',@adjustline);hold on
+props.sc(2) = scatter(10,1,'ob','filled','ButtonDownFcn',@adjustline);hold on
+pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
+pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
+pb.traverseFcn = [];
+iptSetPointerBehavior(props.sc,pb);
+iptPointerManager(gcf)
+
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
     if ~isgraphics(props.plt(d))
-        props.ax(d) = axes(props.axpanel,'Units','pixels','Position',[85   posy(d)   props.axpanel.Position(3)-115   gsize/nch]);
+        props.ax(d) = axes(props.axpanel,'Units','pixels','Position',[left   posy(d)   props.axpanel.Position(3)-(right+left)   gsize/nch]);
         props.plt(d) = plot(tm,data(idx(d),:));
         props.chk(d) = uicontrol(props.axpanel,'Units','pixels','Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
             'Value',false,'Visible','off','Tag',['c' num2str(d)]);
         props.txt(d) = uicontrol(props.axpanel,'Units','pixels','Style','text','Position',[18 chpos  60 15],'String',props.showlist{d},'HorizontalAlignment','left','Visible','off','Tag',['t' num2str(d)]);
-        props.ylim.scplus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[ props.axpanel.Position(3)-30 chpos+8  15 15],'String','+','Callback',@adjylim,'Visible','off','Tag',['p' num2str(d)],'TooltipString','increase yscale');
-        props.ylim.scminus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-30 chpos-8  15 15],'String','-','Callback',@adjylim,'Visible','off','Tag',['m' num2str(d)],'TooltipString','decrease yscale');
-        props.ylim.up(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-15 chpos+8  15 15],'String',char(708),'Callback',@adjylim,'Visible','off','Tag',['u' num2str(d)],'TooltipString','shift y-range up');
-        props.ylim.dwn(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-15 chpos-8  15 15],'String',char(709),'Callback',@adjylim,'Visible','off','Tag',['d' num2str(d)],'TooltipString','shift y-range down');
+        props.ylim.scplus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[ props.axpanel.Position(3)-right chpos+8  15 15],'String','+','Callback',@adjylim,'Visible','off','Tag',['p' num2str(d)],'TooltipString','increase yscale');
+        props.ylim.scminus(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-right chpos-8  15 15],'String','-','Callback',@adjylim,'Visible','off','Tag',['m' num2str(d)],'TooltipString','decrease yscale');
+        props.ylim.up(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-right/2 chpos+8  15 15],'String',char(708),'Callback',@adjylim,'Visible','off','Tag',['u' num2str(d)],'TooltipString','shift y-range up');
+        props.ylim.dwn(d) = uicontrol(props.axpanel,'Units','pixels','Style','pushbutton','Position',[props.axpanel.Position(3)-right/2 chpos-8  15 15],'String',char(709),'Callback',@adjylim,'Visible','off','Tag',['d' num2str(d)],'TooltipString','shift y-range down');
     else
         props.ax(d) = props.plt(d).Parent;
-        set(props.plt(d).Parent,'Units','pixels','Position',[85   posy(d)   props.axpanel.Position(3)-115   gsize/nch])
+        set(props.plt(d).Parent,'Units','pixels','Position',[left   posy(d)   props.axpanel.Position(3)-(right+left)   gsize/nch])
         set(props.plt(d),'XData',tm,'YData',data(idx(d),:))
         
         set(props.chk(d),'Position',[3 chpos  15 15],'Value',false,'Visible','off');
@@ -1253,7 +1274,7 @@ for d=1:nch
 end 
 
 set(props.ax,'YTick',[],'XLim',xlim)% somehow is also modifying im, but only when loading new files, 05-23-22: not sure if this comment is still applicable
-linkaxes(props.ax,'x')
+linkaxes([props.ax; props.axbmp],'x')
 set(findobj(props.chpanel,'Tag','adjust'),'Enable','on')
 set(findobj(props.chpanel,'Tag','showsort'),'Enable','on')
 set(findobj(props.axpanel,'Visible','off'),'Visible','on')
@@ -2452,6 +2473,19 @@ props.log = [props.log; 'Removed baseline using ' num2str(props.blapp.coef),...
 guidata(findobj('Tag',intan_tag),props)
 close(panel.Parent)
 plotdata(findobj('Tag',intan_tag))
+
+%% BMP
+function adjustline(hObject,eventdata)
+set(hObject,'Tag','veryspecifictag')
+set(gcf,'WindowButtonMotionFcn',@mousemove)
+set(gcf,'WindowButtonDownFcn',@mouseclick)
+
+function mousemove(hObject,eventdata)
+C = get(gca,'CurrentPoint');
+sc = findobj(hObject,'veryspecifictag');
+
+function mouseclick(hObject,eventdata)
+set(gcf,'WindowButtonMotionFcn',[])
 
 %% video
 function videoprompt(hObject,eventdata)
@@ -3753,7 +3787,7 @@ props = guidata(hObject);
 if ~any(file); return;end
 
 im = loadit(path,file);
-while ~all(size(im)==size(props.im)) && ~isempty(file)
+while ~all(size(im,1:2)==size(props.im,1:2)) && ~isempty(file)
     if size(im,1)/size(props.im,1)==size(im,2)/size(props.im,2)
         im = imresize(im,size(props.im,1)/size(im,1));
         disp('Changed the image size to size of VSD frames')
@@ -3811,15 +3845,20 @@ guidata(fig,struct('intan_tag',props.intan_tag,'im',im,'im0',props.im,'imex',ime
     'file',fullfile(path,file),'imsel',[2 2 2]));
 
 function im = loadit(path,file)
-for f=1:3
-    try
-        imp = double(imread(fullfile(path,file),'Index',f));
-        if f==1
-            im = zeros([size(imp) 3]);
+imp = double(imread(fullfile(path,file)));
+if size(imp,3)==3
+    im = imp/max(imp,[],'all');
+else
+    for f=1:3
+        try
+            imp = double(imread(fullfile(path,file),'Index',f));
+            if f==1
+                im = zeros([size(imp,[1 2]) 3]);
+            end
+            im(:,:,f) = imp/max(imp,[],'all');
+        catch
+            im(:,:,f) = im(:,:,1);
         end
-        im(:,:,f) = imp/max(imp,[],'all');
-    catch
-        im(:,:,f) = im(:,:,1);
     end
 end
 
@@ -3856,13 +3895,17 @@ props.imadj.imback = get(aprops.imex,'CData');
 props.imadj.params = [0 1;0 1; 0 1];
 props.imadj.params_back = [0 1;0 1; 0 1];
 imsel = find(aprops.imsel==2);
-selstr = ["red","green","blue"];
-substr = char(join(selstr(imsel),' and '));
-str = [substr ' channels replaced with ' substr ' of ' fullfile(path,file)];
+if ~isempty(imsel)
+    selstr = ["red","green","blue"];
+    substr = char(join(selstr(imsel),' and '));
+    str = [substr ' channels replaced with ' substr ' channel of ' aprops.file];
+end
 imsel = find(aprops.imsel==3);
-selstr = ["red","green","blue"];
-substr = char(join(selstr(imsel),' and '));
-str = [substr ' channels replaced with zeros'];
+if ~isempty(imsel)
+    selstr = ["red","green","blue"];
+    substr = char(join(selstr(imsel),' and '));
+    str = [substr ' channels replaced with zeros'];
+end
 props.log = [props.log; str]
 guidata(intan,props)
 close(hObject.Parent)
