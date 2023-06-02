@@ -2538,16 +2538,16 @@ props.axbmp.YLim = [0 4.5];
 guidata(fig,props)
 
 function adjustline(hObject,eventdata)
-sc = findobj(hObject.Parent,'-regexp','Tag','\w+endtag');
-if isvalid(sc)
-    sc.Tag = replace(sc.Tag,'endtag','');
+fig = ancestor(hObject,'figure','toplevel');
+if contains(hObject.Tag,'endtag')
+    mouseclick(fig)
+else
+    set(hObject,'Tag',[hObject.Tag 'endtag'])
+    set(fig,'WindowButtonMotionFcn',@mousemove)
+    set(fig,'WindowButtonDownFcn',@mouseclick)
 end
 
-if ~contains(hObject.Tag,'endtag')
-    set(hObject,'Tag',[hObject.Tag 'endtag'])
-end
-set(gcf,'WindowButtonMotionFcn',@mousemove)
-set(gcf,'WindowButtonDownFcn',@mouseclick)
+
 
 function mousemove(hObject,eventdata)
 C = get(gca,'CurrentPoint');
@@ -2557,7 +2557,10 @@ set(sc,'XData',C(1));
 ln.XData(contains(sc.Tag,'ee')+1) = C(1);
 
 function mouseclick(hObject,eventdata)
+sc = findobj(hObject,'-regexp','Tag','\w+endtag');
+set(sc,'Tag',replace(sc.Tag,'endtag',''))
 set(gcf,'WindowButtonMotionFcn',[])
+set(gcf,'WindowButtonDownFcn',[])
 
 %% video
 function videoprompt(hObject,eventdata)
