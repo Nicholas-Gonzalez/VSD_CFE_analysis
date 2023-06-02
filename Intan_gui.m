@@ -379,6 +379,10 @@ vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
 
+if isfield(matprops.props,'BMP')
+    vsdprops.matprops.BMP = matprops.props.BMP;
+end
+
 if isfield(matprops.props,'imadj')
     vsdprops.matprops.imadj = matprops.props.imadj;
 else
@@ -783,6 +787,13 @@ if intch && vsdch
             if isfield(vsdprops.matprops,'note')
                 props.note = vsdprops.matprops.note;
             end
+
+            if isfield(vsdprops.matprops,'BMP')
+                props.BMP = vsdprops.matprops.BMP;
+            else
+                props.BMP = zeros(0,6);
+            end
+
             if isfield(vsdprops.matprops,'video')
                 props.video = vsdprops.matprops.video;disp('added video')
                 fieldn = ["imdata","imdataroi","imdatar"];
@@ -804,7 +815,13 @@ if intch && vsdch
 %             if ~isfield(props,'imback')
 %                 props.imback = props.im;
 %             end
- 
+
+            if isfield(vsdprops.matprops,'BMP')
+                props.BMP = vsdprops.matprops.BMP;
+            else
+                props.BMP = zeros(0,6);
+            end
+
             props.finfo.files = vsdprops.files;
             props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');
 
@@ -842,6 +859,7 @@ elseif vsdch
     props.finfo.files = vsdprops.files;
     props.finfo.path = path;
     props.finfo.duration = max(props.tm);
+    props.BMP = zeros(0,6);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.log = string(['loaded data on ',char(datetime)]);
@@ -865,6 +883,7 @@ else
     props.showidx = 1:nch;
     props.hidelist = [];
     props.hideidx = [];
+    props.BMP = zeros(0,6);
     props.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'double');
     props.finfo = vsdprops.intan.finfo;
     props.finfo.files = vsdprops.files;
@@ -1222,13 +1241,21 @@ props.axbmp.YTick = [1 2 3];
 props.axbmp.YLim = [0 4.5];
 props.axbmp.YTickLabel = ["Protraction","Retraction","Closure"];
 props.axbmp.TickLength = [0 0];
-if isfield(props,'BMP')
-    line([5 10] , [1 1],'Color','b','Tag','Prot1','LineWidth',2);hold on
-    props.sc(1) = scatter(5,1,'ob','filled','ButtonDownFcn',@adjustline,'Tag','Prot1s');hold on
-    props.sc(2) = scatter(10,1,'ob','filled','ButtonDownFcn',@adjustline,'Tag','Prot1e');hold on
-    pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
-    pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
-    pb.traverseFcn = [];
+if isfield(props,'BMP') && ~isempty(props.BMP)
+    color = 'bg';
+    phase = ["Prot","Retr"];
+    for b=1:size(props.BMP,1)
+        for p=1:2
+            line(props.BMP(b,(1:2)+2*(p-1)) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
+            props.sc(b,1) = scatter(props.BMP(b,1+2*(p-1)),  p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
+                'Tag',[phase{p} num2str(b) 's']);hold on
+            props.sc(b,2) = scatter(props.BMP(b,2+2*(p-1)),p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
+                'Tag',[phase{p} num2str(b) 'e']);hold on
+            pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
+            pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
+            pb.traverseFcn = [];
+        end
+    end
     iptSetPointerBehavior(props.sc,pb);
     iptPointerManager(gcf)
 end
@@ -2486,16 +2513,17 @@ fig = ancestor(hObject,'figure','toplevel');
 props = guidata(fig);
 [x, ~] = ginput(3);
 isprot = contains(hObject.Tag,'prot');
-if ~isfield(props,'BMP')
+if ~isfield(props,'BMP') || isempty(props.BMP)
     b = 1;
-    props.BMP = x([1 2 2 3])';
+    props.BMP(1,1:4) = x([1 2 2 3])';
 else
     b = size(props.BMP,1)+1;
-    props.BMP = [props.BMP; x([1 2 2 3])'];
+    props.BMP = [props.BMP; x([1 2 2 3])' 0 0];
 end
-
+disp(props.BMP);
 color = 'bg';
 phase = ["Prot","Retr"];
+axes(props.axbmp)
 for p=1:2
     line(x(p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
     props.sc(b,1) = scatter(x(p),  p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 's']);hold on
