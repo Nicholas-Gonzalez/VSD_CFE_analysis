@@ -2547,12 +2547,32 @@ else
     set(fig,'WindowButtonDownFcn',@mouseclick)
 end
 
-
-
 function mousemove(hObject,eventdata)
 C = get(gca,'CurrentPoint');
 sc = findobj(hObject,'-regexp','Tag','\w+endtag');
 ln = findobj(hObject,'Tag',sc.Tag(1:5));
+mind = 1;
+if contains(sc.Tag,'ee')
+    C(C<ln.XData(1)+mind) = ln.XData(1)+mind;
+else
+    C(C>ln.XData(2)-mind) = ln.XData(2)-mind;
+end
+
+if contains(sc.Tag,'Prot') && contains(sc.Tag,'ee')
+    sc2 = findobj(hObject,'Tag',['Retr' sc.Tag(5) 's']); 
+    sc3 = findobj(hObject,'Tag',['Retr' sc.Tag(5) 'e']); 
+    C(C>sc3.XData-mind) = sc3.XData-mind;
+    set(sc2,'XData',C(1));
+    ln2 = findobj(hObject,'Tag',['Retr' sc.Tag(5)]); 
+    ln2.XData(1) = C(1);
+elseif contains(sc.Tag,'Retr') && contains(sc.Tag,'s')
+    sc2 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 'e']); 
+    sc3 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 's']);
+    C(C<sc3.XData+mind) = sc3.XData+mind;
+    set(sc2,'XData',C(2));
+    ln2 = findobj(hObject,'Tag',['Prot' sc.Tag(5)]); 
+    ln2.XData(2) = C(2);
+end
 set(sc,'XData',C(1));
 ln.XData(contains(sc.Tag,'ee')+1) = C(1);
 
