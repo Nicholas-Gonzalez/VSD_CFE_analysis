@@ -1211,21 +1211,27 @@ disp('plotting')
 
 if isfield(props,'axbmp')
     delete(props.axbmp)
+    delete(findobj(props.axpanel,'Tag','makeprot'))
+    delete(findobj(props.axpanel,'Tag','makeret'))
 end
+uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+5 20 20],'Style','pushbutton',...
+    'Callback',@makeBMP,'String','+','Tag','makeprot')
 props.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6]);
 props.axbmp.XTick = [];
 props.axbmp.YTick = [1 2 3];
 props.axbmp.YLim = [0 4.5];
 props.axbmp.YTickLabel = ["Protraction","Retraction","Closure"];
 props.axbmp.TickLength = [0 0];
-line([5 10] , [1 1],'Color','b');hold on
-props.sc(1) = scatter(5,1,'ob','filled','ButtonDownFcn',@adjustline);hold on
-props.sc(2) = scatter(10,1,'ob','filled','ButtonDownFcn',@adjustline);hold on
-pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
-pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
-pb.traverseFcn = [];
-iptSetPointerBehavior(props.sc,pb);
-iptPointerManager(gcf)
+if isfield(props,'BMP')
+    line([5 10] , [1 1],'Color','b','Tag','Prot1','LineWidth',2);hold on
+    props.sc(1) = scatter(5,1,'ob','filled','ButtonDownFcn',@adjustline,'Tag','Prot1s');hold on
+    props.sc(2) = scatter(10,1,'ob','filled','ButtonDownFcn',@adjustline,'Tag','Prot1e');hold on
+    pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
+    pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
+    pb.traverseFcn = [];
+    iptSetPointerBehavior(props.sc,pb);
+    iptPointerManager(gcf)
+end
 
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
@@ -2475,14 +2481,52 @@ close(panel.Parent)
 plotdata(findobj('Tag',intan_tag))
 
 %% BMP
+function makeBMP(hObject,eventdata)
+fig = ancestor(hObject,'figure','toplevel');
+props = guidata(fig);
+[x, ~] = ginput(3);
+isprot = contains(hObject.Tag,'prot');
+if ~isfield(props,'BMP')
+    b = 1;
+    props.BMP = x([1 2 2 3])';
+else
+    b = size(props.BMP,1)+1;
+    props.BMP = [props.BMP; x([1 2 2 3])'];
+end
+
+color = 'bg';
+phase = ["Prot","Retr"];
+for p=1:2
+    line(x(p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
+    props.sc(b,1) = scatter(x(p),  p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 's']);hold on
+    props.sc(b,2) = scatter(x(p+1),p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 'e']);hold on
+    pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
+    pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
+    pb.traverseFcn = [];
+    iptSetPointerBehavior(props.sc,pb);
+    iptPointerManager(gcf)
+end
+props.axbmp.YLim = [0 4.5];
+guidata(fig,props)
+
 function adjustline(hObject,eventdata)
-set(hObject,'Tag','veryspecifictag')
+sc = findobj(hObject.Parent,'-regexp','Tag','\w+endtag');
+if isvalid(sc)
+    sc.Tag = replace(sc.Tag,'endtag','');
+end
+
+if ~contains(hObject.Tag,'endtag')
+    set(hObject,'Tag',[hObject.Tag 'endtag'])
+end
 set(gcf,'WindowButtonMotionFcn',@mousemove)
 set(gcf,'WindowButtonDownFcn',@mouseclick)
 
 function mousemove(hObject,eventdata)
 C = get(gca,'CurrentPoint');
-sc = findobj(hObject,'veryspecifictag');
+sc = findobj(hObject,'-regexp','Tag','\w+endtag');
+ln = findobj(hObject,'Tag',sc.Tag(1:5));
+set(sc,'XData',C(1));
+ln.XData(contains(sc.Tag,'ee')+1) = C(1);
 
 function mouseclick(hObject,eventdata)
 set(gcf,'WindowButtonMotionFcn',[])
