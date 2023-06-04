@@ -54,7 +54,7 @@ csz = [nan 300 figsize(3)*0.25];% size of ROI and channels
 menusz = 90;
 insz = 250;
 % ----------------------------------
-axpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[0                       10     figsize(3)-sum(csz(2:3)) figsize(4)-menusz ],'Title','Graph','Tag','axpanel');
+axpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[0                       10     figsize(3)-sum(csz(2:3)) figsize(4)-menusz ],'Title','','Tag','axpanel');
 chpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) insz   csz(2)                 figsize(4)-insz-menusz],'Title','channels','Tag','chpanel');
 cmpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) 0     sum(csz(2:3))-300       insz],'Title','Controls','Tag','cmpanel');
 inpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-300           0     300                     insz],'Title','File information','Tag','inpanel');
@@ -2512,7 +2512,6 @@ function makeBMP(hObject,eventdata)
 fig = ancestor(hObject,'figure','toplevel');
 props = guidata(fig);
 [x, ~] = ginput(3);
-isprot = contains(hObject.Tag,'prot');
 if ~isfield(props,'BMP') || isempty(props.BMP)
     b = 1;
     props.BMP(1,1:4) = x([1 2 2 3])';
@@ -2520,7 +2519,7 @@ else
     b = size(props.BMP,1)+1;
     props.BMP = [props.BMP; x([1 2 2 3])' 0 0];
 end
-disp(props.BMP);
+
 color = 'bg';
 phase = ["Prot","Retr"];
 axes(props.axbmp)
@@ -2533,19 +2532,63 @@ for p=1:2
     pb.traverseFcn = [];
     iptSetPointerBehavior(props.sc,pb);
     iptPointerManager(gcf)
+
+    %count spikes
+    Ridx = find(contains(props.ch));
 end
+%count spikes
+Ridx = find(contains(props.ch));
+rspike = props.spikedetection.spikes(Ridx);
+if isfield(props,'spikedetection') && ~isempty(rspike)
+    rprot = rspike(rspike>x(1) & rspike<x(2));
+    pdursp = diff(rprot);
+    if length(rprot)>1
+        bursts = [1 find(pdursp>4)];
+        for b=1:length(bursts)
+            a = 1;% place holder
+        end
+        pdur = sum(pdursp(pdursp<4));
+    end
+    rret = rspike(rspike>x(2) & rspike<x(3));
+    rdursp = diff(rret);
+    rdur = sum(rdursp(rdursp<4));
+end
+
+
+disp(props.BMP)
 props.axbmp.YLim = [0 4.5];
 guidata(fig,props)
 
 function adjustline(hObject,eventdata)
 fig = ancestor(hObject,'figure','toplevel');
-if contains(hObject.Tag,'endtag')
-    mouseclick(fig)
+props = guidata(fig);
+if eventdata.Button==1
+    if contains(hObject.Tag,'endtag')
+        mouseclick(fig)
+    else
+        set(hObject,'Tag',[hObject.Tag 'endtag'])
+        set(fig,'WindowButtonMotionFcn',@mousemove)
+        set(fig,'WindowButtonDownFcn',@mouseclick)
+    end
 else
-    set(hObject,'Tag',[hObject.Tag 'endtag'])
-    set(fig,'WindowButtonMotionFcn',@mousemove)
-    set(fig,'WindowButtonDownFcn',@mouseclick)
+    choice = questdlg('Delete motor pattern?','Question','Yes','No','Yes');
+    if strcmp(choice,'Yes')
+        idx = str2double(hObject.Tag(5));
+        props.BMP(idx,:) = [];
+        props.sc(idx,:) = [];
+        delete(findobj(fig,'Tag',['Prot' hObject.Tag(5)]))
+        delete(findobj(fig,'Tag',['Prot' hObject.Tag(5) 's']))
+        delete(findobj(fig,'Tag',['Prot' hObject.Tag(5) 'e']))
+
+        delete(findobj(fig,'Tag',['Retr' hObject.Tag(5)]))
+        delete(findobj(fig,'Tag',['Retr' hObject.Tag(5) 's']))
+        delete(findobj(fig,'Tag',['Retr' hObject.Tag(5) 'e']))
+        
+        delete(hObject)
+        disp('BMP removed')
+    end
 end
+guidata(fig,props)
 
 function mousemove(hObject,eventdata)
 C = get(gca,'CurrentPoint');
