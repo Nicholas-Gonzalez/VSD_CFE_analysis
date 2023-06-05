@@ -2537,35 +2537,51 @@ for p=1:2
     iptSetPointerBehavior(props.sc,pb);
     iptPointerManager(gcf)
 end
-%count spikes
-rspike = props.spikedetection.spikes{contains(props.ch,'-Rn')};
-rspike = props.tm(rspike);
-btype = ["Rejection","Ingestion"];
-if isfield(props,'spikedetection') && ~isempty(rspike)
-    pdur = [0 0];
-    for p=1:2
-        rsp = rspike(rspike>x(p) & rspike<x(p+1));
-        rdursp = diff(rsp);
-        if length(rsp)>1
-            bursts = [0 find(rdursp>=4)];
-            for r=1:length(bursts)
-                if r==length(bursts)
-                    bx = [rsp(bursts(r)+1)  rsp(end)];
-                else
-                    bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
-                end
-                line(bx , [3 3],'Color','r','Tag',[phase{p} 'r' num2str(r)],'LineWidth',2);hold on
-            end
-            pdur(p) = sum(rdursp(rdursp<4));
-        end
-    end
-    text(x(2),4,btype( (pdur(2)>pdur(1))+1  ),'HorizontalAlignment','center');hold on
-end
-
-
+countspikes(fig)
 disp(props.BMP)
 props.axbmp.YLim = [0 4.5];
 guidata(fig,props)
+
+function countspikes(hObject)
+props = guidata(hObject);
+rspike = props.spikedetection.spikes{contains(props.ch,'-Rn')};
+rspike = props.tm(rspike);
+btypes = ["Rejection","Ingestion"];
+phase = ["Prot","Retr"];
+if isfield(props,'rnln')
+    delete(props.rnln)
+    delete(props.btxt)
+end
+props.rnln = gobjects(0,1);
+props.btxt = gobjects(size(props.BMP,1),1);
+props.btype = zeros(size(props.BMP,1),1);
+axes(props.axbmp)
+if isfield(props,'spikedetection') && ~isempty(rspike)
+    for b=1:size(props.BMP,1)
+        x = props.BMP(b,:);
+        pdur = [0 0];
+        for p=1:2
+            rsp = rspike(rspike>x(p) & rspike<x(p+1));
+            rdursp = diff(rsp);
+            if length(rsp)>1
+                bursts = [0 find(rdursp>=4)];
+                for r=1:length(bursts)
+                    if r==length(bursts)
+                        bx = [rsp(bursts(r)+1)  rsp(end)];
+                    else
+                        bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
+                    end
+                    rnln = line(bx , [3 3],'Color','r','Tag',[phase{p} 'r' num2str(r)],'LineWidth',2);hold on
+                    props.rnln = [props.rnln; rnln];
+                end
+                pdur(p) = sum(rdursp(rdursp<4));
+            end
+        end
+        props.btype(b) = (pdur(2)>pdur(1))+1;
+        props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
+    end
+end
+guidata(hObject,props)
 
 function adjustline(hObject,eventdata)
 fig = ancestor(hObject,'figure','toplevel');
