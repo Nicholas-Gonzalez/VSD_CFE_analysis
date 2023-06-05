@@ -904,6 +904,10 @@ if isfield(vsdprops,'im')
     props.imadj.params = [0 1;0 1;0 1];
 end
 
+if isfield(props,'sc')
+    props = rmfield(props,'sc');
+end
+
 if isfield(vsdprops,'det')
     props.det = vsdprops.det;
     props.kern_center = vsdprops.kern_center;
@@ -2532,26 +2536,30 @@ for p=1:2
     pb.traverseFcn = [];
     iptSetPointerBehavior(props.sc,pb);
     iptPointerManager(gcf)
-
-    %count spikes
-    Ridx = find(contains(props.ch));
 end
 %count spikes
-Ridx = find(contains(props.ch));
-rspike = props.spikedetection.spikes(Ridx);
+rspike = props.spikedetection.spikes{contains(props.ch,'-Rn')};
+rspike = props.tm(rspike);
+btype = ["Rejection","Ingestion"];
 if isfield(props,'spikedetection') && ~isempty(rspike)
-    rprot = rspike(rspike>x(1) & rspike<x(2));
-    pdursp = diff(rprot);
-    if length(rprot)>1
-        bursts = [1 find(pdursp>4)];
-        for b=1:length(bursts)
-            a = 1;% place holder
+    pdur = [0 0];
+    for p=1:2
+        rsp = rspike(rspike>x(p) & rspike<x(p+1));
+        rdursp = diff(rsp);
+        if length(rsp)>1
+            bursts = [0 find(rdursp>=4)];
+            for r=1:length(bursts)
+                if r==length(bursts)
+                    bx = [rsp(bursts(r)+1)  rsp(end)];
+                else
+                    bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
+                end
+                line(bx , [3 3],'Color','r','Tag',[phase{p} 'r' num2str(r)],'LineWidth',2);hold on
+            end
+            pdur(p) = sum(rdursp(rdursp<4));
         end
-        pdur = sum(pdursp(pdursp<4));
     end
-    rret = rspike(rspike>x(2) & rspike<x(3));
-    rdursp = diff(rret);
-    rdur = sum(rdursp(rdursp<4));
+    text(x(2),4,btype( (pdur(2)>pdur(1))+1  ),'HorizontalAlignment','center');hold on
 end
 
 
