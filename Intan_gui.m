@@ -1243,6 +1243,8 @@ if isfield(props,'axbmp')
 end
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+5 20 20],'Style','pushbutton',...
     'Callback',@makeBMP,'String','+','Tag','makeprot')
+uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+25 20 20],'Style','pushbutton',...
+    'Callback',@selectRn,'String','Rn','Tag','makeprot')
 props.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6]);
 props.axbmp.XTick = [];
 props.axbmp.YTick = [1 2 3];
@@ -2569,43 +2571,60 @@ for a=1:length(allthem)
 end
 props = countspikes(props);
 
+function selectRn(hObject,eventdata)
+props = guidata(hObject);
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
+str(props.hideidx,2) = "gray";
+str(:,4) = string(props.ch);
+str = join(str,'');
+props.rn = listdlg('liststring',str);
+props = countspikes(props);
+guidata(hObject,props)
+
 function props = countspikes(props)
-rspike = props.spikedetection.spikes{contains(props.ch,'-Rn')};
-rspike = props.tm(rspike);
-btypes = ["Rejection","Ingestion"];
-phase = ["Prot","Retr"];
-if isfield(props,'btxt')
-    delete(props.btxt)
-end
-rnln = findobj(findobj('Tag',props.intan_tag),'-regexp','Tag','(Prot|Retr)r');
-if ~isempty(rnln)
-    delete(rnln)
-end
-props.btxt = gobjects(size(props.BMP,1),1);
-props.btype = zeros(size(props.BMP,1),1);
-axes(props.axbmp)
-if isfield(props,'spikedetection') && ~isempty(rspike)
-    for b=1:size(props.BMP,1)
-        x = props.BMP(b,:);
-        pdur = [0 0];
-        for p=1:2
-            rsp = rspike(rspike>x(p) & rspike<x(p+1));
-            rdursp = diff(rsp);
-            if length(rsp)>1
-                bursts = [0 find(rdursp>=4)];
-                for r=1:length(bursts)
-                    if r==length(bursts)
-                        bx = [rsp(bursts(r)+1)  rsp(end)];
-                    else
-                        bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
+if isfield(props,'spikedetection')
+    if isfield(props.rn,'rn')
+        ridx = props.rn;
+    else
+        ridx = contains(props.ch,'-Rn');
+    end
+    rspike = props.spikedetection.spikes{ridx};
+    rspike = props.tm(rspike);
+    btypes = ["Rejection","Ingestion"];
+    phase = ["Prot","Retr"];
+    if isfield(props,'btxt')
+        delete(props.btxt)
+    end
+    rnln = findobj(findobj('Tag',props.intan_tag),'-regexp','Tag','(Prot|Retr)r');
+    if ~isempty(rnln)
+        delete(rnln)
+    end
+    props.btxt = gobjects(size(props.BMP,1),1);
+    props.btype = zeros(size(props.BMP,1),1);
+    axes(props.axbmp)
+    if isfield(props,'spikedetection') && ~isempty(rspike)
+        for b=1:size(props.BMP,1)
+            x = props.BMP(b,:);
+            pdur = [0 0];
+            for p=1:2
+                rsp = rspike(rspike>x(p) & rspike<x(p+1));
+                rdursp = diff(rsp);
+                if length(rsp)>1
+                    bursts = [0 find(rdursp>=4)];
+                    for r=1:length(bursts)
+                        if r==length(bursts)
+                            bx = [rsp(bursts(r)+1)  rsp(end)];
+                        else
+                            bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
+                        end
+                        line(bx , [3 3],'Color','r','Tag',[num2str(b) phase{p} 'r' num2str(r)],'LineWidth',2);hold on
                     end
-                    line(bx , [3 3],'Color','r','Tag',[num2str(b) phase{p} 'r' num2str(r)],'LineWidth',2);hold on
+                    pdur(p) = sum(rdursp(rdursp<4));
                 end
-                pdur(p) = sum(rdursp(rdursp<4));
             end
+            props.btype(b) = (pdur(2)>pdur(1))+1;
+            props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
         end
-        props.btype(b) = (pdur(2)>pdur(1))+1;
-        props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
     end
 end
 
@@ -2654,7 +2673,6 @@ else
         end
 
         props.BMP(idx,:) = [];
-        props.sc(idx,:) = [];
 
         delete(props.btxt(idx))
         props.btxt(idx) = [];
