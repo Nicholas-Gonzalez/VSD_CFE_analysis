@@ -379,44 +379,25 @@ vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
 
-if isfield(matprops.props,'BMP')
-    vsdprops.matprops.BMP = matprops.props.BMP;
+fields = ["BMP","btype","rn","video","spikedetection","log","filter","databackup","imadj","note"];
+for f=1:length(fields)
+    if isfield(matprops.props,fields{f})
+        vsdprops.matprops.(fields{f}) = matprops.props.(fields{f});
+    elseif strcmp(fields{f},'imadj')
+        vsdprops.matprops.imadj.imback = matprops.props.im;
+        vsdprops.matprops.imadj.params = [0 1;0 1;0 1];
+        vsdprops.matprops.imadj.params_back = [0 1;0 1;0 1];
+    elseif strcmp(fields{f},'note')
+        try
+            vsdprops.matprops.note = string(readcell(matprops.props.vsdprops.files{5,2}));
+            disp('Note.xlsx was not found in file.  Successfully loaded')
+        catch
+            warning([matprops.props.vsdprops.files{5,2} , 'not found'])
+        end  
+    end
 end
 
-if isfield(matprops.props,'btype')
-    vsdprops.matprops.btype = matprops.props.btype;
-end
 
-if isfield(matprops.props,'imadj')
-    vsdprops.matprops.imadj = matprops.props.imadj;
-else
-    vsdprops.matprops.imadj.imback = matprops.props.im;
-    vsdprops.matprops.imadj.params = [0 1;0 1;0 1];
-    vsdprops.matprops.imadj.params_back = [0 1;0 1;0 1];
-end
-
-if isfield(matprops.props,'log')
-    vsdprops.matprops.log = matprops.props.log;
-end
-
-if isfield(matprops.props,'video')
-    vsdprops.matprops.video = matprops.props.video;
-end
-
-if isfield(matprops.props,'spikedetection')
-    vsdprops.matprops.spikedetection = matprops.props.spikedetection;
-end
-
-if isfield(matprops.props,'note')
-    vsdprops.matprops.note = matprops.props.note;
-else    
-    try
-        vsdprops.matprops.note = string(readcell(matprops.props.vsdprops.files{5,2}));
-        disp('Note.xlsx was not found in file.  Successfully loaded')
-    catch
-        warning([matprops.props.vsdprops.files{5,2} , 'not found'])
-    end  
-end
 vsdprops.matprops.Max = matprops.props.Max;
 vsdprops.matprops.tm = matprops.props.tm;
 vsdprops.matprops.ch = matprops.props.ch;
@@ -426,6 +407,7 @@ vsdprops.matprops.det = matprops.props.det;
 vsdprops.matprops.kern_center = matprops.props.kern_center;
 vsdprops.matprops.kernpos = matprops.props.kernpos;
 vsdprops.matprops.curdir = path;
+vsdprops.files = matprops.props.files;
 
 vid = get(findobj(hObject.Parent,'Tag','loadvid'),'Value')==1;
 if vid
@@ -466,15 +448,6 @@ if vid
         end
     end
 end
-
-if isfield(matprops.props,'filter')
-    vsdprops.matprops.filter = matprops.props.filter;
-end
-if isfield(matprops.props,'databackup')
-    vsdprops.matprops.databackup = matprops.props.databackup;
-end
-vsdprops.files = matprops.props.files;
-
 
 for f=1:size(matprops.props.vsdprops.files,1)
     ft = matprops.props.vsdprops.files{f,1};
@@ -2588,42 +2561,44 @@ if isfield(props,'spikedetection')
     else
         ridx = contains(props.ch,'-Rn');
     end
-    rspike = props.spikedetection.spikes{ridx};
-    rspike = props.tm(rspike);
-    btypes = ["Rejection","Ingestion"];
-    phase = ["Prot","Retr"];
-    if isfield(props,'btxt')
-        delete(props.btxt)
-    end
-    rnln = findobj(findobj('Tag',props.intan_tag),'-regexp','Tag','(Prot|Retr)r');
-    if ~isempty(rnln)
-        delete(rnln)
-    end
-    props.btxt = gobjects(size(props.BMP,1),1);
-    props.btype = zeros(size(props.BMP,1),1);
-    axes(props.axbmp)
-    if isfield(props,'spikedetection') && ~isempty(rspike)
-        for b=1:size(props.BMP,1)
-            x = props.BMP(b,:);
-            pdur = [0 0];
-            for p=1:2
-                rsp = rspike(rspike>x(p) & rspike<x(p+1));
-                rdursp = diff(rsp);
-                if length(rsp)>1
-                    bursts = [0 find(rdursp>=4)];
-                    for r=1:length(bursts)
-                        if r==length(bursts)
-                            bx = [rsp(bursts(r)+1)  rsp(end)];
-                        else
-                            bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
+    if any(ridx)
+        rspike = props.spikedetection.spikes{ridx};
+        rspike = props.tm(rspike);
+        btypes = ["Rejection","Ingestion"];
+        phase = ["Prot","Retr"];
+        if isfield(props,'btxt')
+            delete(props.btxt)
+        end
+        rnln = findobj(findobj('Tag',props.intan_tag),'-regexp','Tag','(Prot|Retr)r');
+        if ~isempty(rnln)
+            delete(rnln)
+        end
+        props.btxt = gobjects(size(props.BMP,1),1);
+        props.btype = zeros(size(props.BMP,1),1);
+        axes(props.axbmp)
+        if isfield(props,'spikedetection') && ~isempty(rspike)
+            for b=1:size(props.BMP,1)
+                x = props.BMP(b,:);
+                pdur = [0 0];
+                for p=1:2
+                    rsp = rspike(rspike>x(p) & rspike<x(p+1));
+                    rdursp = diff(rsp);
+                    if length(rsp)>1
+                        bursts = [0 find(rdursp>=4)];
+                        for r=1:length(bursts)
+                            if r==length(bursts)
+                                bx = [rsp(bursts(r)+1)  rsp(end)];
+                            else
+                                bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
+                            end
+                            line(bx , [3 3],'Color','r','Tag',[num2str(b) phase{p} 'r' num2str(r)],'LineWidth',2);hold on
                         end
-                        line(bx , [3 3],'Color','r','Tag',[num2str(b) phase{p} 'r' num2str(r)],'LineWidth',2);hold on
+                        pdur(p) = sum(rdursp(rdursp<4));
                     end
-                    pdur(p) = sum(rdursp(rdursp<4));
                 end
+                props.btype(b) = (pdur(2)>pdur(1))+1;
+                props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
             end
-            props.btype(b) = (pdur(2)>pdur(1))+1;
-            props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
         end
     end
 end
