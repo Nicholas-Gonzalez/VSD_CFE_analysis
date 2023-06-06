@@ -670,6 +670,9 @@ function stitchvsd(hObject)
 % combines the vsd and the intan data.  Function used by loadall.
 vsdprops = guidata(hObject);
 props = guidata(findobj('Tag',vsdprops.intan_tag));
+if isfield(props,'spikedetection')
+    props = rmfield(props,'spikedetection');
+end
 intch = isfield(vsdprops,'intan') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'intan'));
 vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd'));
 if intch && vsdch
@@ -1214,6 +1217,7 @@ if isfield(props,'axbmp')
     delete(findobj(props.axpanel,'Tag','makeprot'))
     delete(findobj(props.axpanel,'Tag','makeret'))
 end
+delete(findobj(props.axpanel,'Tag','makeprot'))
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+5 20 20],'Style','pushbutton',...
     'Callback',@makeBMP,'String','+','Tag','makeprot')
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+25 20 20],'Style','pushbutton',...
@@ -1243,6 +1247,11 @@ if isfield(props,'BMP') && ~isempty(props.BMP)
     end
     props = countspikes(props);
 end
+delete(findobj(props.axpanel,'Tag','move'))
+uicontrol(props.axpanel,'Units','pixels','Position',[left-30 bottom 30 30],'Style','pushbutton',...
+    'Callback',@moveleft,'String',char(8882),'Tag','move')
+uicontrol(props.axpanel,'Units','pixels','Position',[props.axpanel.Position(3)-right bottom 30 30],'Style','pushbutton',...
+    'Callback',@moveright,'String',char(8883),'Tag','move')
 
 for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
@@ -1300,6 +1309,14 @@ set(findobj(props.axpanel,'Visible','off'),'Visible','on')
 delete(buf)
 guidata(gcf,props)
 set(allbut(isvalid(allbut)),'Enable','on');
+
+function moveleft(hObject,eventdata)
+props = guidata(hObject);
+set(props.ax(1),'XLim',props.ax(1).XLim - range(props.ax(1).XLim)*0.8)
+
+function moveright(hObject,eventdata)
+props = guidata(hObject);
+set(props.ax(1),'XLim',props.ax(1).XLim + range(props.ax(1).XLim)*0.8)
 
 %% YLimit app
 function setylim(hObject,eventdata)
@@ -2556,7 +2573,7 @@ guidata(hObject,props)
 
 function props = countspikes(props)
 if isfield(props,'spikedetection')
-    if isfield(props.rn,'rn')
+    if isfield(props,'rn')
         ridx = props.rn;
     else
         ridx = contains(props.ch,'-Rn');
@@ -2575,6 +2592,7 @@ if isfield(props,'spikedetection')
         end
         props.btxt = gobjects(size(props.BMP,1),1);
         props.btype = zeros(size(props.BMP,1),1);
+        props.rnratio = zeros(size(props.BMP,1),3);
         axes(props.axbmp)
         if isfield(props,'spikedetection') && ~isempty(rspike)
             for b=1:size(props.BMP,1)
@@ -2597,6 +2615,7 @@ if isfield(props,'spikedetection')
                     end
                 end
                 props.btype(b) = (pdur(2)>pdur(1))+1;
+                props.rnratio(b,:) = [pdur(1) pdur(2) pdur(2)/sum(pdur)];
                 props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
             end
         end
@@ -2622,7 +2641,7 @@ if eventdata.Button==1
 else
     choice = questdlg('Delete motor pattern?','Question','Yes','No','Yes');
     if strcmp(choice,'Yes')
-        idxs = hObject.Tag(5);
+        idxs = char(regexp('Prot21s','\d+','match'));
         idx = str2double(idxs);
         delete(findobj(fig,'Tag',['Prot' idxs]))
         delete(findobj(fig,'Tag',['Prot' idxs 's']))
@@ -2652,6 +2671,7 @@ else
         delete(props.btxt(idx))
         props.btxt(idx) = [];
         props.btype(idx) = [];
+        props.rnratio(idx) = [];
 
         rnln = findobj(fig,'-regexp','Tag',[num2str(idx) '(Prot|Retr)r']);
         delete(rnln)
@@ -2677,7 +2697,7 @@ function mousemove(hObject,eventdata)
 props = guidata(hObject);
 C = get(gca,'CurrentPoint');
 sc = findobj(hObject,'-regexp','Tag','\w+endtag');
-ln = findobj(hObject,'Tag',sc.Tag(1:5));
+ln = findobj(hObject,'Tag',char(regexp(sc.Tag,'(Prot|Retr)\d+','match')));
 mind = 1;
 if contains(sc.Tag,'ee')
     C(C<ln.XData(1)+mind) = ln.XData(1)+mind;
@@ -2714,26 +2734,27 @@ if props.snapit && isfield(props,'spikedetection')
     end
 end
 
+idxs = char(regexp(sc.Tag,'\d+','match'));
 if contains(sc.Tag,'Prot') && contains(sc.Tag,'ee')
-    sc2 = findobj(hObject,'Tag',['Retr' sc.Tag(5) 's']); 
-    sc3 = findobj(hObject,'Tag',['Retr' sc.Tag(5) 'e']); 
+    sc2 = findobj(hObject,'Tag',['Retr' idxs 's']); 
+    sc3 = findobj(hObject,'Tag',['Retr' idxs 'e']); 
     C(C>sc3.XData-mind) = sc3.XData-mind;
     set(sc2,'XData',C(1));
-    ln2 = findobj(hObject,'Tag',['Retr' sc.Tag(5)]); 
+    ln2 = findobj(hObject,'Tag',['Retr' idxs]); 
     ln2.XData(1) = C(1);
-    props.BMP(str2double(sc.Tag(5)),2) = C(1);
+    props.BMP(str2double(idxs),2) = C(1);
 elseif contains(sc.Tag,'Retr') && contains(sc.Tag,'s')
-    sc2 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 'e']); 
-    sc3 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 's']);
+    sc2 = findobj(hObject,'Tag',['Prot' idxs 'e']); 
+    sc3 = findobj(hObject,'Tag',['Prot' idxs 's']);
     C(C<sc3.XData+mind) = sc3.XData+mind;
     set(sc2,'XData',C(2));
-    ln2 = findobj(hObject,'Tag',['Prot' sc.Tag(5)]); 
+    ln2 = findobj(hObject,'Tag',['Prot' idxs]); 
     ln2.XData(2) = C(2);
-    props.BMP(str2double(sc.Tag(5)),2) = C(1);
+    props.BMP(str2double(idxs),2) = C(1);
 elseif contains(sc.Tag,'Prot') 
-    props.BMP(str2double(sc.Tag(5)),1) = C(1);
+    props.BMP(str2double(idxs),1) = C(1);
 else
-    props.BMP(str2double(sc.Tag(5)),3) = C(1);
+    props.BMP(str2double(idxs),3) = C(1);
 end
 set(sc,'XData',C(1));
 ln.XData(contains(sc.Tag,'ee')+1) = C(1);
