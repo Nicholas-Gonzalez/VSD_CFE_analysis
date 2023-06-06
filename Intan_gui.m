@@ -1312,11 +1312,11 @@ set(allbut(isvalid(allbut)),'Enable','on');
 
 function moveleft(hObject,eventdata)
 props = guidata(hObject);
-set(props.ax(1),'XLim',props.ax(1).XLim - range(props.ax(1).XLim)*0.8)
+set(props.ax(1),'XLim',props.ax(1).XLim - range(props.ax(1).XLim)*0.7)
 
 function moveright(hObject,eventdata)
 props = guidata(hObject);
-set(props.ax(1),'XLim',props.ax(1).XLim + range(props.ax(1).XLim)*0.8)
+set(props.ax(1),'XLim',props.ax(1).XLim + range(props.ax(1).XLim)*0.7)
 
 %% YLimit app
 function setylim(hObject,eventdata)
