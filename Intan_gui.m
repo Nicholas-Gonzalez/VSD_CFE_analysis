@@ -383,6 +383,10 @@ if isfield(matprops.props,'BMP')
     vsdprops.matprops.BMP = matprops.props.BMP;
 end
 
+if isfield(matprops.props,'btype')
+    vsdprops.matprops.btype = matprops.props.btype;
+end
+
 if isfield(matprops.props,'imadj')
     vsdprops.matprops.imadj = matprops.props.imadj;
 else
@@ -733,7 +737,7 @@ if intch && vsdch
                 end
             end
         end
-        
+        props.BMP = zeros(0,4);  
         props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
         props.tm = itm;
         showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
@@ -791,7 +795,7 @@ if intch && vsdch
             if isfield(vsdprops.matprops,'BMP')
                 props.BMP = vsdprops.matprops.BMP;
             else
-                props.BMP = zeros(0,6);
+                props.BMP = zeros(0,4);
             end
 
             if isfield(vsdprops.matprops,'video')
@@ -819,7 +823,7 @@ if intch && vsdch
             if isfield(vsdprops.matprops,'BMP')
                 props.BMP = vsdprops.matprops.BMP;
             else
-                props.BMP = zeros(0,6);
+                props.BMP = zeros(0,4);
             end
 
             props.finfo.files = vsdprops.files;
@@ -859,7 +863,7 @@ elseif vsdch
     props.finfo.files = vsdprops.files;
     props.finfo.path = path;
     props.finfo.duration = max(props.tm);
-    props.BMP = zeros(0,6);
+    props.BMP = zeros(0,4);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.log = string(['loaded data on ',char(datetime)]);
@@ -883,7 +887,7 @@ else
     props.showidx = 1:nch;
     props.hidelist = [];
     props.hideidx = [];
-    props.BMP = zeros(0,6);
+    props.BMP = zeros(0,4);
     props.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'double');
     props.finfo = vsdprops.intan.finfo;
     props.finfo.files = vsdprops.files;
@@ -1262,6 +1266,7 @@ if isfield(props,'BMP') && ~isempty(props.BMP)
     end
     iptSetPointerBehavior(props.sc,pb);
     iptPointerManager(gcf)
+    props = countspikes(props);
 end
 
 for d=1:nch
@@ -2518,10 +2523,10 @@ props = guidata(fig);
 [x, ~] = ginput(3);
 if ~isfield(props,'BMP') || isempty(props.BMP)
     b = 1;
-    props.BMP(1,1:4) = x([1 2 2 3])';
+    props.BMP = x([1 2 2 3])';
 else
     b = size(props.BMP,1)+1;
-    props.BMP = [props.BMP; x([1 2 2 3])' 0 0];
+    props.BMP = [props.BMP; x([1 2 2 3])'];
 end
 
 color = 'bg';
@@ -2537,22 +2542,45 @@ for p=1:2
     iptSetPointerBehavior(props.sc,pb);
     iptPointerManager(gcf)
 end
-countspikes(fig)
-disp(props.BMP)
 props.axbmp.YLim = [0 4.5];
+props = countspikes(props);
+props = reorderBMP(props);
+disp(props.BMP)
 guidata(fig,props)
 
-function countspikes(hObject)
-props = guidata(hObject);
+function props = reorderBMP(props)
+fig = findobj('Tag',props.intan_tag);
+[~,idx] = sort(props.BMP(:,1));
+props.BMP = props.BMP(idx,:);
+props.btype = props.btype(idx,:);
+for i=1:length(idx)
+    set(findobj(fig,'Tag',['Prot' num2str(i)]),'Tag', ['Prot' num2str(idx(i)) 'reordered'])
+    set(findobj(fig,'Tag',['Prot' num2str(i) 's']),'Tag', ['Prot' num2str(idx(i)) 's' 'reordered'])
+    set(findobj(fig,'Tag',['Prot' num2str(i) 'e']),'Tag', ['Prot' num2str(idx(i)) 'e' 'reordered'])
+
+    set(findobj(fig,'Tag',['Retr' num2str(i)]),'Tag', ['Retr' num2str(idx(i)) 'reordered'])
+    set(findobj(fig,'Tag',['Retr' num2str(i) 's']),'Tag', ['Retr' num2str(idx(i)) 's' 'reordered'])
+    set(findobj(fig,'Tag',['Retr' num2str(i) 'e']),'Tag', ['Retr' num2str(idx(i)) 'e' 'reordered']) 
+end
+allthem = findobj(fig,'-regexp','Tag','reordered');
+for a=1:length(allthem)
+    tag = get(allthem(a),'Tag');
+    set(allthem(a),'Tag',replace(tag,'reordered',''))
+end
+props = countspikes(props);
+
+function props = countspikes(props)
 rspike = props.spikedetection.spikes{contains(props.ch,'-Rn')};
 rspike = props.tm(rspike);
 btypes = ["Rejection","Ingestion"];
 phase = ["Prot","Retr"];
-if isfield(props,'rnln')
-    delete(props.rnln)
+if isfield(props,'btxt')
     delete(props.btxt)
 end
-props.rnln = gobjects(0,1);
+rnln = findobj(findobj('Tag',props.intan_tag),'-regexp','Tag','(Prot|Retr)r');
+if ~isempty(rnln)
+    delete(rnln)
+end
 props.btxt = gobjects(size(props.BMP,1),1);
 props.btype = zeros(size(props.BMP,1),1);
 axes(props.axbmp)
@@ -2561,7 +2589,7 @@ if isfield(props,'spikedetection') && ~isempty(rspike)
         x = props.BMP(b,:);
         pdur = [0 0];
         for p=1:2
-            rsp = rspike(rspike>x(p) & rspike<x(p+1));
+            rsp = rspike(rspike>x(1+(p-1)*2) & rspike<x(2+(p-1)*2));
             rdursp = diff(rsp);
             if length(rsp)>1
                 bursts = [0 find(rdursp>=4)];
@@ -2571,8 +2599,7 @@ if isfield(props,'spikedetection') && ~isempty(rspike)
                     else
                         bx = [rsp(bursts(r)+1)  rsp(bursts(r+1))];
                     end
-                    rnln = line(bx , [3 3],'Color','r','Tag',[phase{p} 'r' num2str(r)],'LineWidth',2);hold on
-                    props.rnln = [props.rnln; rnln];
+                    line(bx , [3 3],'Color','r','Tag',[num2str(b) phase{p} 'r' num2str(r)],'LineWidth',2);hold on
                 end
                 pdur(p) = sum(rdursp(rdursp<4));
             end
@@ -2581,7 +2608,6 @@ if isfield(props,'spikedetection') && ~isempty(rspike)
         props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
     end
 end
-guidata(hObject,props)
 
 function adjustline(hObject,eventdata)
 fig = ancestor(hObject,'figure','toplevel');
@@ -2597,16 +2623,40 @@ if eventdata.Button==1
 else
     choice = questdlg('Delete motor pattern?','Question','Yes','No','Yes');
     if strcmp(choice,'Yes')
-        idx = str2double(hObject.Tag(5));
+        idxs = hObject.Tag(5);
+        idx = str2double(idxs);
+        delete(findobj(fig,'Tag',['Prot' idxs]))
+        delete(findobj(fig,'Tag',['Prot' idxs 's']))
+        delete(findobj(fig,'Tag',['Prot' idxs 'e']))
+
+        delete(findobj(fig,'Tag',['Retr' idxs]))
+        delete(findobj(fig,'Tag',['Retr' idxs 's']))
+        delete(findobj(fig,'Tag',['Retr' idxs 'e']))
+
+        cnt = idx+1;
+        obj = findobj(fig,'Tag',['Retr' num2str(cnt)]);
+        while isvalid(obj)
+            set(findobj(fig,'Tag',['Prot' num2str(cnt)]),'Tag', ['Prot' num2str(cnt-1)])
+            set(findobj(fig,'Tag',['Prot' num2str(cnt) 's']),'Tag', ['Prot' num2str(cnt-1) 's'])
+            set(findobj(fig,'Tag',['Prot' num2str(cnt) 'e']),'Tag', ['Prot' num2str(cnt-1) 'e'])
+
+            set(findobj(fig,'Tag',['Retr' num2str(cnt)]),'Tag', ['Retr' num2str(cnt-1)])
+            set(findobj(fig,'Tag',['Retr' num2str(cnt) 's']),'Tag', ['Retr' num2str(cnt-1) 's'])
+            set(findobj(fig,'Tag',['Retr' num2str(cnt) 'e']),'Tag', ['Retr' num2str(cnt-1) 'e'])
+
+            cnt = idx+1;
+            obj = findobj(fig,'Tag',['Retr' num2str(cnt)]);
+        end
+
         props.BMP(idx,:) = [];
         props.sc(idx,:) = [];
-        delete(findobj(fig,'Tag',['Prot' hObject.Tag(5)]))
-        delete(findobj(fig,'Tag',['Prot' hObject.Tag(5) 's']))
-        delete(findobj(fig,'Tag',['Prot' hObject.Tag(5) 'e']))
 
-        delete(findobj(fig,'Tag',['Retr' hObject.Tag(5)]))
-        delete(findobj(fig,'Tag',['Retr' hObject.Tag(5) 's']))
-        delete(findobj(fig,'Tag',['Retr' hObject.Tag(5) 'e']))
+        delete(props.btxt(idx))
+        props.btxt(idx) = [];
+        props.btype(idx) = [];
+
+        rnln = findobj(fig,'-regexp','Tag',[num2str(idx) '(Prot|Retr)r']);
+        delete(rnln)
         
         delete(hObject)
         disp('BMP removed')
@@ -2615,6 +2665,7 @@ end
 guidata(fig,props)
 
 function mousemove(hObject,eventdata)
+props = guidata(hObject);
 C = get(gca,'CurrentPoint');
 sc = findobj(hObject,'-regexp','Tag','\w+endtag');
 ln = findobj(hObject,'Tag',sc.Tag(1:5));
@@ -2632,6 +2683,7 @@ if contains(sc.Tag,'Prot') && contains(sc.Tag,'ee')
     set(sc2,'XData',C(1));
     ln2 = findobj(hObject,'Tag',['Retr' sc.Tag(5)]); 
     ln2.XData(1) = C(1);
+    props.BMP(str2double(sc.Tag(5)),2:3) = C(1);
 elseif contains(sc.Tag,'Retr') && contains(sc.Tag,'s')
     sc2 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 'e']); 
     sc3 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 's']);
@@ -2639,15 +2691,25 @@ elseif contains(sc.Tag,'Retr') && contains(sc.Tag,'s')
     set(sc2,'XData',C(2));
     ln2 = findobj(hObject,'Tag',['Prot' sc.Tag(5)]); 
     ln2.XData(2) = C(2);
+    props.BMP(str2double(sc.Tag(5)),2:3) = C(1);
+elseif contains(sc.Tag,'Prot') 
+    props.BMP(str2double(sc.Tag(5)),1) = C(1);
+else
+    props.BMP(str2double(sc.Tag(5)),4) = C(1);
 end
 set(sc,'XData',C(1));
 ln.XData(contains(sc.Tag,'ee')+1) = C(1);
+guidata(hObject,props)
 
 function mouseclick(hObject,eventdata)
 sc = findobj(hObject,'-regexp','Tag','\w+endtag');
 set(sc,'Tag',replace(sc.Tag,'endtag',''))
 set(gcf,'WindowButtonMotionFcn',[])
 set(gcf,'WindowButtonDownFcn',[])
+props = guidata(hObject);
+props = countspikes(props);
+guidata(hObject,props)
+
 
 %% video
 function videoprompt(hObject,eventdata)
