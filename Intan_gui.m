@@ -1255,17 +1255,17 @@ if isfield(props,'BMP') && ~isempty(props.BMP)
     for b=1:size(props.BMP,1)
         for p=1:2
             line(props.BMP(b,p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
-            props.sc(b,1) = scatter(props.BMP(b,p),  p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
+            sc(1) = scatter(props.BMP(b,p),  p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,...
                 'Tag',[phase{p} num2str(b) 's']);hold on
-            props.sc(b,2) = scatter(props.BMP(b,p+1),p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
+            sc(2) = scatter(props.BMP(b,p+1),p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,...
                 'Tag',[phase{p} num2str(b) 'e']);hold on
             pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
             pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
             pb.traverseFcn = [];
+            iptSetPointerBehavior(sc,pb);
+            iptPointerManager(gcf)
         end
     end
-    iptSetPointerBehavior(props.sc,pb);
-    iptPointerManager(gcf)
     props = countspikes(props);
 end
 
@@ -1273,7 +1273,7 @@ for d=1:nch
     chpos = posy(d) + gsize/nch/2 - 8;
     if ~isgraphics(props.plt(d))
         props.ax(d) = axes(props.axpanel,'Units','pixels','Position',[left   posy(d)   props.axpanel.Position(3)-(right+left)   gsize/nch]);
-        props.plt(d) = plot(tm,data(idx(d),:));
+        props.plt(d) = plot(tm,data(idx(d),:));hold on
         props.chk(d) = uicontrol(props.axpanel,'Units','pixels','Style','checkbox','Callback',@yaxis,'Value',false,'Position',[3 chpos  15 15],...
             'Value',false,'Visible','off','Tag',['c' num2str(d)]);
         props.txt(d) = uicontrol(props.axpanel,'Units','pixels','Style','text','Position',[18 chpos  60 15],'String',props.showlist{d},'HorizontalAlignment','left','Visible','off','Tag',['t' num2str(d)]);
@@ -2534,12 +2534,12 @@ phase = ["Prot","Retr"];
 axes(props.axbmp)
 for p=1:2
     line(x(p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
-    props.sc(b,1) = scatter(x(p),  p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 's']);hold on
-    props.sc(b,2) = scatter(x(p+1),p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 'e']);hold on
+    sc(1) = scatter(x(p),  p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 's']);hold on
+    sc(2) = scatter(x(p+1),p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 'e']);hold on
     pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
     pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
     pb.traverseFcn = [];
-    iptSetPointerBehavior(props.sc,pb);
+    iptSetPointerBehavior(sc,pb);
     iptPointerManager(gcf)
 end
 props.axbmp.YLim = [0 4.5];
@@ -2613,12 +2613,17 @@ function adjustline(hObject,eventdata)
 fig = ancestor(hObject,'figure','toplevel');
 props = guidata(fig);
 if eventdata.Button==1
-    if contains(hObject.Tag,'endtag')
+    if contains(hObject.Tag,'endtag')% i don't think this is necessary
         mouseclick(fig)
     else
+        for a=1:length(props.ax)
+            scatter(props.ax(a),nan,nan,'or','filled','Tag',['snap_marker' num2str(length(props.ax) - a+1)]);hold on
+        end
         set(hObject,'Tag',[hObject.Tag 'endtag'])
         set(fig,'WindowButtonMotionFcn',@mousemove)
         set(fig,'WindowButtonDownFcn',@mouseclick)
+        set(fig,'WindowKeyPressFcn',@snaptospike)
+        set(gcf,'WindowKeyReleaseFcn',@snaprelease)
     end
 else
     choice = questdlg('Delete motor pattern?','Question','Yes','No','Yes');
@@ -2662,7 +2667,18 @@ else
         disp('BMP removed')
     end
 end
+props.snapit = false;
 guidata(fig,props)
+
+function snaptospike(hObject,eventdata)
+props = guidata(hObject);
+props.snapit = true;
+guidata(hObject,props)
+
+function snaprelease(hObject,eventdata)
+props = guidata(hObject);
+props.snapit = false;
+guidata(hObject,props)
 
 function mousemove(hObject,eventdata)
 props = guidata(hObject);
@@ -2674,6 +2690,35 @@ if contains(sc.Tag,'ee')
     C(C<ln.XData(1)+mind) = ln.XData(1)+mind;
 else
     C(C>ln.XData(2)-mind) = ln.XData(2)-mind;
+end
+set(findobj(hObject,'-regexp','Tag','snap_marker'),'XData',nan,'YData',nan)
+if props.snapit && isfield(props,'spikedetection')
+    Cf = get(gcf,'CurrentPoint');
+    ch = findobj(props.axpanel,'Type','uicontrol','Style','text');
+    pos = cell2mat({ch.Position}');
+    pos = pos(:,2);
+    ht = diff(pos(1:2));
+    curax = abs(pos-Cf(2))<ht/2;
+    if any(curax)
+        idx = ismember(props.ch,ch(curax).String);
+        spikes = props.tm(props.spikedetection.spikes{idx});
+        if ~isempty(spikes)
+            [~,sidx] = min(abs(spikes-C(1)));
+            C(1) = spikes(sidx);
+        
+            snap_sc = findobj('Tag',['snap_marker' num2str(find(curax))]);
+            params = props.spikedetection.params(idx);
+            md = mean(props.data(idx,:));
+            stdev = std(props.data(idx,:));
+
+            if params.ckup
+                y = md + params.upthr*stdev;
+            else
+                y = md - params.dwnthr*stdev;
+            end
+            set(snap_sc,'XData',C(1),'YData',y);
+        end
+    end
 end
 
 if contains(sc.Tag,'Prot') && contains(sc.Tag,'ee')
@@ -2706,6 +2751,7 @@ sc = findobj(hObject,'-regexp','Tag','\w+endtag');
 set(sc,'Tag',replace(sc.Tag,'endtag',''))
 set(gcf,'WindowButtonMotionFcn',[])
 set(gcf,'WindowButtonDownFcn',[])
+delete(findobj(hObject,'-regexp','Tag','snap_marker'))
 props = guidata(hObject);
 props = countspikes(props);
 guidata(hObject,props)
