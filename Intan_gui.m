@@ -737,7 +737,7 @@ if intch && vsdch
                 end
             end
         end
-        props.BMP = zeros(0,4);  
+        props.BMP = zeros(0,3);  
         props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
         props.tm = itm;
         showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
@@ -795,7 +795,7 @@ if intch && vsdch
             if isfield(vsdprops.matprops,'BMP')
                 props.BMP = vsdprops.matprops.BMP;
             else
-                props.BMP = zeros(0,4);
+                props.BMP = zeros(0,3);
             end
 
             if isfield(vsdprops.matprops,'video')
@@ -823,7 +823,7 @@ if intch && vsdch
             if isfield(vsdprops.matprops,'BMP')
                 props.BMP = vsdprops.matprops.BMP;
             else
-                props.BMP = zeros(0,4);
+                props.BMP = zeros(0,3);
             end
 
             props.finfo.files = vsdprops.files;
@@ -863,7 +863,7 @@ elseif vsdch
     props.finfo.files = vsdprops.files;
     props.finfo.path = path;
     props.finfo.duration = max(props.tm);
-    props.BMP = zeros(0,4);
+    props.BMP = zeros(0,3);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.log = string(['loaded data on ',char(datetime)]);
@@ -887,7 +887,7 @@ else
     props.showidx = 1:nch;
     props.hidelist = [];
     props.hideidx = [];
-    props.BMP = zeros(0,4);
+    props.BMP = zeros(0,3);
     props.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'double');
     props.finfo = vsdprops.intan.finfo;
     props.finfo.files = vsdprops.files;
@@ -1254,10 +1254,10 @@ if isfield(props,'BMP') && ~isempty(props.BMP)
     phase = ["Prot","Retr"];
     for b=1:size(props.BMP,1)
         for p=1:2
-            line(props.BMP(b,(1:2)+2*(p-1)) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
-            props.sc(b,1) = scatter(props.BMP(b,1+2*(p-1)),  p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
+            line(props.BMP(b,p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
+            props.sc(b,1) = scatter(props.BMP(b,p),  p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
                 'Tag',[phase{p} num2str(b) 's']);hold on
-            props.sc(b,2) = scatter(props.BMP(b,2+2*(p-1)),p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
+            props.sc(b,2) = scatter(props.BMP(b,p+1),p,['o' color(p)],'filled','ButtonDownFcn',@adjustline,...
                 'Tag',[phase{p} num2str(b) 'e']);hold on
             pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
             pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
@@ -2523,10 +2523,10 @@ props = guidata(fig);
 [x, ~] = ginput(3);
 if ~isfield(props,'BMP') || isempty(props.BMP)
     b = 1;
-    props.BMP = x([1 2 2 3])';
+    props.BMP = x';
 else
     b = size(props.BMP,1)+1;
-    props.BMP = [props.BMP; x([1 2 2 3])'];
+    props.BMP = [props.BMP; x'];
 end
 
 color = 'bg';
@@ -2589,7 +2589,7 @@ if isfield(props,'spikedetection') && ~isempty(rspike)
         x = props.BMP(b,:);
         pdur = [0 0];
         for p=1:2
-            rsp = rspike(rspike>x(1+(p-1)*2) & rspike<x(2+(p-1)*2));
+            rsp = rspike(rspike>x(p) & rspike<x(p+1));
             rdursp = diff(rsp);
             if length(rsp)>1
                 bursts = [0 find(rdursp>=4)];
@@ -2683,7 +2683,7 @@ if contains(sc.Tag,'Prot') && contains(sc.Tag,'ee')
     set(sc2,'XData',C(1));
     ln2 = findobj(hObject,'Tag',['Retr' sc.Tag(5)]); 
     ln2.XData(1) = C(1);
-    props.BMP(str2double(sc.Tag(5)),2:3) = C(1);
+    props.BMP(str2double(sc.Tag(5)),2) = C(1);
 elseif contains(sc.Tag,'Retr') && contains(sc.Tag,'s')
     sc2 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 'e']); 
     sc3 = findobj(hObject,'Tag',['Prot' sc.Tag(5) 's']);
@@ -2691,11 +2691,11 @@ elseif contains(sc.Tag,'Retr') && contains(sc.Tag,'s')
     set(sc2,'XData',C(2));
     ln2 = findobj(hObject,'Tag',['Prot' sc.Tag(5)]); 
     ln2.XData(2) = C(2);
-    props.BMP(str2double(sc.Tag(5)),2:3) = C(1);
+    props.BMP(str2double(sc.Tag(5)),2) = C(1);
 elseif contains(sc.Tag,'Prot') 
     props.BMP(str2double(sc.Tag(5)),1) = C(1);
 else
-    props.BMP(str2double(sc.Tag(5)),4) = C(1);
+    props.BMP(str2double(sc.Tag(5)),3) = C(1);
 end
 set(sc,'XData',C(1));
 ln.XData(contains(sc.Tag,'ee')+1) = C(1);
