@@ -2643,8 +2643,8 @@ if eventdata.Button==1
 else
     choice = questdlg('Delete motor pattern?','Question','Yes','No','Yes');
     if strcmp(choice,'Yes')
-        idxs = char(regexp('Prot21s','\d+','match'));
-        idx = str2double(idxs);
+        idxs = char(regexp(hObject.Tag,'\d+','match'));
+        idx = str2double(idxs);disp(idx)
         delete(findobj(fig,'Tag',['Prot' idxs]))
         delete(findobj(fig,'Tag',['Prot' idxs 's']))
         delete(findobj(fig,'Tag',['Prot' idxs 'e']))
