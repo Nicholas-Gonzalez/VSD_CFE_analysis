@@ -2544,7 +2544,9 @@ function props = reorderBMP(props)
 fig = findobj('Tag',props.intan_tag);
 [~,idx] = sort(props.BMP(:,1));
 props.BMP = props.BMP(idx,:);
-props.btype = props.btype(idx,:);
+if isfield(props,'btype')
+    props.btype = props.btype(idx,:);
+end
 for i=1:length(idx)
     set(findobj(fig,'Tag',['Prot' num2str(i)]),'Tag', ['Prot' num2str(idx(i)) 'reordered'])
     set(findobj(fig,'Tag',['Prot' num2str(i) 's']),'Tag', ['Prot' num2str(idx(i)) 's' 'reordered'])
