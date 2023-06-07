@@ -17,6 +17,7 @@ if ischar(inputinfo)
     [folder, filenm, ext] = fileparts(vsd);
     fvsd = [filenm{1},ext{1}];
 
+    hasvsd = true;
     if exist(fullfile(inputdata.curdir,fvsd),'file')
         nvsd = fullfile(inputdata.curdir,fvsd);
     else
@@ -31,21 +32,23 @@ if ischar(inputinfo)
                 nvsd = vsd;
             else
                 warning(['Could not find ' char(vsd)])
-                return
+                hasvsd = false;
             end
         end
     end
 
-    warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
-    info = fitsinfo(nvsd);
-    warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
-
-    vsd = nvsd;
+    if hasvsd
+        warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
+        info = fitsinfo(nvsd);
+        warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
     
-    xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
-    ysize = info.PrimaryData.Size(1);
-    sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
-    origim = inputdata.im;
+        vsd = nvsd;
+        
+        xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
+        ysize = info.PrimaryData.Size(1);
+        sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
+        origim = inputdata.im;
+    end
 else
     data = inputdata;
     data(isnan(data)) = 0;
@@ -629,9 +632,6 @@ set(findobj('Tag','processing','Parent',hObject.Parent),'String',' ')
 set(allbut,'Enable','on')
 
 guidata(hObject,props)
-% assignin('base', 'roi', roi);
-% assignin('base', 'pixels', pixels);
-% assignin('base', 'props', props);
 
 function chframe(hObject,eventdata)
 props = guidata(hObject);
