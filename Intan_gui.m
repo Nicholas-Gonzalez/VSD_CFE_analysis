@@ -2582,7 +2582,7 @@ if isfield(props,'spikedetection')
     if any(ridx)
         rspike = props.spikedetection.spikes{ridx};
         rspike = props.tm(rspike);
-        btypes = ["Rejection","Ingestion"];
+        btypes = ["R","I"];
         phase = ["Prot","Retr"];
         if isfield(props,'btxt')
             delete(props.btxt)
