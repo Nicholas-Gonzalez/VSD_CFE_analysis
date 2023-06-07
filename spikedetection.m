@@ -48,6 +48,8 @@ if ischar(inputinfo)
         ysize = info.PrimaryData.Size(1);
         sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
         origim = inputdata.im;
+    else
+        sr = 1;
     end
 else
     data = inputdata;
