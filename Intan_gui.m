@@ -1504,9 +1504,8 @@ str(:,4) = string(props.ch);
 str = join(str,'');
 idx = listdlg('liststring',str);
 [x,~] = ginput(2);
-tm1 = find(props.tm>x(1),1);
-tm2 = find(props.tm>x(2),1);
-props.data(idx,tm1:tm2) = 0;
+tidx = find(props.tm>min(x),1):find(props.tm<max(x),1,'last');
+props.data(idx,tidx) = 0;
 guidata(hObject,props)
 plotdata(hObject)
 
