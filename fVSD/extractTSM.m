@@ -70,7 +70,7 @@ if nargin>2 && ~isempty(pixelparam) && ~isempty(pixelfun)
 end
 
 % Iterate data extraction through chunks
-kernelData = nan(zsize,numKern);
+kernelData = single(nan(zsize,numKern));
 
 fig = figure('Name','ROI warp Progress...','NumberTitle','off','MenuBar','none',...
     'Position',[300, 500 600 75]);
@@ -83,11 +83,12 @@ shutter = nan(zsize,1);
 tic
 
 if warpROI
+    imdata = nan(ysize,xsize,3,numChunks);
     kernall = single(zeros(256,256,numKern));
+    kern = zeros(256,256);
     for b = 1:numKern
         kIdx = det(kernpos(b)+1:kernpos(b)+kernel_size(b)); % Index of current kernel.
-        kern = zeros(256,256);
-        kern(kIdx) = true;
+        kern(kIdx) = b;
         kernall(:,:,b) = kern;
     end
     
@@ -128,12 +129,11 @@ if warpROI
     disp('=============')
 end
 
-
 fig.Name = 'ROI Progress...';
 set(rec,'Position',[0 0 0 1])
 pause(0.01)
 
-imw2p = zeros(xsize*ysize,chunkLength,numKern);
+tic
 for a = 1:numChunks
     if mod(a,1)==0
         if ~isvalid(rec)
@@ -141,11 +141,15 @@ for a = 1:numChunks
             return
         end
         set(rec,'Position',[0 0 a/numChunks 1])
-        pause(0.01)
+        if mod(a,10)==0
+            t = toc;
+            tleft = (numChunks - a)*t/a;
+            disp(['Time remaining:  ' num2str(tleft/60) ' min'])
+        end
+        pause(0.001)
     end
-    tic
+
     dataChunk = readTSM(info,chunkLength,a,false);
-    toc
 
     alength = size(dataChunk,3);
     dataChunk = dataChunk - darkFrame;
@@ -170,36 +174,58 @@ for a = 1:numChunks
     
 %     chunkWin = 1+chunkLength*(a-1):chunkLength*a; % Index of the temporal window of the chunk.
 %     chunktm = chunkWin*sr;
+    if warpROI
+        if a<size(Dwarp,4)
+            i = floor(a/10) + 1;
+            Dw1 = Dwarp(:,:,:,i) + mod(a,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
+            Dw2 = Dwarp(:,:,:,i) + mod(a+1,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
+        end
 
-    if a<size(Dwarp,4)
-        Dw1 = Dwarp(:,:,:,a) + mod(a-1,stepsize)*(Dwarp(:,:,:,a+1) - Dwarp(:,:,:,a))/(stepsize - 1) ;
-        Dw2 = Dwarp(:,:,:,a) + mod(a,stepsize)*(Dwarp(:,:,:,a+1) - Dwarp(:,:,:,a))/(stepsize - 1) ;
-    end
+
+        fsp = single(repmat(1:alength,xsize*ysize,1));
     
-    tic
-    fsp = single(repmat(1:alength,xsize*ysize,1));
-    for b = 1:numKern
-        if warpROI
-            imw1 = imwarp(kernall(:,:,b),Dw1,'SmoothEdges',true);% see how to speed this up
-            imw1 = repmat(imw1(:),1,chunkLength);
-            imw2 = imwarp(kernall(:,:,b),Dw2,'SmoothEdges',true);
-            imw2 = repmat(imw2(:),1,chunkLength);
-            ims = imw1 + (fsp-1).*(imw2 - imw1)/(chunkLength - 1);
+        dkern_group1 = uint8(imwarp(categorical(kern),Dw1,'SmoothEdges',true))-1;
+        dkern1 = imwarp(kern,Dw2,'SmoothEdges',true);
 
-            dataChunk = dataChunk.*ims/chunkLength;
-            kernelData(chunkWin,b) = sum(dataChunk)';
-        else
+        dkern_group2 = uint8(imwarp(categorical(kern),Dw1,'SmoothEdges',true))-1;
+        dkern2 = imwarp(kern,Dw2,'SmoothEdges',true);
+
+        imr = repmat(reshape(dataChunk(:,1),256,256),1,1,3);
+        for c=1:3
+            idx = round([(c-1)*numKern/3+1,  c*numKern/3]);
+            dk = dkern1(:,:);
+            imp = imr(:,:,end);
+            imp(dk>=idx(1) & dk<=idx(2)) = dk(dk>=idx(1) & dk<=idx(2));
+            imr(:,:,c) = imp;
+        end
+        imdata(:,:,:,a) = imr;
+
+        imw1 = single(zeros(xsize*ysize,alength));
+        imw2 = single(zeros(xsize*ysize,alength));
+        for b = 1:numKern
+            imw1(:) = 0;
+            imw2(:) = 0;
+
+            imw1(dkern_group1(:)==b,:) = repmat(dkern1(dkern_group1==b),1,alength);
+            imw2(dkern_group2(:)==b,:) = repmat(dkern2(dkern_group2==b),1,alength);
+
+            ims = imw1 + (fsp-1).*(imw2 - imw1)/(chunkLength - 1);
+            
+            temp = dataChunk.*ims;
+            kernelData(chunkWin,b) = sum(temp)';
+        end
+        kernelData(chunkWin,:) = kernelData(chunkWin,:)/alength;
+    else
+        for b = 1:numKern
             kIdx = det(kernpos(b)+1:kernpos(b)+kernel_size(b)); % Index of current kernel.     
             kernelData(chunkWin,b) = mean(dataChunk(kIdx,:),1)';   
         end
     end
-    toc
-    disp(' ')
 end
 close(fig)
 toc
 
-data = kernelData;
+data = double(kernelData);
 
 %% Data pre-processsing and normalization
 

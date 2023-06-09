@@ -284,7 +284,8 @@ end
 function loadapp(hObject,eventdata)
 props = guidata(hObject);
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
-f2.Position = [props.figsize(1:2)+props.figsize(3:4)/2 540 300];
+intan = findobj('Tag',props.intan_tag);
+f2.Position = [intan.Position(1:2)+intan.Position(3:4)/2 540 300];
 
 
 uicontrol('Position',[480 280 60 20],'Style','text','String','Include');
@@ -326,8 +327,11 @@ uicontrol('Position',[360 10 60 20],'Style','pushbutton','String',"Help",'Callba
 uicontrol('Position',[125 10 90 20],'Style','pushbutton','String',"Load Matlab File",'Callback',@loadmat);
 uicontrol('Position',[65 10 60 20],'Style','text','String','','Tag','matprog');
 
-uicontrol('Position',[230 10 20 20],'Style','checkbox','Tag','loadvid','Value',1);
+uicontrol('Position',[230 10 20 20],'Style','checkbox','Tag','loadvid','Value',0);
 uicontrol('Position',[250 8 60 20],'Style','text','String','Load video');
+
+uicontrol('Position',[230 30 20 20],'Style','checkbox','Tag','warproi','Value',1);
+uicontrol('Position',[250 28 60 20],'Style','text','String','Warp ROI');
 
 load_tag = ['load_tag' num2str(randi(1e4,1))];
 hmenu = hObject.Parent;
@@ -552,9 +556,16 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
 %             vsdprops.vsd.fparam = fparam;
 %             fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
 %             save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
-            [data,tm,info,imdata,imtm] = extractTSM(tsm{1}, det,[],[],true);
+            warproi = get(findobj(hObject.Parent,'Tag','warproi'),'Value');
+            [data,tm,info,imdata,imtm] = extractTSM(tsm{1}, det,[],[],warproi);
 %             save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
-            
+            if warproi
+                rwstr = replace(tsm{1},'.tsm',  '_ROIwarp.tif');
+                imwrite(imdata(:,:,:,1),rwstr)
+                for i=2:size(imdata,4)
+                    imwrite(imdata(:,:,:,i),rwstr,'WriteMode','append')
+                end  
+            end
 
             data = data';
             vsdprops.vsd.min = min(data,[],2);
