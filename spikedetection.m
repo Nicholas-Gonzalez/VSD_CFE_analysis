@@ -29,7 +29,7 @@ if ischar(inputinfo)
                 [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select file','MultiSelect','off');
                 nvsd = fullfile(path,file);
             elseif strcmp(answer,'No')
-                nvsd = vsd;
+                hasvsd = false;
             else
                 warning(['Could not find ' char(vsd)])
                 hasvsd = false;

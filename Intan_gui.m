@@ -1000,20 +1000,22 @@ for s=1:size(strs,2)
         if exist(noten,"file")
             notes = readcell(fullfile(fpath,'notes.xlsx'));
             cfename = notes{ismember(string(notes(:,1)),fn),2};
-            rfn = split(cfename,'; ');
-            for r=1:length(rfn)
-                if any(contains(fnames,rfn{r}))
-                   rfn{r} = fullfile(fpath,rfn{r},[rfn{r} '.rhs']);
-                else
-                   for f=3:length(dfolder)
-                       if dfolder(f).isdir
-                            sf = dir(fullfile(dfolder(f).folder,dfolder(f).name));
-                            idx = contains(string({sf.name}),rfn{r});
-                            if any(idx)
-                                rfn{r} = fullfile(sf(idx).folder,sf(idx).name);break
-                            end
+            if ~isempty(cfename)
+                rfn = split(cfename,'; ');
+                for r=1:length(rfn)
+                    if any(contains(fnames,rfn{r}))
+                       rfn{r} = fullfile(fpath,rfn{r},[rfn{r} '.rhs']);
+                    else
+                       for f=3:length(dfolder)
+                           if dfolder(f).isdir
+                                sf = dir(fullfile(dfolder(f).folder,dfolder(f).name));
+                                idx = contains(string({sf.name}),rfn{r});
+                                if any(idx)
+                                    rfn{r} = fullfile(sf(idx).folder,sf(idx).name);break
+                                end
+                           end
                        end
-                   end
+                    end
                 end
             end
             cfename = join(rfn,'; ');
@@ -1225,7 +1227,7 @@ uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+25 20
 props.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6]);
 props.axbmp.XTick = [];
 props.axbmp.YTick = [1 2 3];
-props.axbmp.YLim = [0 4.5];
+props.axbmp.YLim = [0 4.8];
 props.axbmp.YTickLabel = ["Protraction","Retraction","Closure"];
 props.axbmp.TickLength = [0 0];
 if isfield(props,'BMP') && ~isempty(props.BMP)
@@ -2617,7 +2619,7 @@ if isfield(props,'spikedetection')
                 end
                 props.btype(b) = (pdur(2)>pdur(1))+1;
                 props.rnratio(b,:) = [pdur(1) pdur(2) pdur(2)/sum(pdur)];
-                props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center');hold on
+                props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center','FontName','times');hold on
             end
         end
     end
