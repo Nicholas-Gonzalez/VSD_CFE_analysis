@@ -552,7 +552,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
 %             vsdprops.vsd.fparam = fparam;
 %             fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
 %             save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
-            [data,tm,info,imdata,imtm] = extractTSM(tsm{1}, det);
+            [data,tm,info,imdata,imtm] = extractTSM(tsm{1}, det,[],[],true);
 %             save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
             
 
