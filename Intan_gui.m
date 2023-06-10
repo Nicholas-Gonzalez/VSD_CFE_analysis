@@ -2558,6 +2558,7 @@ fig = findobj('Tag',props.intan_tag);
 props.BMP = props.BMP(idx,:);
 if isfield(props,'btype')
     props.btype = props.btype(idx,:);
+    props.Rn = props.Rn(idx,:);
 end
 for i=1:length(idx)
     set(findobj(fig,'Tag',['Prot' num2str(i)]),'Tag', ['Prot' num2str(idx(i)) 'reordered'])
@@ -2606,14 +2607,16 @@ if isfield(props,'spikedetection')
         end
         props.btxt = gobjects(size(props.BMP,1),1);
         props.btype = zeros(size(props.BMP,1),1);
-        props.rnratio = zeros(size(props.BMP,1),3);
+        props.Rn = zeros(size(props.BMP,1),8);
         axes(props.axbmp)
         if isfield(props,'spikedetection') && ~isempty(rspike)
+            props.rnratio_head = ["rn duration protr","rn duration retr","rn dur ratio","rn sp protr","rn sp retr","rn Hz protr","rn Hz retr","rn Hz ratio"];
             for b=1:size(props.BMP,1)
                 x = props.BMP(b,:);
                 pdur = [0 0];
                 for p=1:2
                     rsp = rspike(rspike>x(p) & rspike<x(p+1));
+                    props.Rn(b,p+3) = length(rsp);
                     rdursp = diff(rsp);
                     if length(rsp)>1
                         bursts = [0 find(rdursp>=4)];
@@ -2629,7 +2632,8 @@ if isfield(props,'spikedetection')
                     end
                 end
                 props.btype(b) = (pdur(2)>pdur(1))+1;
-                props.rnratio(b,:) = [pdur(1) pdur(2) pdur(2)/sum(pdur)];
+                props.Rn(b,6:7) = props.Rn(b,4:5)./diff(props.BMP(b,1:3));
+                props.Rn(b,[1:3 8]) = [pdur(1)  pdur(2)  pdur(2)/sum(pdur)  props.Rn(b,7)/sum(props.Rn(b,6:7))];
                 props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center','FontName','times');hold on
             end
         end
@@ -2685,7 +2689,7 @@ else
         delete(props.btxt(idx))
         props.btxt(idx) = [];
         props.btype(idx) = [];
-        props.rnratio(idx) = [];
+        props.Rn(idx,:) = [];
 
         rnln = findobj(fig,'-regexp','Tag',[num2str(idx) '(Prot|Retr)r']);
         delete(rnln)
