@@ -557,7 +557,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
 %             fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
 %             save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
             warproi = get(findobj(hObject.Parent,'Tag','warproi'),'Value');
-            [data,tm,info,imdata,imtm] = extractTSM(tsm{1}, det,[],[],warproi);
+            [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(tsm{1}, det,[],[],warproi);
 %             save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
             if warproi
                 rwstr = replace(tsm{1},'.tsm',  '_ROIwarp.tif');
@@ -565,6 +565,8 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
                 for i=2:size(imdata,4)
                     imwrite(imdata(:,:,:,i),rwstr,'WriteMode','append')
                 end  
+
+                save(replace(tsm{1},'.tsm',  '_ROIwarp.mat'), 'im','Dwarp','Dwall')
             end
 
             data = data';

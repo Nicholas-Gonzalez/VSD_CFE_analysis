@@ -1,4 +1,4 @@
-function [data,tm,info,imdata,imtm] = extractTSM(fpath, detpath, pixelparam,pixelfun,warpROI)
+function [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(fpath, detpath, pixelparam,pixelfun,warpROI)
 
 if nargin==0
     [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
@@ -82,6 +82,9 @@ imdata = nan(ysize,xsize,numChunks);
 shutter = nan(zsize,1);
 tic
 
+stepsize = 10;
+im = zeros(ysize,xsize,ceil(numChunks/stepsize));
+Dwarp = zeros(ysize,xsize,2,ceil(numChunks/stepsize));
 if warpROI
     imdata = nan(ysize,xsize,3,numChunks);
     kernall = single(zeros(256,256,numKern));
@@ -98,9 +101,6 @@ if warpROI
         kidx{j} = [kidx{j} i];
     end
     
-    stepsize = 10;
-    im = zeros(ysize,xsize,ceil(numChunks/stepsize));
-    Dwarp = zeros(ysize,xsize,2,ceil(numChunks/stepsize));
     refim = readTSM(info,1,round(numChunks/2),false);
     refim = refim/max(refim,[],'all');
     cnt = 1;
@@ -119,7 +119,7 @@ if warpROI
             dataChunk = readTSM(info,chunkLength,a,false);
             im(:,:,cnt) = dataChunk(:,:,1)/max(dataChunk(:,:,1),[],'all');
             imr = imhistmatch(im(:,:,cnt),refim);
-            [Dwarp(:,:,:,a),~] = imregdemons(refim,imr,[200 100 50],'AccumulatedFieldSmoothing',1.5,'DisplayWaitbar',false);
+            [Dwarp(:,:,:,cnt),~] = imregdemons(refim,imr,[200 100 50],'AccumulatedFieldSmoothing',1.5,'DisplayWaitbar',false);
             cnt = cnt + 1;
         end
     end
@@ -134,6 +134,7 @@ set(rec,'Position',[0 0 0 1])
 pause(0.01)
 
 tic
+Dwall = zeros(ysize,xsize,2,numChunks);
 for a = 1:numChunks
     if mod(a,1)==0
         if ~isvalid(rec)
@@ -163,9 +164,10 @@ for a = 1:numChunks
     end
     chunkWin = idx + chunkLength*(a-1);% Index of the temporal window of the chunk.
     shutter(chunkWin) = mean(dataChunk);
-    dataChunk = (dataChunk - f0(:,idx))./f0(:,idx);
+    
 
     if nargin>2 && ~isempty(pixelparam) && ~isempty(pixelfun)
+        dataChunk = (dataChunk - f0(:,idx))./f0(:,idx);
         imdata(:,:,a) = reshape(dataChunk(:,1),ysize,xsize);   
         imdatafp = pixelfun(pixelparam(:,idx,1), pixelparam(:,idx,2), pixelparam(:,idx,3),...
             pixelparam(:,idx,4), chunktm(:,idx)+a*chunkLength*sr);
@@ -176,8 +178,9 @@ for a = 1:numChunks
 %     chunktm = chunkWin*sr;
     if warpROI
         if a<size(Dwarp,4)
-            i = floor(a/10) + 1;
+            i = floor(a/stepsize) + 1;
             Dw1 = Dwarp(:,:,:,i) + mod(a,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
+            Dwall(:,:,:,a) = Dw1;
             Dw2 = Dwarp(:,:,:,i) + mod(a+1,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
         end
 
@@ -190,24 +193,24 @@ for a = 1:numChunks
         dkern_group2 = uint8(imwarp(categorical(kern),Dw1,'SmoothEdges',true))-1;
         dkern2 = imwarp(kern,Dw2,'SmoothEdges',true);
 
-        imr = repmat(reshape(dataChunk(:,1),256,256),1,1,3);
+        imr = repmat(reshape(dataChunk(:,1),ysize,xsize),1,1,3)/max(dataChunk,[],'all');
         for c=1:3
-            idx = round([(c-1)*numKern/3+1,  c*numKern/3]);
-            dk = dkern1(:,:);
+            kidx = round([(c-1)*numKern/3+1,  c*numKern/3]);
             imp = imr(:,:,end);
-            imp(dk>=idx(1) & dk<=idx(2)) = dk(dk>=idx(1) & dk<=idx(2));
+            imp(dkern_group1>=kidx(1) & dkern_group1<=kidx(2)) = dkern1(dkern_group1>=kidx(1) & dkern_group1<=kidx(2))/kidx(2);
             imr(:,:,c) = imp;
         end
         imdata(:,:,:,a) = imr;
 
+        dataChunk = (dataChunk - f0(:,idx))./f0(:,idx);
         imw1 = single(zeros(xsize*ysize,alength));
         imw2 = single(zeros(xsize*ysize,alength));
         for b = 1:numKern
             imw1(:) = 0;
             imw2(:) = 0;
 
-            imw1(dkern_group1(:)==b,:) = repmat(dkern1(dkern_group1==b),1,alength);
-            imw2(dkern_group2(:)==b,:) = repmat(dkern2(dkern_group2==b),1,alength);
+            imw1(dkern_group1(:)==b,:) = repmat(dkern1(dkern_group1==b)/b,1,alength);
+            imw2(dkern_group2(:)==b,:) = repmat(dkern2(dkern_group2==b)/b,1,alength);
 
             ims = imw1 + (fsp-1).*(imw2 - imw1)/(chunkLength - 1);
             
@@ -216,6 +219,7 @@ for a = 1:numChunks
         end
         kernelData(chunkWin,:) = kernelData(chunkWin,:)/alength;
     else
+        dataChunk = (dataChunk - f0(:,idx))./f0(:,idx);
         for b = 1:numKern
             kIdx = det(kernpos(b)+1:kernpos(b)+kernel_size(b)); % Index of current kernel.     
             kernelData(chunkWin,b) = mean(dataChunk(kIdx,:),1)';   
