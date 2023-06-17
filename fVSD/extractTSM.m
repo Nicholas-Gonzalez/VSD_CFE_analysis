@@ -123,6 +123,16 @@ if warpROI
             cnt = cnt + 1;
         end
     end
+    Dwall = zeros(ysize,xsize,2,numChunks);
+    for i=1:ysize
+        for j=1:xsize
+            for d=1:2
+                xt = Dwarp(i,j,d,:);
+                Dwall(i,j,d,:) = interp(xt(:),10);
+            end
+        end
+    end
+
     disp('=============')
     disp('ROI warp')
     toc
@@ -177,20 +187,24 @@ for a = 1:numChunks
 %     chunkWin = 1+chunkLength*(a-1):chunkLength*a; % Index of the temporal window of the chunk.
 %     chunktm = chunkWin*sr;
     if warpROI
-        if a<size(Dwarp,4)
-            i = floor(a/stepsize) + 1;
-            Dw1 = Dwarp(:,:,:,i) + mod(a,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
-            Dwall(:,:,:,a) = Dw1;
-            Dw2 = Dwarp(:,:,:,i) + mod(a+1,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
+        if a<numChunks
+            Dw1 = Dwall(:,:,:,a);
+            Dw2 = Dwall(:,:,:,a+1);
         end
+%         if floor(a/stepsize) + 1<size(Dwarp,4)
+%             i = floor(a/stepsize) + 1;
+%             Dw1 = Dwarp(:,:,:,i) + mod(a,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
+%             Dwall(:,:,:,a) = Dw1;
+%             Dw2 = Dwarp(:,:,:,i) + mod(a+1,stepsize)*(Dwarp(:,:,:,i+1) - Dwarp(:,:,:,i))/(stepsize - 1) ;
+%         end
 
 
         fsp = single(repmat(1:alength,xsize*ysize,1));
     
         dkern_group1 = uint8(imwarp(categorical(kern),Dw1,'SmoothEdges',true))-1;
-        dkern1 = imwarp(kern,Dw2,'SmoothEdges',true);
+        dkern1 = imwarp(kern,Dw1,'SmoothEdges',true);
 
-        dkern_group2 = uint8(imwarp(categorical(kern),Dw1,'SmoothEdges',true))-1;
+        dkern_group2 = uint8(imwarp(categorical(kern),Dw2,'SmoothEdges',true))-1;
         dkern2 = imwarp(kern,Dw2,'SmoothEdges',true);
 
         imr = repmat(reshape(dataChunk(:,1),ysize,xsize),1,1,3)/max(dataChunk,[],'all');
@@ -212,7 +226,7 @@ for a = 1:numChunks
             imw1(dkern_group1(:)==b,:) = repmat(dkern1(dkern_group1==b)/b,1,alength);
             imw2(dkern_group2(:)==b,:) = repmat(dkern2(dkern_group2==b)/b,1,alength);
 
-            ims = imw1 + (fsp-1).*(imw2 - imw1)/(chunkLength - 1);
+            ims = imw1 + (fsp-1).*(imw2 - imw1)/alength;
             
             temp = dataChunk.*ims;
             kernelData(chunkWin,b) = sum(temp)';
