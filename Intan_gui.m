@@ -557,9 +557,19 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
 %             fun = @(p1,p2,p3,p4,x) p1.*(1-exp(x./-p2))-p3.*(1-exp(x./-p4));
 %             save(replace(tsm,'.tsm','_pixelfit'),'fparam','fun')
             warproi = get(findobj(hObject.Parent,'Tag','warproi'),'Value');
-            [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(tsm{1}, det,[],[],warproi);
-%             save(replace(tsm,'.tsm','_pixelfit'),'imdata','imtm','imdataf','-append')
-            if warproi
+            
+            if ~warproi
+                [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(tsm{1}, det,[],[],warproi);
+            else
+                directory = dir(fileparts(tsm{1}));
+                filenms = string({directory.name}');
+                framefile = filenms{arrayfun(@(x) ~isempty(regexp(x,'001_\d{2}-')),filenms)};
+                framefile = fullfile(fileparts(tsm{1}),framefile);
+                frame = open(framefile);
+                disp(['found ' framefile])
+                
+                [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(tsm{1}, det,[],[],warproi,frame.frame);
+
                 rwstr = replace(tsm{1},'.tsm',  '_ROIwarp.tif');
                 imwrite(imdata(:,:,:,1),rwstr)
                 for i=2:size(imdata,4)
@@ -1520,7 +1530,13 @@ str = join(str,'');
 idx = listdlg('liststring',str);
 [x,~] = ginput(2);
 tidx = find(props.tm>min(x),1):find(props.tm<max(x),1,'last');
-props.data(idx,tidx) = 0;
+
+props.bmin = min(props.data,[],2);
+props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
+props.log = [props.log; 'updated backup of data'];
+
+props.data(idx,tidx) = repmat(props.data(idx,tidx(1)),1,length(tidx));
 guidata(hObject,props)
 plotdata(hObject)
 

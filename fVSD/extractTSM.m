@@ -1,4 +1,4 @@
-function [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(fpath, detpath, pixelparam,pixelfun,warpROI)
+function [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(fpath, detpath, pixelparam,pixelfun,warpROI,refidx)
 
 if nargin==0
     [file, path, ~] = uigetfile('C:\Users\cneveu\Desktop\Data\*.tsm','Select tsm file');
@@ -82,7 +82,7 @@ imdata = nan(ysize,xsize,numChunks);
 shutter = nan(zsize,1);
 tic
 
-stepsize = 10;
+stepsize = 20;
 im = zeros(ysize,xsize,ceil(numChunks/stepsize));
 Dwarp = zeros(ysize,xsize,2,ceil(numChunks/stepsize));
 if warpROI
@@ -101,11 +101,11 @@ if warpROI
         kidx{j} = [kidx{j} i];
     end
     
-    refim = readTSM(info,1,round(numChunks/2),false);
+    refim = readTSM(info,1,refidx,false);
+    refim = refim(:,:,1);
     refim = refim/max(refim,[],'all');
-    cnt = 1;
     tic
-    for a = 1:numChunks
+    for a = stepsize:stepsize:numChunks
         if mod(a,round(numChunks/120))==0
             if ~isvalid(rec)
                 disp('operation terminated')
@@ -114,21 +114,18 @@ if warpROI
             set(rec,'Position',[0 0 a/numChunks 1])
             pause(0.01)
         end
-
-        if mod(a,stepsize)==1
-            dataChunk = readTSM(info,chunkLength,a,false);
-            im(:,:,cnt) = dataChunk(:,:,1)/max(dataChunk(:,:,1),[],'all');
-            imr = imhistmatch(im(:,:,cnt),refim);
-            [Dwarp(:,:,:,cnt),~] = imregdemons(refim,imr,[200 100 50],'AccumulatedFieldSmoothing',1.5,'DisplayWaitbar',false);
-            cnt = cnt + 1;
-        end
+        dataChunk = readTSM(info,chunkLength,a,false);
+        im(:,:,a/stepsize) = dataChunk(:,:,1)/max(dataChunk(:,:,1),[],'all');
+        imr = imhistmatch(im(:,:,a/stepsize),refim);
+        [Dwarp(:,:,:,a/stepsize),~] = imregdemons(refim,imr,[200 100 50],'AccumulatedFieldSmoothing',1.5,'DisplayWaitbar',false);
     end
     Dwall = zeros(ysize,xsize,2,numChunks);
     for i=1:ysize
         for j=1:xsize
             for d=1:2
                 xt = Dwarp(i,j,d,:);
-                Dwall(i,j,d,:) = interp(xt(:),10);
+                yt = interp(xt(:),stepsize);
+                Dwall(i,j,d,:) = yt(1:size(Dwall,4));
             end
         end
     end
@@ -144,7 +141,6 @@ set(rec,'Position',[0 0 0 1])
 pause(0.01)
 
 tic
-Dwall = zeros(ysize,xsize,2,numChunks);
 for a = 1:numChunks
     if mod(a,1)==0
         if ~isvalid(rec)
