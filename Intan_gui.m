@@ -559,7 +559,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
             warproi = get(findobj(hObject.Parent,'Tag','warproi'),'Value');
             
             if ~warproi
-                [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(tsm{1}, det,[],[],warproi);
+                [data,tm,info,imdata,imtm,im] = extractTSM(tsm{1}, det,[],[],warproi);
             else
                 directory = dir(fileparts(tsm{1}));
                 filenms = string({directory.name}');

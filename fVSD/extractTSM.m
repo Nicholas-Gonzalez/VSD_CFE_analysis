@@ -225,9 +225,8 @@ for a = 1:numChunks
             ims = imw1 + (fsp-1).*(imw2 - imw1)/alength;
             
             temp = dataChunk.*ims;
-            kernelData(chunkWin,b) = sum(temp)';
+            kernelData(chunkWin,b) = sum(temp)'./sum(ims)';
         end
-        kernelData(chunkWin,:) = kernelData(chunkWin,:)/alength;
     else
         dataChunk = (dataChunk - f0(:,idx))./f0(:,idx);
         for b = 1:numKern
