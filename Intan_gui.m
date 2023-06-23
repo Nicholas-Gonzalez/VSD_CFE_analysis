@@ -43,9 +43,10 @@ mi(1) = uimenu(m,'Text','Open','Callback',@loadapp);
 mi(3) = uimenu(m,'Text','Generate Tiffs','Callback',@all_kframe,'Enable','on','Tag','kframe');
 mi(4) = uimenu(m,'Text','Average Image','Callback',@avgtsm,'Enable','on');
 mi(5) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
-mi(6) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
-mi(7) = uimenu(m,'Text','Print file log','Callback',@printlog,'Enable','off','Tag','savem');
-mi(8) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
+mi(6) = uimenu(m,'Text','Save BMP','Callback',@saveBMP,'Enable','off','Tag','savem');
+mi(7) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','off','Tag','savem');
+mi(8) = uimenu(m,'Text','Print file log','Callback',@printlog,'Enable','off','Tag','savem');
+mi(9) = uimenu(m,'Text','Help','Callback',@help,'Enable','on','Tag','help');
 
 % ---- formatting parameters --------
 fontsz = 10;
@@ -2318,7 +2319,7 @@ str = join(str,'');
 
 uicontrol('Units','normalized','Position',[0.002 0.96 0.07 0.03],'Style','text','String','Select channel');
 uicontrol('Units','normalized','Position',[0.002 0.23 0.07 0.73],'Style','listbox',...
-    'Max',length(ch),'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@chchannel);
+    'Max',1,'Min',1,'String',str','Tag','channels','Value',showidx(1),'Callback',@chchannel);
 
 cpanel = uipanel('Title','Controls','Units','normalized','FontSize',12,'Position',[0.75 0 0.25 1],'Tag','cpanel');
 
@@ -4460,6 +4461,53 @@ guidata(intan,props)
 updateroi(intan)
 
 %% misc methods
+function saveBMP(hObject,eventdata)
+props = guidata(hObject);
+if ~isfield(props,'BMP')
+    msgbox('You have no BMPs to save')
+    return
+end
+[file,path] = uiputfile('BMP_analysis.mat','Select BMP file');
+if isequal(file,0) || isequal(path,0)
+    disp('Canceled')
+else
+    fn = fullfile(path,file);
+    bmp = [props.BMP props.Rn];
+    group = [string(props.intan.finfo.date), props.notes.note1];
+    group = repmat(group,size(bmp,1),1);
+    bmp(:,12:13) = diff(bmp(:,1:3),1,2);
+    bmp(:,14) = (bmp(:,6)>0.5)+1;
+    head = ["protraction",...   1
+    "transition",...            2
+    "retraction",...            3
+    "Rn protr dur",...          4
+    "Rn retr dur",...           5
+    "Rn activity dur (retr / (prot + ret))",... 6
+    "Rn sp protr",...                           7
+    "Rn sp retr",...                            8
+    "Rn protraction spike rate (Hz)",...        9
+    "Rn retraction spike rate (Hz)",...         10
+    "Rn activity Hz (retr / (prot + ret))",...  11
+    "Prot dur",...  12
+    "Retr dur",...  13
+    "Type"];%       14
+    if exist(fn,'file')
+        answer = questdlg('Would you like to append to this file or overwrite?','Action','Append','Overwrite','Cancel','Append');
+        if strcmp(answer,'Append')
+            vars = load(fn);
+            bmp = [vars.bmp ; bmp];
+            group = [vars.group; group];
+            disp(['BMPs were appended to ' fn])
+        elseif strcmp(answer,'Cancel')
+            disp('BMP save canceled')
+            return
+        end
+    else
+        disp(['BMPs were saved to ' fn])
+    end
+    save(fn,'group','bmp','head')
+end
+
 function printlog(hObject,eventdata)
 props = guidata(hObject);
 disp('============= File Log =============')
