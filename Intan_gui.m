@@ -4498,12 +4498,14 @@ else
             bmp = [vars.bmp ; bmp];
             group = [vars.group; group];
             disp(['BMPs were appended to ' fn])
+            props.log = [props.log; 'Appended BMPs to ' fn];
         elseif strcmp(answer,'Cancel')
             disp('BMP save canceled')
             return
         end
     else
         disp(['BMPs were saved to ' fn])
+        props.log = [props.log; 'Saved BMPs to ' fn];
     end
     save(fn,'group','bmp','head')
 end
