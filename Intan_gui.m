@@ -331,7 +331,7 @@ uicontrol('Position',[65 10 60 20],'Style','text','String','','Tag','matprog');
 uicontrol('Position',[230 10 20 20],'Style','checkbox','Tag','loadvid','Value',0);
 uicontrol('Position',[250 8 60 20],'Style','text','String','Load video');
 
-uicontrol('Position',[230 30 20 20],'Style','checkbox','Tag','warproi','Value',1);
+uicontrol('Position',[230 30 20 20],'Style','checkbox','Tag','warproi','Value',0);
 uicontrol('Position',[250 28 60 20],'Style','text','String','Warp ROI');
 
 load_tag = ['load_tag' num2str(randi(1e4,1))];
@@ -4227,7 +4227,7 @@ if ~isempty(imsel)
     substr = char(join(selstr(imsel),' and '));
     str = [substr ' channels replaced with zeros'];
 end
-props.log = [props.log; str]
+props.log = [props.log; str];
 guidata(intan,props)
 close(hObject.Parent)
 updateroi(intan)
