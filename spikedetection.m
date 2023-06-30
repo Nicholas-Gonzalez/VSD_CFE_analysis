@@ -734,7 +734,9 @@ props = guidata(hObject);
 function plotdata(hObject)
 props = guidata(hObject);
 idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value');
+
 set(props.plt(1),'YData', props.data(idx,:));
+
 
 stdata = std(props.data(idx,:));
 if props.params(idx).ckup
@@ -747,10 +749,17 @@ else
 end
 thr = str2double(get(findobj(props.panel,'Tag',tag),'String'));
 spikes = props.spikes{idx};
+
 set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*stdata)
 
-set(props.aplt,'YData',mean(props.aspike{idx},1))
-set(props.aplt2,'YData',mean(props.aspike2{idx},1))
+if ~isempty(spikes)
+    set(props.aplt,'YData',mean(props.aspike{idx},1))
+    set(props.aplt2,'YData',mean(props.aspike2{idx},1));
+else
+    set(props.aplt,'YData',nan(size(props.aplt.XData)))
+    set(props.aplt2,'YData',nan(size(props.aplt2.XData)));
+end
+
 guidata(hObject,props)
 
 function activatethr(hObject,eventdata)
