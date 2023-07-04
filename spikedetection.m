@@ -74,6 +74,7 @@ sf = diff(tm(1:2));
 slidepos = 27;% default frame for image
 inc = 0.25;% increment increas for threshold
 
+default.ckdv = false;% default on whether to use a differential spike detection
 default.ckup = true;% default whether upper threshold is used as criteria
 default.updur = 5;% default number of datapoints above threshold to detect spike.
 default.upthr = 5;
@@ -85,15 +86,25 @@ default.dwnthr = -1.75;
 default.ckdwnrej = false;
 default.dwnrej = -4;
 default.gapdur = 15;
+default.gpdvdur = 15;% gap duration for dv threshold method
 default.ra = 20;% re-arm, the minimal amount of time to detect a subsequent spike (should be just longer than the concievable duration of a spike)
 
 default.updur = sf*default.updur*1000;
 default.dwndur = sf*default.dwndur*1000;
 default.gapdur = sf*default.gapdur*1000;
+default.gpdvdur = sf*default.gpdvdur*1000;
 default.ra = sf*default.ra*1000;
 
 if isfield(inputdata,'spikedetection')
     params = inputdata.spikedetection.params;
+    fields = fieldnames(default);
+    for fn = 1:length(fields)
+        if ~isfield(params,fields{fn})
+            for p=1:length(params)
+                params(p).(fields{fn}) = default.(fields{fn});
+            end
+        end
+    end
     spikes = inputdata.spikedetection.spikes;
 else
     params = repmat(default,length(ch),1);
@@ -121,6 +132,9 @@ uicontrol(panel,'Position',[135 88 80 25],'Style','text','String','Min Duration'
 uicontrol(panel,'Position',[215 88 80 25],'Style','text','String','Gap','Enable','on');
 uicontrol(panel,'Position',[295 88 80 25],'Style','text','String','Reject','Enable','on');
 
+% dv threshold
+uicontrol(panel,'Position',[140 4 20 20],'Style','checkbox','Tag','ckdv','Callback',@dvthr,'Enable','on','Value',default.ckdv);
+uicontrol(panel,'Position',[160 1 35 20],'Style','text','String','dv Thr','Enable','on');
 
 %threshold 1
 uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',default.ckup);
@@ -165,6 +179,13 @@ uicontrol(panel,'Position',[370 40  20 20],'Style','text','String','std','Tag','
 
 uicontrol(panel,'Position',[395 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
 
+%gap start (only active when using dv threshold
+uicontrol(panel,'Position',[220 82 20 14],'Style','pushbutton','Tag','gpdvpUPdur','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[220 69 20 14],'Style','pushbutton','Tag','gpdvpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[240 73 35 20],'Style','edit','String',num2str(default.gpdvdur,2),'Tag','gpdvdur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[275 70 20 20],'Style','text','String','ms','Tag','gpdvunits','Enable','off');
+
+
 %gap
 uicontrol(panel,'Position',[220 52 20 14],'Style','pushbutton','Tag','gappUPdur','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[220 39 20 14],'Style','pushbutton','Tag','gappDWNdur','String',char(709),'Callback',@chval,'Enable','off');
@@ -177,8 +198,8 @@ uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',num2str(default.
 uicontrol(panel,'Position',[70 1 20 20],'Style','text','String','ms','Enable','on');
 uicontrol(panel,'Position',[90 4 20 20],'Style','pushbutton','String','?','Tag','helps3','Callback',@helpf,'Enable','on');
 
-uicontrol(panel,'Position',[295 1 120 30],'Style','pushbutton','String','Get Image Average','Tag','avgim','Callback',@avgim,'Enable','on');
-uicontrol(panel,'Position',[170 1 120 30],'Style','pushbutton','String','Copy Parameters','Callback',@copyparam,'Enable','on');
+uicontrol(panel,'Position',[325 1 90 30],'Style','pushbutton','String','Get Im Average','Tag','avgim','Callback',@avgim,'Enable','on');
+uicontrol(panel,'Position',[225 1 100 30],'Style','pushbutton','String','Copy Parameters','Callback',@copyparam,'Enable','on');
 
 
 uicontrol('Position',[220 125 60 20],'Style','text','String','# spikes:','Enable','on');
@@ -650,10 +671,19 @@ props.txttm.String = sprintf('Time: %0.1f ms',(props.W(1) + length(props.W)*fram
 set(props.frame,'Position',pos)
 guidata(hObject,props)
 
+function dvthr(hObject,eventdata)
+obj = findobj(hObject.Parent,'-regexp','Tag','gpdv');
+if hObject.Value
+    set(obj,'Enable','on')
+else
+    set(obj,'Enable','off')
+end
+chparam(hObject)
+
 function chval(hObject,eventdata)
 props = guidata(hObject);
 tag = get(hObject,'Tag');
-change = regexp(tag,'(up|dwn|UP|DWN|thr|dur|gap|rej)','match');
+change = regexp(tag,'(up|dwn|UP|DWN|thr|dur|gap|rej|gpdv)','match');
 dir = contains(tag,'UP')*2 - 1;
 obj = findobj(hObject.Parent,'Tag',[change{1},change{3}]);
 val = str2double(obj.String);
@@ -737,8 +767,6 @@ idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value'
 
 set(props.plt(1),'YData', props.data(idx,:));
 
-
-stdata = std(props.data(idx,:));
 if props.params(idx).ckup
     tag = 'upthr';
     if props.params(idx).ckdwn && str2double(get(findobj('Tag','gapdur','Parent',props.panel),'String'))<0
@@ -750,7 +778,14 @@ end
 thr = str2double(get(findobj(props.panel,'Tag',tag),'String'));
 spikes = props.spikes{idx};
 
-set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*stdata)
+sf = diff(props.tm(1:2));
+gpdvdur = round(props.params(idx).gpdvdur/1000/sf);% convert from time to # indices
+data = props.data(idx,:);
+if props.params(idx).ckdv
+    data = [zeros(1,gpdvdur-1) , data(gpdvdur:end) - data(1:end - gpdvdur+1)];
+end
+
+set(props.splt,'XData',props.tm(spikes),'YData',ones(size(spikes))*thr*std(data))
 
 if ~isempty(spikes)
     set(props.aplt,'YData',mean(props.aspike{idx},1))
@@ -805,6 +840,7 @@ function chparam(hObject,eventdata)
 props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
+props.params(idx).ckdv = get(findobj(props.panel,'Tag','ckdv'),'Value');
 props.params(idx).ckup = get(findobj(props.panel,'Tag','ckup'),'Value');
 props.params(idx).ckdwn = get(findobj(props.panel,'Tag','ckdwn'),'Value');
 props.params(idx).ckuprej = get(findobj(props.panel,'Tag','ckuprej'),'Value');
@@ -817,6 +853,7 @@ props.params(idx).dwnrej = str2double(get(findobj(props.panel,'Tag','dwnrej'),'S
 
 props.params(idx).dwndur = str2double(get(findobj(props.panel,'Tag','dwndur'),'String'));
 props.params(idx).dwnthr = str2double(get(findobj(props.panel,'Tag','dwnthr'),'String'));
+props.params(idx).gpdvdur = str2double(get(findobj(props.panel,'Tag','gpdvdur'),'String'));
 props.params(idx).gapdur = str2double(get(findobj(props.panel,'Tag','gapdur'),'String'));
 props.params(idx).ra = str2double(get(findobj(props.panel,'Tag','rearm'),'String'));
 guidata(hObject.Parent,props)
@@ -863,6 +900,11 @@ updur = round(params.updur/1000/sf);% convert from time to # indices
 dwndur = round(params.dwndur/1000/sf);% convert from time to # indices
 gapdur = round(params.gapdur/1000/sf);% convert from time to # indices
 ra = round(params.ra/1000/sf);% convert from time to # indices
+
+gpdvdur = round(params.gpdvdur/1000/sf);% convert from time to # indices
+if params.ckdv
+    data = [zeros(1,gpdvdur-1) , data(gpdvdur:end) - data(1:end - gpdvdur+1)];
+end
 
 sdata = repelem('n',length(data));
 stdata = std(data,"omitnan");
