@@ -159,7 +159,7 @@ uicontrol(panel,'Position',[395 73  20 20],'Style','pushbutton','String','?','Ta
 
 
 %threshold 2
-uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','on','value',default.ckdwn,'Tooltip','have not coded this yet');
+uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','on','value',default.ckdwn);
 uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','dwnstr','String','Lower','Enable','off');
 uicontrol(panel,'Position',[65  52 20 14],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[65  39 20 14],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
@@ -810,9 +810,10 @@ ckdwn = findobj(props.panel,'Tag','ckdwn');
 ckuprej = findobj(props.panel,'Tag','ckuprej');
 ckdwnrej = findobj(props.panel,'Tag','ckdwnrej');
 
-disp(enable((get(ckdwn,'Value') & get(ckdwnrej,'Value'))+1))
+set(findobj(props.panel,'Tag','upstr') ,'Enable',enable(get(ckup,'Value')+1))
 set(findobj(props.panel,'-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(get(ckup,'Value')+1))
 set(findobj(props.panel,'-regexp','Tag','^up\w*rej$')     ,'Enable',enable((get(ckup,'Value') & get(ckuprej,'Value'))+1))
+set(findobj(props.panel,'Tag','dwnstr') ,'Enable',enable(get(ckdwn,'Value')+1))
 set(findobj(props.panel,'-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(get(ckdwn,'Value')+1))
 set(findobj(props.panel,'-regexp','Tag','^dwn\w*rej$')    ,'Enable',enable((get(ckdwn,'Value') & get(ckdwnrej,'Value'))+1))
 
