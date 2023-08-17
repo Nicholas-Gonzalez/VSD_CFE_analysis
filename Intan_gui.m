@@ -102,8 +102,8 @@ uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.33 0.1],'Style','push
 
           
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@remove_artifact,'String','Remove Artifact','Enable','off',...
-              'TooltipString','Attempts to remove artifact by stimulation.  Sometimes it is not effective');
+              'Callback',@zero_region,'String','Zero region','Enable','off',...
+              'TooltipString','zeros a region of data.  Sometimes it is not effective');
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.8 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@edit_undo,'String','Edit undo','Enable','off');
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.7 0.33 0.1],'Style','pushbutton','Tag','adjust_not_finished',...
@@ -112,6 +112,9 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.7 0.33 0.1],'Style','p
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.6 0.33 0.1],'Style','pushbutton','Tag','filter',...
               'Callback',@filterit,'String','Filter','Enable','off',...
               'Tag','filter','TooltipString','Filters the data');
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.5 0.33 0.1],'Style','pushbutton','Tag','filter',...
+              'Callback',@remove_artifact,'String','Remove artifact','Enable','off',...
+              'Tag','filter','Tooltip','Removes stimulation artifact of data');
 
 
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
@@ -1522,72 +1525,69 @@ end
 props.log = [props.log; 'replaced data with backup'];
 guidata(hObject,props)
 
+function zero_region(hObject,eventdata)
+props = guidata(hObject);
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
+str(props.hideidx,2) = "gray";
+str(:,4) = string(props.ch);
+str = join(str,'');
+[idx,tf] = listdlg('liststring',str);
+if tf
+    [x,~] = ginput(2);
+    tidx = find(props.tm>min(x),1):find(props.tm<max(x),1,'last');
+    
+    props.bmin = min(props.data,[],2);
+    props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+    props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
+    props.log = [props.log; 'updated backup of data'];
+    
+    props.data(idx,tidx) = repmat(props.data(idx,tidx(1)),1,length(tidx));
+    guidata(hObject,props)
+    plotdata(hObject)
+end
+
 function remove_artifact(hObject,eventdata)
 props = guidata(hObject);
 str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
 str(props.hideidx,2) = "gray";
 str(:,4) = string(props.ch);
 str = join(str,'');
-idx = listdlg('liststring',str);
-[x,~] = ginput(2);
-tidx = find(props.tm>min(x),1):find(props.tm<max(x),1,'last');
-
-props.bmin = min(props.data,[],2);
-props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
-props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
-props.log = [props.log; 'updated backup of data'];
-
-props.data(idx,tidx) = repmat(props.data(idx,tidx(1)),1,length(tidx));
-guidata(hObject,props)
-plotdata(hObject)
-
-function remove_artifact_depricated(hObject,eventdata)
-props = guidata(hObject);
-idx = listdlg('liststring',props.showlist);
-props.databackup = props.data;
-
-ch = props.showidx(idx);
-noart = [];
-for c=1:length(idx)
-    data = props.data(ch(c),:);
-    sidx = find(data<-500);
-    if length(sidx)<2
-        noart = [noart; props.showlist(idx(c))];
-        continue
+[idx,tf] = listdlg('liststring',str,'SelectionMode','single');
+if tf
+    [~,y] = ginput(1);
+    if sum(props.data(idx,:)>y) < sum(props.data(idx,:)>y)
+        yidx = find(props.data(idx,:)>y);
+    else
+        yidx = find(props.data(idx,:)<y);
     end
-    sidx = [sidx(1) , sidx([false , diff(sidx)>10])];
-    window = max(diff(sidx));
-    adata = zeros(length(sidx),window);
-    for a=1:length(sidx)
-        if sidx(a)+window-1<length(data)
-            adata(a,:) = data(sidx(a):sidx(a)+window-1);
-        end
+    ra = 5;
+    win = -20:100;
+    avg = zeros(size(win));
+    yidx = yidx([true diff(yidx)>ra]);
+    for w=1:length(win)
+        avg(w) = mean(props.data(idx,yidx+win(w)));
     end
-    midx = adata>repmat(prctile(adata,25,1),size(adata,1),1) & adata<repmat(prctile(adata,75,1),size(adata,1),1);
-    madata = nan(size(adata));
-    madata(midx) = adata(midx);
-    madata = mean(madata,1,'omitnan');
 
-    for a=1:length(sidx)
-        if sidx(a)+window<length(data)
-            data(sidx(a):sidx(a)+window-1) = data(sidx(a):sidx(a)+window-1) - int16(madata);
-            data(sidx(a)-5:sidx(a)+35) = 0;
-            if a==1
-                data((-2:-1) + sidx(a)) = 0;
-            end
-        else
-            idxx = sidx(a):length(data);
-            data(idxx) = data(idxx) - int16(madata(1:length(idxx)));
-        end
+    start = find(abs(diff(avg))>0.04,1,'first');
+    last = find(abs(diff(avg))>0.04,1,'last');
+    val = avg(start);   
+    awin = win(start:last);
+
+    startd = diff(avg(start-1:start));
+    lastd = diff(avg(last-1:last));
+        
+    props.bmin = min(props.data,[],2);
+    props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+    props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
+    props.log = [props.log; 'updated backup of data'];
+
+    for w=1:length(awin)
+        props.data(idx,yidx+awin(w)) = val;
     end
-    props.data(ch(c),:) = data;
-    props.ax(idx(c)).Children.YData = data;pause(0.01)
+    props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').  Replaced with value of ' num2str(val)]];
+    guidata(hObject,props)
+    plotdata(hObject)
 end
-
-if ~isempty(noart)
-    msgbox(sprintf(join(["No artifact detected for channels:"  string(noart')],'\n')))
-end
-guidata(hObject,props)
 
 function sortlist(hObject,eventdata)
 props = guidata(hObject);
@@ -4546,6 +4546,7 @@ if ~isfield(props,'hidelist')
 end
 
 props.log = [props.log; string(['saved data on ',char(datetime)])];
+guidata(hObject,props)
 
 fields = ["plt","txt","chk","ax"];
 for f=1:length(fields)
