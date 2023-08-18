@@ -167,8 +167,6 @@ uicontrol(ropanel,'Units','pixels','Position',[170 0 60 20],'Style','pushbutton'
 uicontrol(ropanel,'Units','pixels','Position',[230 0 80 20],'Style','pushbutton','Tag','adjcont',...
             'Callback',@adjcontrast,'String','Contrast','Enable','off','Visible','off')
 
-
-
 guidata(f,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
                  'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
 
@@ -287,7 +285,7 @@ end
 % This is the app that loads that data into the guidata
 function loadapp(hObject,eventdata)
 props = guidata(hObject);
-f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off');
+f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off','DeleteFcn',@reenable);
 intan = findobj('Tag',props.intan_tag);
 f2.Position = [intan.Position(1:2)+intan.Position(3:4)/2 540 300];
 
@@ -351,6 +349,10 @@ set(allbut,'Enable','off')
 vsdprops.allbut = allbut;
 
 guidata(f2,vsdprops)
+
+function reenable(hObject,eventdata)
+vsdprops = guidata(hObject);
+set(vsdprops.allbut,'Enable','on')
 
 function loadmat(hObject,eventdata)
 vsdprops = guidata(hObject);
@@ -1196,7 +1198,9 @@ props = guidata(hObject);
 set(findobj('Tag','yaxis_label'),'Visible','on')
 allbut = findobj('Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
-buf = uicontrol(props.axpanel,'Units','pixels','Position',[props.axpanel.Position(3)/2, props.axpanel.Position(4)-60,200, 40],'Style','text','String','Plotting...','FontSize',15);
+buf = uicontrol(props.axpanel,'Units','pixels',...
+    'Position',[props.axpanel.Position(3)/2, props.axpanel.Position(4)-60,200, 40],...
+    'Style','text','String','Plotting...','FontSize',15);
 pause(0.1)
 
 data = props.data;
@@ -1518,12 +1522,23 @@ guidata(hObject,props)
 
 function edit_undo(hObject,eventdata)
 props = guidata(hObject);
-props.data = convert_uint(props.databackup, props.bd2uint, props.bmin, 'double');
-for c=1:length(props.showidx)
-    props.ax(c).Children.YData = props.data(props.showidx(c),:);pause(0.01)
+if isfield(props,'bd2uint')
+    props.data = convert_uint(props.databackup, props.bd2uint, props.bmin, 'double');
+    for c=1:length(props.showidx)
+        props.ax(c).Children.YData = props.data(props.showidx(c),:);pause(0.01)
+    end
+    props.log = [props.log; 'replaced data with backup'];
+    guidata(hObject,props)
+else
+    buf = uicontrol(props.axpanel,'Units','pixels',...
+    'Position',[props.axpanel.Position(3)/2, props.axpanel.Position(4)-60,200, 40],...
+    'Style','text','String','No backup found','FontSize',15);
+    pause(1)
+    delete(buf)
+    disp(' ')
+    disp('No backup data is stored.')
+    disp('Usually because the original file was too large to store a backup of the data.')
 end
-props.log = [props.log; 'replaced data with backup'];
-guidata(hObject,props)
 
 function zero_region(hObject,eventdata)
 props = guidata(hObject);
