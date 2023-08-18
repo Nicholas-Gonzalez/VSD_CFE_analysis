@@ -106,13 +106,16 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.9 0.33 0.1],'Style','p
               'TooltipString','zeros a region of data.  Sometimes it is not effective');
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.8 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@edit_undo,'String','Edit undo','Enable','off');
-uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.7 0.33 0.1],'Style','pushbutton','Tag','adjust_not_finished',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.7 0.33 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@restore_channel,'String','Restore Channel','Enable','off',...
+              'Tooltip','Restores data from a channel to the original');
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust_not_finished',...
               'Callback',@decimateit,'String','Reduce sampling','Enable','off',...
               'TooltipString','Reduces the number or samples by half using the decimate function');
-uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.6 0.33 0.1],'Style','pushbutton','Tag','filter',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.5 0.33 0.1],'Style','pushbutton','Tag','filter',...
               'Callback',@filterit,'String','Filter','Enable','off',...
               'Tag','filter','TooltipString','Filters the data');
-uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.5 0.33 0.1],'Style','pushbutton','Tag','filter',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.4 0.33 0.1],'Style','pushbutton','Tag','filter',...
               'Callback',@remove_artifact,'String','Remove artifact','Enable','off',...
               'Tag','filter','Tooltip','Removes stimulation artifact of data');
 
@@ -144,7 +147,7 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.5 0.33 0.1],'Style','p
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@imhistogram,'String','Image histogram','Enable','off',...
-              'Tag','filter','TooltipString','Filters the data');
+              'Tag','filter','Tooltip','Generates a histogram of the pixel intensities');
 
 
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.2 0.33 0.1],'Style','pushbutton','Tag','plotagain',...
@@ -389,7 +392,7 @@ vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
 
-fields = ["BMP","btype","rn","video","spikedetection","log","filter","databackup","imadj","note"];
+fields = ["BMP","btype","rn","video","spikedetection","log","filter","databackup","bmin","bd2uint","imadj","note"];
 for f=1:length(fields)
     if isfield(matprops.props,fields{f})
         vsdprops.matprops.(fields{f}) = matprops.props.(fields{f});
@@ -710,6 +713,8 @@ if intch && vsdch
         itm = vsdprops.intan.tm(1:2:end);
         if isfield(vsdprops,'vsd')
             vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
+            props.vsd.d2uint = vsdprops.vsd.d2uint;
+            props.vsd.min = vsdprops.vsd.min;
             tm = vsdprops.vsd.tm;
             if isfield(vsdprops.vsd,'fparam')
                 props.fparam = vsdprops.vsd.fparam;
@@ -717,6 +722,8 @@ if intch && vsdch
         else
             vsd = convert_uint(vsdprops.matprops.vsd.data, vsdprops.matprops.vsd.d2uint,...
                 vsdprops.matprops.vsd.min,'double');
+            props.vsd.d2uint = vsdprops.matprops.vsd.d2uint;
+            props.vsd.min = vsdprops.matprops.vsd.min;
             tm = vsdprops.matprops.vsd.tm;
         end
         sr = diff(vsdprops.vsd.tm(1:2));
@@ -727,6 +734,8 @@ if intch && vsdch
         if length(vtm)>size(vsd,2)
             vtm = vtm(1:size(vsd,2));
         end
+        props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
+        props.vsd.tm = vtm;
         vsd = interp1(vtm, vsd', itm);
         vsd = vsd';
         
@@ -742,7 +751,8 @@ if intch && vsdch
                 end
             end
         end
-        props.BMP = zeros(0,3);  
+        props.intan = vsdprops.intan;
+        props.BMP = zeros(0,3); 
         props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
         props.tm = itm;
         showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
@@ -765,12 +775,17 @@ if intch && vsdch
             itm = vsdprops.matprops.intan.tm;  
             vsd = vsdprops.vsd.data;
             tm = vsdprops.vsd.tm;
+            props.vsd.tm = vsdprops.vsd.tm;
+            props.vsd.d2uint = vsdprops.vsd.d2uint;
+            props.vsd.min = vsdprops.vsd.min;
             sr = diff(vsdprops.vsd.tm(1:2));
             vtm = min(itm):sr:max(itm);
             prsz = length(min(itm):sr:min(tm)-sr);
             posz = length(max(tm)+sr:sr:max(itm));
             vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
 
+            props.vsd.data = vsd;
+            props.vsd.tm = vtm;
             vsd = convert_uint(vsd, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');% removed d from vsdprops.vsd.mind
             vsd = interp1(vtm, vsd', itm);
             vsd = vsd';
@@ -1522,7 +1537,7 @@ guidata(hObject,props)
 
 function edit_undo(hObject,eventdata)
 props = guidata(hObject);
-if isfield(props,'bd2uint')
+if isfield(props,'databackup')
     props.data = convert_uint(props.databackup, props.bd2uint, props.bmin, 'double');
     for c=1:length(props.showidx)
         props.ax(c).Children.YData = props.data(props.showidx(c),:);pause(0.01)
@@ -1538,6 +1553,44 @@ else
     disp(' ')
     disp('No backup data is stored.')
     disp('Usually because the original file was too large to store a backup of the data.')
+end
+
+function restore_channel(hObject,eventdata)
+props = guidata(hObject);
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
+str(props.hideidx,2) = "gray";
+str(:,4) = string(props.ch);
+str = join(str,'');
+[idx,tf] = listdlg('liststring',str,'OKString','Restore');
+vst = find(contains(props.ch,'V-'),1,'first');
+if tf
+    idxd = zeros(0,1);
+    for i=1:length(idx)
+        cidx = contains(props.intan.ch,props.ch{idx(i)});  
+        if any(cidx)
+            d2uint = props.intan.d2uint(cidx);
+            dmin = props.intan.min(cidx);
+            data = convert_uint(props.intan.data(cidx,:), d2uint, dmin, 'double');
+            props.data(idx(i),:) = interp1(props.intan.tm,data,props.tm);
+            idxd = [idxd,idx(i)];
+        else
+            vidx = idx(i) - vst + 1;
+            d2uint = props.vsd.d2uint(vidx);
+            dmin = props.vsd.min(vidx);
+            data = convert_uint(props.vsd.data(vidx,:),d2uint,dmin,'double');
+            props.data(idx(i),:) = interp1(props.vsd.tm, data, props.tm);
+            idxd = [idxd,idx(i)];
+        end
+    end
+
+    props.bmin = min(props.data,[],2);
+    props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+    props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
+    props.log = [props.log; 'updated backup of data'];
+
+    props.log = [props.log; ['Restored channels ' num2str(idxd) ' back to original.']];
+    guidata(hObject,props)
+    plotdata(hObject)
 end
 
 function zero_region(hObject,eventdata)
@@ -1576,30 +1629,38 @@ if tf
         yidx = find(props.data(idx,:)<y);
     end
     ra = 5;
-    win = -20:100;
-    avg = zeros(size(win));
     yidx = yidx([true diff(yidx)>ra]);
-    for w=1:length(win)
-        avg(w) = mean(props.data(idx,yidx+win(w)));
+    deltax = floor(mean(diff(yidx)));
+    avg = zeros(1,deltax+20);
+
+    for x=1:length(yidx)
+        avg = avg + props.data(idx,yidx(x)-19:yidx(x)+deltax);
     end
-
-    start = find(abs(diff(avg))>0.04,1,'first');
-    last = find(abs(diff(avg))>0.04,1,'last');
-    val = avg(start);   
-    awin = win(start:last);
-
-    startd = diff(avg(start-1:start));
-    lastd = diff(avg(last-1:last));
+    avg = avg/length(yidx);
+    
+%     start = find(abs(diff(avg))>0.04,1,'first');
+%     last = find(abs(diff(avg))>0.04,1,'last');
+%     val = avg(start);   
+%     awin = win(start:last);
+% 
+%     startd = diff(avg(start-1:start));
+%     lastd = diff(avg(last-1:last));
         
     props.bmin = min(props.data,[],2);
     props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
     props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
     props.log = [props.log; 'updated backup of data'];
 
-    for w=1:length(awin)
-        props.data(idx,yidx+awin(w)) = val;
-    end
-    props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').  Replaced with value of ' num2str(val)]];
+%     for w=1:length(awin)
+%         props.data(idx,yidx+awin(w)) = val;
+%     end
+
+    for x=1:length(yidx)
+        props.data(idx,yidx(x)-19:yidx(x)+deltax) = props.data(idx,yidx(x)-19:yidx(x)+deltax) - avg;
+    end    
+    props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').']];
+
+%     props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').  Replaced with value of ' num2str(val)]];
     guidata(hObject,props)
     plotdata(hObject)
 end
