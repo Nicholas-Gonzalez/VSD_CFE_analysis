@@ -1631,10 +1631,12 @@ if tf
     ra = 5;
     yidx = yidx([true diff(yidx)>ra]);
     deltax = floor(mean(diff(yidx)));
-    avg = zeros(1,deltax+20);
-
+    prew = 5;
+    trim = 50;
+    avg = zeros(1,deltax - trim);
+    
     for x=1:length(yidx)
-        avg = avg + props.data(idx,yidx(x)-19:yidx(x)+deltax);
+        avg = avg + props.data(idx,yidx(x) - prew:yidx(x) + length(avg) - prew - 1);
     end
     avg = avg/length(yidx);
     
@@ -1654,10 +1656,14 @@ if tf
 %     for w=1:length(awin)
 %         props.data(idx,yidx+awin(w)) = val;
 %     end
-
+    tic
     for x=1:length(yidx)
-        props.data(idx,yidx(x)-19:yidx(x)+deltax) = props.data(idx,yidx(x)-19:yidx(x)+deltax) - avg;
-    end    
+        widx = yidx(x) - prew:yidx(x) + length(avg) - prew - 1;
+        ridx = find(abs(props.data(idx,widx))>abs(y),1,'last');
+        props.data(idx,widx) = props.data(idx,widx) - avg;
+        props.data(idx,widx(1:ridx + 5)) = avg(end);
+    end
+    toc
     props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').']];
 
 %     props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').  Replaced with value of ' num2str(val)]];
