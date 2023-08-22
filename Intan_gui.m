@@ -1623,7 +1623,7 @@ str = join(str,'');
 [idx,tf] = listdlg('liststring',str,'SelectionMode','single');
 if tf
     [~,y] = ginput(1);
-    if sum(props.data(idx,:)>y) < sum(props.data(idx,:)>y)
+    if y>mean(props.data(idx,:))
         yidx = find(props.data(idx,:)>y);
     else
         yidx = find(props.data(idx,:)<y);
@@ -1632,8 +1632,10 @@ if tf
     yidx = yidx([true diff(yidx)>ra]);
     deltax = floor(mean(diff(yidx)));
     prew = 5;
-    trim = 50;
+    trim = 100;
     avg = zeros(1,deltax - trim);
+    yidx(yidx<=prew) = [];
+    yidx(yidx>length(props.data)-length(avg)-1) = [];
     
     for x=1:length(yidx)
         avg = avg + props.data(idx,yidx(x) - prew:yidx(x) + length(avg) - prew - 1);
@@ -1661,7 +1663,7 @@ if tf
         widx = yidx(x) - prew:yidx(x) + length(avg) - prew - 1;
         ridx = find(abs(props.data(idx,widx))>abs(y),1,'last');
         props.data(idx,widx) = props.data(idx,widx) - avg;
-        props.data(idx,widx(1:ridx + 5)) = avg(end);
+        props.data(idx,widx(1:ridx + 5)) = 0;
     end
     toc
     props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').']];
