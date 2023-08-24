@@ -113,7 +113,7 @@ end
 
 apptag = ['apptag' num2str(randi(1e4,1))];
 % fig = figure('Position',[10 80 1900 600],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
-fig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3) ofigsize(4)*0.7],'Name','Intan_Gui','NumberTitle','off','Tag',apptag);
+fig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3) ofigsize(4)*0.7],'Name','Spike Detection','NumberTitle','off','Tag',apptag);
 
 
 m = uimenu('Text','Spike Tools');
