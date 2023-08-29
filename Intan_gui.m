@@ -1818,7 +1818,7 @@ function filterit(hObject,eventdata)% main app for filtering data
 props = guidata(hObject);
 mfpos = get(findobj('Tag',props.intan_tag),'Position');
 f2 = figure('MenuBar','None','Name','Filter Data','NumberTitle','off');
-f2.Position = [mfpos(1:2)+200 500 600];
+f2.Position = [mfpos(1:2)+100 500 600];
 f2.Tag = ['filt_tag' num2str(randi(1e4,1))];
 
 
@@ -1847,14 +1847,16 @@ uicontrol('Position',[20  552 100 20],'Style','text','String','Filter type','Hor
 uicontrol('Position',[125 555 100 20],'Style','popupmenu','String',meth,'Tag','ftype','Callback',@fvalidate,...
           'Tag','fmeth','Value',find(ismember(meth,filterp.meth)));
 
-bg = uibuttongroup('Visible','off','Units','Pixels','Position',[60 510 200 40],'SelectionChangedFcn',@bpass,'Tag','fband');
+bg = uibuttongroup('Visible','off','Units','Pixels','Position',[30 510 260 40],'SelectionChangedFcn',@bpass,'Tag','fband');
 
 uicontrol(bg,'Style','text',       'Position',[10  13 60 20],'String','Lowpass','HandleVisibility','off');
 uicontrol(bg,'Style','text',       'Position',[70  13 60 20],'String','Bandpass','HandleVisibility','off');
 uicontrol(bg,'Style','text',       'Position',[130 13 60 20],'String','Highpass','HandleVisibility','off');
+uicontrol(bg,'Style','text',       'Position',[190 13 60 20],'String','Notch','HandleVisibility','off');
 uicontrol(bg,'Style','radiobutton','Position',[30  0 60 20],'HandleVisibility','off','Tag','lowpass');     
 uicontrol(bg,'Style','radiobutton','Position',[90  0 60 20],'HandleVisibility','off','Tag','bandpass','Value',1);
 uicontrol(bg,'Style','radiobutton','Position',[150 0 60 20],'HandleVisibility','off','Tag','highpass');
+uicontrol(bg,'Style','radiobutton','Position',[210 0 60 20],'HandleVisibility','off','Tag','notch');
 bg.Visible = 'on';
 
 uicontrol('Position',[20  480 150 20],'Style','text','String','Filter Parameters','HorizontalAlignment','left');
@@ -1912,6 +1914,7 @@ function bpass(hObject,eventdata)% change available parameters based on passband
 type = get(hObject.SelectedObject,'Tag');
 uil = findobj(hObject.Parent,'Tag','fattlower','-or',  'Tag','fplower','-or',  'Tag','fslower');
 uih = findobj(hObject.Parent,'Tag','fatthigher','-or',  'Tag','fphigher','-or',   'Tag','fshigher');
+meth =   get(findobj(hObject.Parent,'Tag','fmeth'),'String');
 switch type
     case 'lowpass'
         set(uil,'Visible','off')
@@ -1922,6 +1925,14 @@ switch type
     case 'highpass'
         set(uil,'Visible','on')
         set(uih,'Visible','off')
+    case 'notch'
+        set(uil,'Visible','on')
+        set(uih,'Visible','on')
+        objs = findobj(hObject.Parent,'Tag','fatthigher','-or','Tag','fslower','-or','Tag','fshigher');
+        set(objs,'Visible','off')
+        if strcmp(meth,'butter')
+            set(findobj(hObject.Parent,'Tag','fripple'),'Enable','off')
+        end
 end
 filterprops(hObject)
 preview(hObject)
@@ -1938,7 +1949,9 @@ fstop = [str2double(get(findobj(hObject.Parent,'Tag','fslower'),'String')), ...
          str2double(get(findobj(hObject.Parent,'Tag','fshigher'),'String'))];
 
 plt = findobj(hObject.Parent,'Tag','fpropline'); 
-plt.XData = [0 fstop(1) fpass fstop(2) ax.XLim(2)];
+set(plt, 'XData', [0 fstop(1) fpass fstop(2) ax.XLim(2)],...
+         'YData', [0  0   0  0  0 0]);
+%plt.XData = [0 fstop(1) fpass fstop(2) ax.XLim(2)];
 rec = findobj(hObject.Parent,'Tag','fproprec');
      
 hband = get(findobj(hObject.Parent,'Tag','fband'),'SelectedObject');
@@ -1952,6 +1965,10 @@ switch hband.Tag
     case 'highpass'
         plt.YData = [-fatt([1 1]) 0 0 0 0];
         rec.Position = [fpass(1)   0   ax.XLim(2)-fpass(1)   fr];
+    case 'notch'
+        set(plt,'XData', [0 fpass(1) mean(fpass) fpass(2) ax.XLim(2)],...
+                'YData', [0   0      -fatt(1) 0 0 ]);
+        rec.Position = [1e6   0   1   1];
 end
 
 ax.YLim(2) = round(fr+10);
@@ -1963,41 +1980,22 @@ hObject.BackgroundColor = [0.6 1 0.6];
 pause(0.1)
 idx = get(findobj(hObject.Parent,'Tag','channels'),'Value');
 
-fr = str2double(get(findobj(hObject.Parent,'Tag','fripple'),'String'));
-fatt = [str2double(get(findobj(hObject.Parent,'Tag','fattlower'),'String')),...
-        str2double(get(findobj(hObject.Parent,'Tag','fatthigher'),'String'))];
-fpass = [str2double(get(findobj(hObject.Parent,'Tag','fplower'),'String')), ...
-         str2double(get(findobj(hObject.Parent,'Tag','fphigher'),'String'))];
-fstop = [str2double(get(findobj(hObject.Parent,'Tag','fslower'),'String')), ...
-         str2double(get(findobj(hObject.Parent,'Tag','fshigher'),'String'))]; 
-meth =   get(findobj(hObject.Parent,'Tag','fmeth'),'String'); 
-midx =   get(findobj(hObject.Parent,'Tag','fmeth'),'Value'); 
-    
-hband = get(findobj(hObject.Parent,'Tag','fband'),'SelectedObject');
-switch hband.Tag
-    case 'lowpass'
-        h = fdesign.lowpass('Fp,Fst,Ap,Ast',  fpass(2), fstop(2), fr, fatt(2), diff(props.tm(1:2))^-1);
-    case 'bandpass'      
-        h = fdesign.bandpass('Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2',  fstop(1), fpass(1), ...
-            fpass(2), fstop(2), fatt(1), fr, fatt(2), diff(props.tm(1:2))^-1);
-    case 'highpass'
-        h = fdesign.highpass('Fst,Fp,Ast,Ap', fstop(1), fpass(1), fatt(1), fr, diff(props.tm(1:2))^-1);
-end
-Hd = design(h, meth{midx}, 'MatchExactly', 'passband', 'SOSScaleNorm', 'Linf');
+[h, Hd, fprop] = makefilter(hObject, diff(props.tm(1:2))^-1);
 
 fprintf(['\nfilter parameters\n',...
-         'type\t'       meth{midx}            '\t' class(meth) '\n',...
-         'ripple\t'      num2str(fr)   '\t' class(fr) '\n',...
-         'attenuation\t' 'low\t' num2str(fatt(1)) '\thigh\t' num2str(fatt(2)) '\n',...
-         'passband\t'    'low\t' num2str(fpass(1)) '\thigh\t' num2str(fpass(2)) '\n',...
-         'stopband\t'    'low\t' num2str(fstop(1)) '\thigh\t' num2str(fstop(2)) '\n\n'])
+         'method\t'       fprop.meth           '\t' 'type\t' fprop.ftype '\n',...
+         'ripple\t'      num2str(fprop.fr)   '\t' num2str(fprop.fr) '\n',...
+         'attenuation\t' 'low\t' num2str(fprop.fatt(1)) '\thigh\t' num2str(fprop.fatt(2)) '\n',...
+         'passband\t'    'low\t' num2str(fprop.fpass(1)) '\thigh\t' num2str(fprop.fpass(2)) '\n',...
+         'stopband\t'    'low\t' num2str(fprop.fstop(1)) '\thigh\t' num2str(fprop.fstop(2)) '\n\n'])
 
-filterp.fr = fr;
-filterp.fatt = fatt;
-filterp.fpass = fpass;
-filterp.fstop = fstop;
-filterp.meth = meth{midx};
+filterp.fr = fprop.fr;
+filterp.fatt = fprop.fatt;
+filterp.fpass = fprop.fpass;
+filterp.fstop = fprop.fstop;
+filterp.meth = fprop.meth;
 filterp.idx = idx;
+filterp.type = fprop.ftype;
 
 props.bmin = min(props.data,[],2);
 props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
@@ -2014,12 +2012,17 @@ end
 if ~isfield(props,'filter')
     props.filter = filterp;
 else
-    props.filter(end+1) = filterp;
+    if isfield(props.filter,'type')
+        props.filter(end+1) = filterp;
+    else
+        props.filter(end+1).type = 5;
+        props.filter(end) = filterp;
+    end
 end
 
 str = ['filtered: idx = '  char(join(string(filterp.idx),',')),...
-    ' fr = ' num2str(fr) ' fatt = ' char(join(string(fatt),','))  ' fpass = ' char(join(string(fpass),',')),...
-    ' fstop = ' char(join(string(fstop),',')), ' meth = ', meth{midx}];
+    ' fr = ' num2str(fprop.fr) ' fatt = ' char(join(string(fprop.fatt),','))  ' fpass = ' char(join(string(fprop.fpass),',')),...
+    ' fstop = ' char(join(string(fprop.fstop),',')), ' meth = ', fprop.meth,' type = ', fprop.ftype];
 props.log = [props.log; str];
 
 guidata(findobj('Tag',props.intan_tag),props)
@@ -2027,7 +2030,6 @@ close(hObject.Parent)
 plotdata(findobj('Tag',props.intan_tag))
 
 function preview(hObject,eventdata)% get a preview of the data to optimize filtering parameters
-
 allbut = findobj(hObject.Parent,'Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
 pause(0.1)
@@ -2037,7 +2039,18 @@ props = guidata(hObject);
 plt1 = findobj(hObject.Parent,'Tag','fdata');
 val = get(findobj(hObject.Parent,'Tag','preview'),'Value');
 plt1.YData = props.data(val,:);
+ 
+[h, Hd] = makefilter(hObject, diff(props.tm(1:2))^-1);
 
+plt2 = findobj(hObject.Parent,'Tag','fdata_filt');
+fdata = filter(Hd,props.data(val,:));
+idx = find(props.tm>1,1);
+fdata(1:idx) = 0;
+plt2.YData = fdata;
+
+set(allbut,'Enable','on')
+
+function [h, Hd,fprop] = makefilter(hObject,sr)
 fr = str2double(get(findobj(hObject.Parent,'Tag','fripple'),'String'));
 fatt = [str2double(get(findobj(hObject.Parent,'Tag','fattlower'),'String')),...
         str2double(get(findobj(hObject.Parent,'Tag','fatthigher'),'String'))];
@@ -2047,30 +2060,41 @@ fstop = [str2double(get(findobj(hObject.Parent,'Tag','fslower'),'String')), ...
          str2double(get(findobj(hObject.Parent,'Tag','fshigher'),'String'))]; 
 meth =   get(findobj(hObject.Parent,'Tag','fmeth'),'String'); 
 midx =   get(findobj(hObject.Parent,'Tag','fmeth'),'Value'); 
-    
 hband = get(findobj(hObject.Parent,'Tag','fband'),'SelectedObject');
+
+fprop = struct('fr',fr,'fatt',fatt,'fpass',fpass,'fstop',fstop,'meth',meth{midx},'midx',midx,'ftype',hband.Tag);
+
 switch hband.Tag
     case 'lowpass'
-        h = fdesign.lowpass('Fp,Fst,Ap,Ast', fpass(2), fstop(2), fr, fatt(2), diff(props.tm(1:2))^-1);
+        h = fdesign.lowpass('Fp,Fst,Ap,Ast', fpass(2), fstop(2), fr, fatt(2), sr);
     case 'bandpass'      
         h = fdesign.bandpass('Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2', fstop(1), fpass(1), ...
-            fpass(2), fstop(2), fatt(1), fr, fatt(2), diff(props.tm(1:2))^-1);
+            fpass(2), fstop(2), fatt(1), fr, fatt(2), sr);
     case 'highpass'
-        h = fdesign.highpass('Fst,Fp,Ast,Ap', fstop(1), fpass(1), fatt(1), fr, diff(props.tm(1:2))^-1);
+        h = fdesign.highpass('Fst,Fp,Ast,Ap', fstop(1), fpass(1), fatt(1), fr, sr);
+    case 'notch'
+        switch meth{midx}
+            case 'butter'
+                h = fdesign.notch('N,F0,BW', 2, mean(fpass), diff(fpass), sr);
+            case 'cheby1'
+                h = fdesign.notch('N,F0,BW,Ap', 2, mean(fpass), diff(fpass), fr, sr);
+            case 'cheby2'
+                h = fdesign.notch('N,F0,BW,Ast', 2, mean(fpass), diff(fpass), fatt(1), sr);
+            case 'ellip'
+                h = fdesign.notch('N,F0,BW,Ap,Ast', 2, mean(fpass), diff(fpass), fr, fatt(1), sr);
+        end
 end
+
 try
-    Hd = design(h, meth{midx}, 'MatchExactly', 'passband', 'SOSScaleNorm', 'Linf');
-    plt2 = findobj(hObject.Parent,'Tag','fdata_filt');
-    fdata = filter(Hd,props.data(val,:));
-    idx = find(props.tm>1,1);
-    fdata(1:idx) = 0;
-    plt2.YData = fdata;
+    if strcmp(hband.Tag,'notch')
+        Hd = design(h, meth{midx}, 'SOSScaleNorm', 'Linf');
+    else
+        Hd = design(h, meth{midx}, 'MatchExactly', 'passband', 'SOSScaleNorm', 'Linf');
+    end
     set(findobj(hObject.Parent,'Tag','errorcode'),'String','')
 catch ME
     set(findobj(hObject.Parent,'Tag','errorcode'),'String',ME.message)
 end
-
-set(allbut,'Enable','on')
 
 function fvalidate(hObject,eventdata)% validates the filtering prameters to prevent errors
 fr = str2double(get(findobj(hObject.Parent,'Tag','fripple'),'String'));
