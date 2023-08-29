@@ -735,6 +735,7 @@ set(findobj(props.panel,'Tag','dwndur'),'String',num2str(props.params(idx).dwndu
 set(findobj(props.panel,'Tag','dwnthr'),'String',props.params(idx).dwnthr);
 set(findobj(props.panel,'Tag','gapdur'),'String',num2str(props.params(idx).gapdur,2));
 set(findobj(props.panel,'Tag','rearm'),'String',num2str(props.params(idx).ra,2));
+set(findobj(props.panel,'Tag','ckdv'),'Value',props.params(idx).ckdv);
 
 set(findobj(props.panel,'-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(props.params(idx).ckup+1))
 set(findobj(props.panel,'-regexp','Tag','^up\w*rej$')     ,'Enable',enable((props.params(idx).ckup & props.params(idx).ckuprej)+1))
