@@ -2440,6 +2440,8 @@ uicontrol(cpanel,'Units','normalized','Position',[0.25 0.78 0.1 0.05],'Style','t
     'String','Coefficients','HorizontalAlignment','right','Enable','on','Tag','Fit');
 uicontrol(cpanel,'Units','normalized','Position',[0.41 0.8 0.1 0.05],'Style','edit',...
     'String','2','Callback',@fitequation,'Enable','on','TooltipString','Number of coefficients','Tag','Fit');
+uicontrol(cpanel,'Units','normalized','Position',[0.52 0.825  0.05 0.025],'Style','pushbutton','Tag','UP','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(cpanel,'Units','normalized','Position',[0.52 0.8 0.05 0.025],'Style','pushbutton','Tag','DN','String',char(709),'Callback',@chval,'Enable','on');
 
 uicontrol(cpanel,'Units','normalized','Position',[0.05 0.70 0.05 0.05],'Style','radiobutton',...
     'Callback',@radio,'Tag','Spline_','Value',0);
@@ -2484,6 +2486,16 @@ props.blapp = struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                     'p0',p0,            'flimits',flimits,   'tm',tm,...
                     'splt',splt,        'scplt',scplt,          'intan_tag',intan_tag);
 guidata(hObject,props)
+
+function chval(hObject,eventdata)
+obj = findobj(hObject.Parent,'Tag','Fit','Style','edit');
+coef = str2double(get(obj,'String'));
+if strcmp(hObject.Tag,'UP')
+    set(obj,'String',num2str(coef+1))
+else
+    set(obj,'String',num2str(coef-1))
+end
+fitequation(obj)
 
 function addpoints(hObject,eventdata)
 intan_tag = guidata(hObject);
@@ -2553,11 +2565,12 @@ data(:,data(:)==data(1)) = [];
 
 function fitequation(hObject,eventdata)
 intan_tag = guidata(hObject);
-if nargin==2% for when function is called by the coeffient uicontrol
-    fig = hObject.Parent.Parent;
-else
-    fig = hObject.Parent;
+
+fig = hObject.Parent;
+while ~strcmp(get(fig,'type'),'figure')
+    fig = fig.Parent;
 end
+
 props = guidata(findobj('Tag',intan_tag));
 disp('fitting')
 buf = uicontrol(fig,'Units','normalized','Position',[0.3 , 0.9, 0.4 0.1],...
