@@ -392,10 +392,14 @@ vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
 
-fields = ["BMP","btype","rn","video","spikedetection","log","filter","databackup","bmin","bd2uint","imadj","note"];
+fields = ["BMP_analysis","BMP","btype","rn","video","spikedetection","log","filter","databackup","bmin","bd2uint","imadj","note"];
 for f=1:length(fields)
     if isfield(matprops.props,fields{f})
-        vsdprops.matprops.(fields{f}) = matprops.props.(fields{f});
+        if strcmp(fields{f},"BMP") || strcmp(fields{f},"btype") || strcmp(fields{f},"rn")
+            vsdprops.matprops.BMP_analysis.(fields{f}) = matprops.props.(fields{f});
+        else
+            vsdprops.matprops.(fields{f}) = matprops.props.(fields{f});
+        end
     elseif strcmp(fields{f},'imadj')
         vsdprops.matprops.imadj.imback = matprops.props.im;
         vsdprops.matprops.imadj.params = [0 1;0 1;0 1];
@@ -406,7 +410,7 @@ for f=1:length(fields)
             disp('Note.xlsx was not found in file.  Successfully loaded')
         catch
             warning([matprops.props.vsdprops.files{5,2} , 'not found'])
-        end  
+        end 
     end
 end
 
@@ -812,10 +816,10 @@ if intch && vsdch
                 props.note = vsdprops.matprops.note;
             end
 
-            if isfield(vsdprops.matprops,'BMP')
-                props.BMP = vsdprops.matprops.BMP;
+            if isfield(vsdprops.matprops,'BMP_analysis')
+                props.BMP_analysis.BMP = vsdprops.matprops.BMP_analysis.BMP;
             else
-                props.BMP = zeros(0,3);
+                props.BMP_analysis.BMP = zeros(0,3);
             end
 
             if isfield(vsdprops.matprops,'video')
@@ -840,10 +844,10 @@ if intch && vsdch
 %                 props.imback = props.im;
 %             end
 
-            if isfield(vsdprops.matprops,'BMP')
-                props.BMP = vsdprops.matprops.BMP;
+            if isfield(vsdprops.matprops,'BMP_analysis')
+                props.BMP_analysis.BMP = vsdprops.matprops.BMP_analysis.BMP;
             else
-                props.BMP = zeros(0,3);
+                props.BMP_analysis.BMP = zeros(0,3);
             end
 
             props.finfo.files = vsdprops.files;
@@ -883,7 +887,7 @@ elseif vsdch
     props.finfo.files = vsdprops.files;
     props.finfo.path = path;
     props.finfo.duration = max(props.tm);
-    props.BMP = zeros(0,3);
+    props.BMP_analysis.BMP = zeros(0,3);
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.log = string(['loaded data on ',char(datetime)]);
@@ -907,7 +911,7 @@ else
     props.showidx = 1:nch;
     props.hidelist = [];
     props.hideidx = [];
-    props.BMP = zeros(0,3);
+    props.BMP_analysis.BMP = zeros(0,3);
     props.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'double');
     props.finfo = vsdprops.intan.finfo;
     props.finfo.files = vsdprops.files;
@@ -1260,8 +1264,8 @@ props.ylim.dwn = gobjects(nch,1);
 
 disp('plotting')
 
-if isfield(props,'axbmp')
-    delete(props.axbmp)
+if isfield(props,'BMP_analysis') && isfield(props.BMP_analysis,'axbmp')
+    delete(props.BMP_analysis.axbmp)
     delete(findobj(props.axpanel,'Tag','makeprot'))
     delete(findobj(props.axpanel,'Tag','makeret'))
 end
@@ -1270,21 +1274,21 @@ uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+5 20 
     'Callback',@makeBMP,'String','+','Tag','makeprot')
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+25 20 20],'Style','pushbutton',...
     'Callback',@selectRn,'String','Rn','Tag','makeprot')
-props.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6]);
-props.axbmp.XTick = [];
-props.axbmp.YTick = [1 2 3];
-props.axbmp.YLim = [0 4.8];
-props.axbmp.YTickLabel = ["Protraction","Retraction","Closure"];
-props.axbmp.TickLength = [0 0];
-if isfield(props,'BMP') && ~isempty(props.BMP)
+props.BMP_analysis.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6]);
+props.BMP_analysis.axbmp.XTick = [];
+props.BMP_analysis.axbmp.YTick = [1 2 3];
+props.BMP_analysis.axbmp.YLim = [0 4.8];
+props.BMP_analysis.axbmp.YTickLabel = ["Protraction","Retraction","Closure"];
+props.BMP_analysis.axbmp.TickLength = [0 0];
+if isfield(props,'BMP_analysis') && isfield(props.BMP_analysis,'BMP') && ~isempty(props.BMP_analysis.BMP)
     color = 'bg';
     phase = ["Prot","Retr"];
-    for b=1:size(props.BMP,1)
+    for b=1:size(props.BMP_analysis.BMP,1)
         for p=1:2
-            line(props.BMP(b,p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
-            sc(1) = scatter(props.BMP(b,p),  p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,...
+            line(props.BMP_analysis.BMP(b,p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
+            sc(1) = scatter(props.BMP_analysis.BMP(b,p),  p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,...
                 'Tag',[phase{p} num2str(b) 's']);hold on
-            sc(2) = scatter(props.BMP(b,p+1),p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,...
+            sc(2) = scatter(props.BMP_analysis.BMP(b,p+1),p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,...
                 'Tag',[phase{p} num2str(b) 'e']);hold on
             pb.enterFcn = @(fig,currentPoint) set(fig,'Pointer','hand');
             pb.exitFcn = @(fig,currentPoint) set(fig,'Pointer','arrow');
@@ -1348,7 +1352,7 @@ for d=1:nch
 end 
 
 set(props.ax,'YTick',[],'XLim',xlim)% somehow is also modifying im, but only when loading new files, 05-23-22: not sure if this comment is still applicable
-linkaxes([props.ax; props.axbmp],'x')
+linkaxes([props.ax; props.BMP_analysis.axbmp],'x')
 set(findobj(props.chpanel,'Tag','adjust'),'Enable','on')
 set(findobj(props.chpanel,'Tag','showsort'),'Enable','on')
 set(findobj(props.axpanel,'Visible','off'),'Visible','on')
@@ -2665,17 +2669,20 @@ function makeBMP(hObject,eventdata)
 fig = ancestor(hObject,'figure','toplevel');
 props = guidata(fig);
 [x, ~] = ginput(3);
-if ~isfield(props,'BMP') || isempty(props.BMP)
+
+if ~isfield(props.BMP,'BMP') || ~isfield(props.BMP_analysis,'BMP') || isempty(props.BMP_analysis.BMP)
     b = 1;
-    props.BMP = x';
+    props.BMP_analysis.BMP = x';
 else
-    b = size(props.BMP,1)+1;
-    props.BMP = [props.BMP; x'];
+    b = size(props.BMP_analysis.BMP,1)+1;
+    props.BMP_analysis.BMP = [props.BMP_analysis.BMP; x'];
 end
+
+
 
 color = 'bg';
 phase = ["Prot","Retr"];
-axes(props.axbmp)
+axes(props.BMP_analysis.axbmp)
 for p=1:2
     line(x(p:p+1) , [p p],'Color',color(p),'Tag',[phase{p} num2str(b)],'LineWidth',2);hold on
     sc(1) = scatter(x(p),  p,100,['|' color(p)],'LineWidth',2,'ButtonDownFcn',@adjustline,'Tag',[phase{p} num2str(b) 's']);hold on
@@ -2689,16 +2696,16 @@ end
 props.axbmp.YLim = [0 4.5];
 props = countspikes(props);
 props = reorderBMP(props);
-disp(props.BMP)
+disp(props.BMP_analysis.BMP)
 guidata(fig,props)
 
 function props = reorderBMP(props)
 fig = findobj('Tag',props.intan_tag);
-[~,idx] = sort(props.BMP(:,1));
-props.BMP = props.BMP(idx,:);
+[~,idx] = sort(props.BMP_analysis.BMP(:,1));
+props.BMP_analysis.BMP = props.BMP_analysis.BMP(idx,:);
 if isfield(props,'btype')
-    props.btype = props.btype(idx,:);
-    props.Rn = props.Rn(idx,:);
+    props.BMP_analysis.btype = props.BMP_analysis.btype(idx,:);
+    props.BMP_analysis.Rn = props.BMP_analysis.Rn(idx,:);
 end
 for i=1:length(idx)
     set(findobj(fig,'Tag',['Prot' num2str(i)]),'Tag', ['Prot' num2str(idx(i)) 'reordered'])
@@ -2728,8 +2735,8 @@ guidata(hObject,props)
 
 function props = countspikes(props)
 if isfield(props,'spikedetection')
-    if isfield(props,'rn')
-        ridx = props.rn;
+    if isfield(props.BMP_analysis,'rn')
+        ridx = props.BMP_analysis.rn;
     else
         ridx = contains(props.ch,'-Rn');
     end
@@ -2738,25 +2745,25 @@ if isfield(props,'spikedetection')
         rspike = props.tm(rspike);
         btypes = ["R","I"];
         phase = ["Prot","Retr"];
-        if isfield(props,'btxt')
-            delete(props.btxt)
+        if isfield(props.BMP_analysis,'btxt')
+            delete(props.BMP_analysis.btxt)
         end
         rnln = findobj(findobj('Tag',props.intan_tag),'-regexp','Tag','(Prot|Retr)r');
         if ~isempty(rnln)
             delete(rnln)
         end
-        props.btxt = gobjects(size(props.BMP,1),1);
-        props.btype = zeros(size(props.BMP,1),1);
-        props.Rn = zeros(size(props.BMP,1),8);
-        axes(props.axbmp)
+        props.btxt = gobjects(size(props.BMP_analysis.BMP,1),1);
+        props.btype = zeros(size(props.BMP_analysis.BMP,1),1);
+        props.BMP_analysis.Rn = zeros(size(props.BMP_analysis.BMP,1),8);
+        axes(props.BMP_analysis.axbmp)
         if isfield(props,'spikedetection') && ~isempty(rspike)
             props.rnratio_head = ["rn duration protr","rn duration retr","rn dur ratio","rn sp protr","rn sp retr","rn Hz protr","rn Hz retr","rn Hz ratio"];
-            for b=1:size(props.BMP,1)
-                x = props.BMP(b,:);
+            for b=1:size(props.BMP_analysis.BMP,1)
+                x = props.BMP_analysis.BMP(b,:);
                 pdur = [0 0];
                 for p=1:2
                     rsp = rspike(rspike>x(p) & rspike<x(p+1));
-                    props.Rn(b,p+3) = length(rsp);
+                    props.BMP_analysis.Rn(b,p+3) = length(rsp);
                     rdursp = diff(rsp);
                     if length(rsp)>1
                         bursts = [0 find(rdursp>=4)];
@@ -2771,10 +2778,10 @@ if isfield(props,'spikedetection')
                         pdur(p) = sum(rdursp(rdursp<4));
                     end
                 end
-                props.btype(b) = (pdur(2)>pdur(1))+1;
-                props.Rn(b,6:7) = props.Rn(b,4:5)./diff(props.BMP(b,1:3));
-                props.Rn(b,[1:3 8]) = [pdur(1)  pdur(2)  pdur(2)/sum(pdur)  props.Rn(b,7)/sum(props.Rn(b,6:7))];
-                props.btxt(b) = text(x(2),4,btypes(props.btype(b)),'HorizontalAlignment','center','FontName','times');hold on
+                props.BMP_analysis.btype(b) = (pdur(2)>pdur(1))+1;
+                props.BMP_analysis.Rn(b,6:7) = props.BMP_analysis.Rn(b,4:5)./diff(props.BMP_analysis.BMP(b,1:3));
+                props.BMP_analysis.Rn(b,[1:3 8]) = [pdur(1)  pdur(2)  pdur(2)/sum(pdur)  props.BMP_analysis.Rn(b,7)/sum(props.BMP_analysis.Rn(b,6:7))];
+                props.BMP_analysis.btxt(b) = text(x(2),4,btypes(props.BMP_analysis.btype(b)),'HorizontalAlignment','center','FontName','times');hold on
             end
         end
     end
@@ -2824,12 +2831,12 @@ else
             obj = findobj(fig,'Tag',['Retr' num2str(cnt)]);
         end
 
-        props.BMP(idx,:) = [];
+        props.BMP_analysis.BMP(idx,:) = [];
 
-        delete(props.btxt(idx))
-        props.btxt(idx) = [];
-        props.btype(idx) = [];
-        props.Rn(idx,:) = [];
+        delete(props.BMP_analysis.btxt(idx))
+        props.BMP_analysis.btxt(idx) = [];
+        props.BMP_analysis.btype(idx) = [];
+        props.BMP_analysis.Rn(idx,:) = [];
 
         rnln = findobj(fig,'-regexp','Tag',[num2str(idx) '(Prot|Retr)r']);
         delete(rnln)
@@ -4584,7 +4591,7 @@ updateroi(intan)
 %% misc methods
 function saveBMP(hObject,eventdata)
 props = guidata(hObject);
-if ~isfield(props,'BMP')
+if ~isfield(props,'BMP_analysis')
     msgbox('You have no BMPs to save')
     return
 end
@@ -4593,7 +4600,7 @@ if isequal(file,0) || isequal(path,0)
     disp('Canceled')
 else
     fn = fullfile(path,file);
-    bmp = [props.BMP props.Rn];
+    bmp = [props.BMP_analysis.BMP props.BMP_analysis.Rn];
     group = [string(props.intan.finfo.date), props.notes.note1];
     group = repmat(group,size(bmp,1),1);
     bmp(:,12:13) = diff(bmp(:,1:3),1,2);
