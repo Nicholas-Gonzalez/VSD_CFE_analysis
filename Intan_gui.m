@@ -2735,6 +2735,42 @@ guidata(hObject,props)
 
 function props = countspikes(props)
 if isfield(props,'spikedetection')
+    nbmp = size(props.BMP_analysis.BMP,1);
+    btypes = ["R","I"];
+    phase = ["Prot","Retr"];
+    props.BMP_analysis.spikes = zeros(nbmp, 8, length(props.ch) );
+    for c=1:length(props.ch)
+        spike = props.spikedetection.spikes{c};
+        spike = props.tm(spike);
+        if ~isempty(spike)
+            for b=1:nbmp
+                x = props.BMP_analysis.BMP(b,:);
+                pdur = [0 0];
+                for p=1:2
+                    sp = spike(spike>x(p) & spike<x(p+1));
+                    props.BMP_analysis.spikes(b,p+3,c) = length(sp);
+                    rdursp = diff(sp);
+                    if length(sp)>1
+                        bursts = [0 find(rdursp>=4)];
+                        for r=1:length(bursts)
+                            if r==length(bursts)
+                                bx = [sp(bursts(r)+1)  sp(end)];
+                            else
+                                bx = [sp(bursts(r)+1)  sp(bursts(r+1))];
+                            end
+                            line(bx , [3 3],'Color','r','Tag',[num2str(b) phase{p} 'r' num2str(r)],'LineWidth',2);hold on
+                        end
+                        pdur(p) = sum(rdursp(rdursp<4));
+                    end
+                end
+                props.BMP_analysis.spikes(b,6:7,c) = props.BMP_analysis.spikes(b,4:5)./diff(props.BMP_analysis.BMP(b,1:3));
+                analysis = [pdur(1)  pdur(2)  pdur(2)/sum(pdur)  props.BMP_analysis.spikes(b,7,c)/sum(props.BMP_analysis.spikes(b,6:7,c))];
+                props.BMP_analysis.spikes(b,[1:3 8],c) = analysis;                
+            end
+        end
+    end       
+
+    % count rn spikes
     if isfield(props.BMP_analysis,'rn')
         ridx = props.BMP_analysis.rn;
     else
@@ -2743,8 +2779,6 @@ if isfield(props,'spikedetection')
     if any(ridx)
         rspike = props.spikedetection.spikes{ridx};
         rspike = props.tm(rspike);
-        btypes = ["R","I"];
-        phase = ["Prot","Retr"];
         if isfield(props.BMP_analysis,'btxt')
             delete(props.BMP_analysis.btxt)
         end
@@ -2756,8 +2790,8 @@ if isfield(props,'spikedetection')
         props.btype = zeros(size(props.BMP_analysis.BMP,1),1);
         props.BMP_analysis.Rn = zeros(size(props.BMP_analysis.BMP,1),8);
         axes(props.BMP_analysis.axbmp)
-        if isfield(props,'spikedetection') && ~isempty(rspike)
-            props.rnratio_head = ["rn duration protr","rn duration retr","rn dur ratio","rn sp protr","rn sp retr","rn Hz protr","rn Hz retr","rn Hz ratio"];
+        if ~isempty(rspike)
+            props.BMP_analysis.rnratio_head = ["rn duration protr","rn duration retr","rn dur ratio","rn sp protr","rn sp retr","rn Hz protr","rn Hz retr","rn Hz ratio"];
             for b=1:size(props.BMP_analysis.BMP,1)
                 x = props.BMP_analysis.BMP(b,:);
                 pdur = [0 0];
@@ -4608,14 +4642,14 @@ else
     head = ["protraction",...   1
     "transition",...            2
     "retraction",...            3
-    "Rn protr dur",...          4
-    "Rn retr dur",...           5
-    "Rn activity dur (retr / (prot + ret))",... 6
-    "Rn sp protr",...                           7
-    "Rn sp retr",...                            8
-    "Rn protraction spike rate (Hz)",...        9
-    "Rn retraction spike rate (Hz)",...         10
-    "Rn activity Hz (retr / (prot + ret))",...  11
+    "Sp protr dur",...          4
+    "Sp retr dur",...           5
+    "Sp activity dur (retr / (prot + ret))",... 6
+    "Sp protr",...                           7
+    "Sp retr",...                            8
+    "Protraction spike rate (Hz)",...        9
+    "Retraction spike rate (Hz)",...         10
+    "Activity Hz (retr / (prot + ret))",...  11
     "Prot dur",...  12
     "Retr dur",...  13
     "Type"];%       14
