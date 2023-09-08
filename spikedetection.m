@@ -37,6 +37,7 @@ if ischar(inputinfo)
         end
     end
 
+    origim = inputdata.im;
     if hasvsd
         warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
         info = fitsinfo(nvsd);
@@ -47,9 +48,10 @@ if ischar(inputinfo)
         xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
         ysize = info.PrimaryData.Size(1);
         sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryData.Keywords(:,1)),2};
-        origim = inputdata.im;
     else
-        sr = 1;
+        sr = 0.001;
+        xsize = size(inputdata.im,2);
+        ysize = size(inputdata.im,1);
     end
 else
     data = inputdata;
@@ -75,33 +77,51 @@ slidepos = 27;% default frame for image
 inc = 0.25;% increment increas for threshold
 
 default.ckdv = false;% default on whether to use a differential spike detection
-default.ckup = true;% default whether upper threshold is used as criteria
-default.updur = 5;% default number of datapoints above threshold to detect spike.
-default.upthr = 5;
-default.ckuprej = false;% default whether to reject spikes above a value
-default.uprej = 10;% default value for rejection.  If data is above this then it rejects the spike.
-default.ckdwn = false;% default whether lower threshold is used as criteria.
-default.dwndur = 5;
-default.dwnthr = -1.75;
-default.ckdwnrej = false;
-default.dwnrej = -4;
+default.ck1 = true;% default whether upper threshold is used as criteria
+default.dur1 = 5;% default number of datapoints above threshold to detect spike.
+default.thr1 = 5;
+default.ck1rej = false;% default whether to reject spikes above a value
+default.rej1 = 10;% default value for rejection.  If data is above this then it rejects the spike.
+default.ck2 = false;% default whether lower threshold is used as criteria.
+default.dur2 = 5;
+default.thr2 = -1.75;
+default.ck2rej = false;
+default.rej2 = -4;
 default.gapdur = 15;
 default.gpdvdur = 15;% gap duration for dv threshold method
 default.ra = 20;% re-arm, the minimal amount of time to detect a subsequent spike (should be just longer than the concievable duration of a spike)
 
-default.updur = sf*default.updur*1000;
-default.dwndur = sf*default.dwndur*1000;
+default.dur1 = sf*default.dur1*1000;
+default.dur2 = sf*default.dur2*1000;
 default.gapdur = sf*default.gapdur*1000;
 default.gpdvdur = sf*default.gpdvdur*1000;
 default.ra = sf*default.ra*1000;
 
 if isfield(inputdata,'spikedetection')
-    params = inputdata.spikedetection.params;
     fields = fieldnames(default);
-    for fn = 1:length(fields)
-        if ~isfield(params,fields{fn})
+    params = inputdata.spikedetection.params;
+    nfields = fieldnames(params);
+    oldnm = ["ckdv","ckup","updur","upthr","ckuprej","uprej","ckdwn","dwndur","dwnthr","ckdwnrej","dwnrej","gapdur","gpdvdur","ra"];
+    newnm = ["ckdv","ck1" ,"dur1" ,"thr1" ,"ck1rej" ,"rej1" ,"ck2"  ,"dur2"  ,"thr2"  ,"ck2rej"  ,"rej2"  ,"gapdur","gpdvdur","ra"];
+    for f=1:length(nfields)
+        idx = find(oldnm==nfields{f});
+        if ~isempty(idx)
             for p=1:length(params)
-                params(p).(fields{fn}) = default.(fields{fn});
+                params(p).(newnm{idx}) = params(p).(nfields{f});
+            end
+        end
+    end
+    
+    for f=1:length(oldnm)
+        if isfield(params,oldnm{f})
+            params = rmfield(params,oldnm{f});
+        end
+    end
+
+    for f = 1:length(fields)
+        if ~isfield(params,fields{f})
+            for p=1:length(params)
+                params(p).(fields{f}) = default.(fields{f});
             end
         end
     end
@@ -134,55 +154,56 @@ uicontrol(panel,'Position',[295 88 80 25],'Style','text','String','Reject','Enab
 
 % dv threshold
 uicontrol(panel,'Position',[140 4 20 20],'Style','checkbox','Tag','ckdv','Callback',@dvthr,'Enable','on','Value',default.ckdv);
-uicontrol(panel,'Position',[160 1 35 20],'Style','text','String','dv Thr','Enable','on');
+uicontrol(panel,'Position',[160 1 15 20],'Style','text','String','dv','Enable','on');
 
 %threshold 1
-uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ckup','Callback',@activatethr,'Enable','on','Value',default.ckup);
-uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','Upper','Tag','upstr','Enable','on');
-uicontrol(panel,'Position',[65  82  20 14],'Style','pushbutton','Tag','uppUPthr','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[65  69  20 14],'Style','pushbutton','Tag','uppDWNthr','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[85 73  30 20],'Style','edit','String',default.upthr,'Tag','upthr','Callback',@chparam,'Enable','on');
-uicontrol(panel,'Position',[115 70  20 20],'Style','text','String','std','Tag','upunits','Enable','on');
+uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ck1','Callback',@activatethr,'Enable','on','Value',default.ck1);
+uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','1Thr','Tag','1str','Enable','on');
+uicontrol(panel,'Position',[65  82  20 14],'Style','pushbutton','Tag','1pUPthr','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[65  69  20 14],'Style','pushbutton','Tag','1pDWNthr','String',char(709),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[85 73  30 20],'Style','edit','String',default.thr1,'Tag','1thr','Callback',@chparam,'Enable','on');
+uicontrol(panel,'Position',[115 70  20 20],'Style','text','String','std','Tag','1units','Enable','on');
 
-uicontrol(panel,'Position',[145 82  20 14],'Style','pushbutton','Tag','uppUPdur','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[145 69  20 14],'Style','pushbutton','Tag','uppDWNdur','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[165 73  30 20],'Style','edit','String',num2str(default.updur,2),'Tag','updur','Callback',@duration,'Enable','on');
-uicontrol(panel,'Position',[195 70  20 20],'Style','text','String','ms','Tag','upunits','Enable','on');
+uicontrol(panel,'Position',[145 82  20 14],'Style','pushbutton','Tag','1pUPdur','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[145 69  20 14],'Style','pushbutton','Tag','1pDWNdur','String',char(709),'Callback',@chval,'Enable','on');
+uicontrol(panel,'Position',[165 73  30 20],'Style','edit','String',num2str(default.dur1,2),'Tag','1dur','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[195 70  20 20],'Style','text','String','ms','Tag','1units','Enable','on');
 
-uicontrol(panel,'Position',[300 73 20 20],'Style','checkbox','Tag','ckuprej','Callback',@activatethr,'Enable','on','Value',default.ckuprej);
-uicontrol(panel,'Position',[320 82  20 14],'Style','pushbutton','Tag','uppUPrej','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[320 69  20 14],'Style','pushbutton','Tag','uppDWNrej','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[340 73  30 20],'Style','edit','String',num2str(default.uprej,2),'Tag','uprej','Callback',@chparam,'Enable','off');
-uicontrol(panel,'Position',[370 70  20 20],'Style','text','String','std','Tag','upunitsrej','Enable','off');
+uicontrol(panel,'Position',[300 73 20 20],'Style','checkbox','Tag','ck1rej','Callback',@activatethr,'Enable','on','Value',default.ck1rej);
+uicontrol(panel,'Position',[320 82  20 14],'Style','pushbutton','Tag','1pUPrej','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[320 69  20 14],'Style','pushbutton','Tag','1pDWNrej','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[340 73  30 20],'Style','edit','String',num2str(default.rej1,2),'Tag','1rej','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[370 70  20 20],'Style','text','String','std','Tag','1unitsrej','Enable','off');
 
 uicontrol(panel,'Position',[395 73  20 20],'Style','pushbutton','String','?','Tag','helps1','Callback',@helpf,'Enable','on');
 
 
 %threshold 2
-uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ckdwn','Callback',@activatethr,'Enable','on','value',default.ckdwn);
-uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','dwnstr','String','Lower','Enable','off');
-uicontrol(panel,'Position',[65  52 20 14],'Style','pushbutton','Tag','dwnpUPthr','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[65  39 20 14],'Style','pushbutton','Tag','dwnpDWNthr','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[85  43 30 20],'Style','edit','String',default.dwnthr,'Tag','dwnthr','Callback',@chparam,'Enable','off');
-uicontrol(panel,'Position',[115  40 20 20],'Style','text','String','std','Tag','dwnunits','Enable','off');
+uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ck2','Callback',@activatethr,'Enable','on','value',default.ck2);
+uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','2str','String','2Thr','Enable','off');
+uicontrol(panel,'Position',[65  52 20 14],'Style','pushbutton','Tag','2pUPthr','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[65  39 20 14],'Style','pushbutton','Tag','2pDWNthr','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[85  43 30 20],'Style','edit','String',default.thr2,'Tag','2thr','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[115  40 20 20],'Style','text','String','std','Tag','2units','Enable','off');
 
-uicontrol(panel,'Position',[145 52 20 14],'Style','pushbutton','Tag','dwnpUPdur','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[145 39 20 14],'Style','pushbutton','Tag','dwnpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[165 43 30 20],'Style','edit','String',num2str(default.dwndur,2),'Tag','dwndur','Callback',@duration,'Enable','off');
-uicontrol(panel,'Position',[195 40 20 20],'Style','text','String','ms','Tag','dwnunits','Enable','off');
+uicontrol(panel,'Position',[145 52 20 14],'Style','pushbutton','Tag','2pUPdur','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[145 39 20 14],'Style','pushbutton','Tag','2pDWNdur','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[165 43 30 20],'Style','edit','String',num2str(default.dur2,2),'Tag','2dur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[195 40 20 20],'Style','text','String','ms','Tag','2units','Enable','off');
 
-uicontrol(panel,'Position',[300 43 20 20],'Style','checkbox','Tag','ckdwnrej','Callback',@activatethr,'Enable','on','Value',default.ckdwnrej);
-uicontrol(panel,'Position',[320 52  20 14],'Style','pushbutton','Tag','dwnpUPrej','String',char(708),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[320 39  20 14],'Style','pushbutton','Tag','dwnpDWNrej','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[340 43  30 20],'Style','edit','String',num2str(default.dwnrej,2),'Tag','dwnrej','Callback',@chparam,'Enable','off');
-uicontrol(panel,'Position',[370 40  20 20],'Style','text','String','std','Tag','dwnunitsrej','Enable','off');
+uicontrol(panel,'Position',[300 43 20 20],'Style','checkbox','Tag','ck2rej','Callback',@activatethr,'Enable','on','Value',default.ck2rej);
+uicontrol(panel,'Position',[320 52  20 14],'Style','pushbutton','Tag','2pUPrej','String',char(708),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[320 39  20 14],'Style','pushbutton','Tag','2pDWNrej','String',char(709),'Callback',@chval,'Enable','off');
+uicontrol(panel,'Position',[340 43  30 20],'Style','edit','String',num2str(default.rej2,2),'Tag','2rej','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[370 40  20 20],'Style','text','String','std','Tag','2unitsrej','Enable','off');
 
 uicontrol(panel,'Position',[395 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
 
-%gap start (only active when using dv threshold
+%gap start (only active when using dv threshold)
 uicontrol(panel,'Position',[220 82 20 14],'Style','pushbutton','Tag','gpdvpUPdur','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[220 69 20 14],'Style','pushbutton','Tag','gpdvpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[240 73 35 20],'Style','edit','String',num2str(default.gpdvdur,2),'Tag','gpdvdur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[240 73 35 20],'Style','edit','String',num2str(default.gpdvdur,2),'Tag','gpdvdur','Callback',@duration,'Enable','off',...
+    'Tooltip','Time difference between baseline and first point');
 uicontrol(panel,'Position',[275 70 20 20],'Style','text','String','ms','Tag','gpdvunits','Enable','off');
 
 
@@ -198,7 +219,7 @@ uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',num2str(default.
 uicontrol(panel,'Position',[70 1 20 20],'Style','text','String','ms','Enable','on');
 uicontrol(panel,'Position',[90 4 20 20],'Style','pushbutton','String','?','Tag','helps3','Callback',@helpf,'Enable','on');
 
-uicontrol(panel,'Position',[325 1 90 30],'Style','pushbutton','String','Get Im Average','Tag','avgim','Callback',@avgim,'Enable','on');
+uicontrol(panel,'Position',[325 1 90 30],'Style','pushbutton','String','Image Average','Tag','avgim','Callback',@avgim,'Enable','on');
 uicontrol(panel,'Position',[225 1 100 30],'Style','pushbutton','String','Copy Parameters','Callback',@copyparam,'Enable','on');
 
 
@@ -230,7 +251,7 @@ stddata = std(data(showidx(1),:));
 ax = axes('Position',[0.23 0.1 0.5 0.75]);
 plt = plot(tm,data(showidx(1),:));hold on
 
-tplt(1) = plot([min(tm) max(tm)],[mdata, mdata]+stddata*default.upthr);hold on
+tplt(1) = plot([min(tm) max(tm)],[mdata, mdata]+stddata*default.thr1);hold on
 tplt(2) = plot([min(tm) max(tm)],nan(2,1));hold on
 tplt(3) = plot([min(tm) max(tm)],nan(2,1),':');hold on
 tplt(4) = plot([min(tm) max(tm)],nan(2,1),':');hold on
@@ -245,7 +266,7 @@ linkaxes([ax, ax2],'x')
 
 ax2.XTick = [];
 ax2.YTick = -2:2;
-ax2.YTickLabels = ["Lower Rej","Thr","null","Thr","Upper Rej"];
+ax2.YTickLabels = ["Lower Rej","Thr2","null","Thr1","Upper Rej"];
 ax2.YLim = [-2 2];
 ax2.Toolbar.Visible = 'off';
 ax2.XLim = [min(tm),max(tm)];
@@ -265,7 +286,13 @@ ht = 0.2; % height of axes
 sp = 0.02; % space between graphs
 
 sax = axes('Position',[0.08 0.72 0.12 ht]);
-aplt = plot(W*sf*1000,nan(size(W)));
+aplt = plot(W*sf*1000,nan(size(W)));hold on
+xv = [-default.gpdvdur,...
+      0,...
+      default.dur1,...
+      default.gapdur + default.dur1,...
+      default.dur2 + default.gapdur + default.dur1];
+athrp = plot(xv,nan(size(xv)),'r');
 sax.XTick = [];
 sax.Title.String = 'Average detected spike';
 
@@ -335,7 +362,7 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'aplt',aplt,         'iax',iax,          'img',img,...
                    'W',W,               'data',data,        'ch',ch,...
                    'hideidx',hideidx,   'showidx',showidx,  'tm',tm,...
-                   'str',str,           'ckup',true,        'ckdwn',false,...
+                   'str',str,           'ck1',true,        'ck2',false,...
                    'gidx',showidx(1),   'aspike',{aspike},  'aspike2',{aspike},...
                    'aplt2',aplt2,       'spikes',{spikes},  'vsd',vsd,...
                    'inc',inc,           'files',files,      'frame',frame,...
@@ -344,9 +371,39 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'roiln',gobjects(0,1),'roi',gobjects(0,1), 'colors',color,...
                    'params',params,     'Lplt',Lplt,        'txtframe',txtframe,...
                    'txttm',txttm,       'cpanel',cpanel,    'cdata',{cell(0,3)},...
-                   'intan_tag',inputinfo))
+                   'intan_tag',inputinfo,'athrp',athrp))
 
 detsp(fig)
+
+function plotthr(props,idx)
+params = props.params(idx);
+dur1 = round(params.dur1/1000/sf);% convert from time to # indices
+dur2 = round(params.dur2/1000/sf);% convert from time to # indices
+gapdur = round(params.gapdur/1000/sf);% convert from time to # indices
+gpdvdur = round(params.gpdvdur/1000/sf);% convert from time to # indices
+thr1 = params.thr1;
+thr2 = params.thr2;
+
+athrp = props.athrp;
+
+xv = [-default.gpdvdur,...
+      0,...
+      default.dur1,...
+      default.gapdur + default.dur1,...
+      default.dur2 + default.gapdur + default.dur1];
+yv = nan(size(xv));
+
+YData = props.aplt.YData;
+XData = props.aplt.XData;
+
+xidx = arrayfun( @(x) find(XData>x, 1,'first') ,xv);
+if ckdv
+    yv(1) = YData(xidx(1));
+    yv(2:3) =  YData(xidx(1));
+end
+
+
+
 
 function tointan(hObject,eventdata)
 aprops = guidata(hObject);
@@ -683,7 +740,7 @@ chparam(hObject)
 function chval(hObject,eventdata)
 props = guidata(hObject);
 tag = get(hObject,'Tag');
-change = regexp(tag,'(up|dwn|UP|DWN|thr|dur|gap|rej|gpdv)','match');
+change = regexp(tag,'(1|2|UP|DWN|thr|dur|gap|rej|gpdv)','match');
 dir = contains(tag,'UP')*2 - 1;
 obj = findobj(hObject.Parent,'Tag',[change{1},change{3}]);
 val = str2double(obj.String);
@@ -707,13 +764,13 @@ function val = correctgap(props,val)
 % must be in units of samples (idx) 
 sr = diff(props.tm(1:2));
 if val>=0
-    updur = str2double(get(findobj('Tag','updur','Parent',props.panel),'String'))/1000/sr;
-    updur = updur+2;
-    val(val<updur) = updur;
+    dur1 = str2double(get(findobj('Tag','1dur','Parent',props.panel),'String'))/1000/sr;
+    dur1 = dur1+2;
+    val(val<dur1) = dur1;
 else
-    dwndur = str2double(get(findobj('Tag','dwndur','Parent',props.panel),'String'))/1000/sr;
-    dwndur = -(dwndur+2);
-    val(val>dwndur) = dwndur;
+    dur2 = str2double(get(findobj('Tag','2dur','Parent',props.panel),'String'))/1000/sr;
+    dur2 = -(dur2+2);
+    val(val>dur2) = dur2;
 end
 
 function chchannel(hObject,eventdata)
@@ -721,28 +778,28 @@ props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
 enable = ["off","on"];
-set(findobj(props.panel,'Tag','ckup'),'Value',props.params(idx).ckup)
-set(findobj(props.panel,'Tag','ckdwn'),'Value',props.params(idx).ckdwn)
-set(findobj(props.panel,'Tag','ckuprej'),'Value',props.params(idx).ckuprej)
-set(findobj(props.panel,'Tag','ckdwnrej'),'Value',props.params(idx).ckdwnrej)
-set(findobj(props.panel,'Tag','updur'),'String',num2str(props.params(idx).updur,2));
-set(findobj(props.panel,'Tag','upthr'),'String',props.params(idx).upthr);
+set(findobj(props.panel,'Tag','ck1'),'Value',props.params(idx).ck1)
+set(findobj(props.panel,'Tag','ck2'),'Value',props.params(idx).ck2)
+set(findobj(props.panel,'Tag','ck1rej'),'Value',props.params(idx).ck1rej)
+set(findobj(props.panel,'Tag','ck2rej'),'Value',props.params(idx).ck2rej)
+set(findobj(props.panel,'Tag','1dur'),'String',num2str(props.params(idx).dur1,2));
+set(findobj(props.panel,'Tag','1thr'),'String',props.params(idx).thr1);
 
-set(findobj(props.panel,'Tag','uprej'),'String',props.params(idx).uprej);
-set(findobj(props.panel,'Tag','dwnrej'),'String',props.params(idx).dwnrej);
+set(findobj(props.panel,'Tag','1rej'),'String',props.params(idx).rej1);
+set(findobj(props.panel,'Tag','2rej'),'String',props.params(idx).rej2);
 
-set(findobj(props.panel,'Tag','dwndur'),'String',num2str(props.params(idx).dwndur,2));
-set(findobj(props.panel,'Tag','dwnthr'),'String',props.params(idx).dwnthr);
+set(findobj(props.panel,'Tag','2dur'),'String',num2str(props.params(idx).dur2,2));
+set(findobj(props.panel,'Tag','2thr'),'String',props.params(idx).thr2);
 set(findobj(props.panel,'Tag','gapdur'),'String',num2str(props.params(idx).gapdur,2));
 set(findobj(props.panel,'Tag','rearm'),'String',num2str(props.params(idx).ra,2));
 set(findobj(props.panel,'Tag','ckdv'),'Value',props.params(idx).ckdv);
 
-set(findobj(props.panel,'-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(props.params(idx).ckup+1))
-set(findobj(props.panel,'-regexp','Tag','^up\w*rej$')     ,'Enable',enable((props.params(idx).ckup & props.params(idx).ckuprej)+1))
-set(findobj(props.panel,'-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(props.params(idx).ckdwn+1))
-set(findobj(props.panel,'-regexp','Tag','^dwn\w*rej$')    ,'Enable',enable((props.params(idx).ckdwn & props.params(idx).ckdwnrej)+1))
+set(findobj(props.panel,'-regexp','Tag','^1(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(props.params(idx).ck1+1))
+set(findobj(props.panel,'-regexp','Tag','^1\w*rej$')     ,'Enable',enable((props.params(idx).ck1 & props.params(idx).ck1rej)+1))
+set(findobj(props.panel,'-regexp','Tag','^2(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(props.params(idx).ck2+1))
+set(findobj(props.panel,'-regexp','Tag','^2\w*rej$')    ,'Enable',enable((props.params(idx).ck2 & props.params(idx).ck2rej)+1))
 
-if props.params(idx).ckup && props.params(idx).ckdwn
+if props.params(idx).ck1 && props.params(idx).ck2
     set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','on')
 else
     set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','off')
@@ -768,13 +825,13 @@ idx = get(findobj('Tag','channels','Parent',findobj('Tag',props.apptag)),'Value'
 
 set(props.plt(1),'YData', props.data(idx,:));
 
-if props.params(idx).ckup
-    tag = 'upthr';
-    if props.params(idx).ckdwn && str2double(get(findobj('Tag','gapdur','Parent',props.panel),'String'))<0
-        tag = 'dwnthr';
+if props.params(idx).ck1
+    tag = '1thr';
+    if props.params(idx).ck2 && str2double(get(findobj('Tag','gapdur','Parent',props.panel),'String'))<0
+        tag = '2thr';
     end
 else
-    tag = 'dwnthr';
+    tag = '2thr';
 end
 thr = str2double(get(findobj(props.panel,'Tag',tag),'String'));
 spikes = props.spikes{idx};
@@ -796,35 +853,37 @@ else
     set(props.aplt2,'YData',nan(size(props.aplt2.XData)));
 end
 
+% plotthr(props,idx)
+
 guidata(hObject,props)
 
 function activatethr(hObject,eventdata)
 props = guidata(hObject);
-vals = [get(findobj(props.panel,'Tag','ckup'),'Value') , get(findobj(props.panel,'Tag','ckdwn'),'Value')];
+vals = [get(findobj(props.panel,'Tag','ck1'),'Value') , get(findobj(props.panel,'Tag','ck2'),'Value')];
 if ~hObject.Value && ~any(vals)
     hObject.Value = true;
     return
 end
 enable = ["off","on"];
-ckup = findobj(props.panel,'Tag','ckup');
-ckdwn = findobj(props.panel,'Tag','ckdwn');
-ckuprej = findobj(props.panel,'Tag','ckuprej');
-ckdwnrej = findobj(props.panel,'Tag','ckdwnrej');
+ck1 = findobj(props.panel,'Tag','ck1');
+ck2 = findobj(props.panel,'Tag','ck2');
+ck1rej = findobj(props.panel,'Tag','ck1rej');
+ck2rej = findobj(props.panel,'Tag','ck2rej');
 
-set(findobj(props.panel,'Tag','upstr') ,'Enable',enable(get(ckup,'Value')+1))
-set(findobj(props.panel,'-regexp','Tag','^up(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(get(ckup,'Value')+1))
-set(findobj(props.panel,'-regexp','Tag','^up\w*rej$')     ,'Enable',enable((get(ckup,'Value') & get(ckuprej,'Value'))+1))
-set(findobj(props.panel,'Tag','dwnstr') ,'Enable',enable(get(ckdwn,'Value')+1))
-set(findobj(props.panel,'-regexp','Tag','^dwn(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(get(ckdwn,'Value')+1))
-set(findobj(props.panel,'-regexp','Tag','^dwn\w*rej$')    ,'Enable',enable((get(ckdwn,'Value') & get(ckdwnrej,'Value'))+1))
+set(findobj(props.panel,'Tag','1str') ,'Enable',enable(get(ck1,'Value')+1))
+set(findobj(props.panel,'-regexp','Tag','^1(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(get(ck1,'Value')+1))
+set(findobj(props.panel,'-regexp','Tag','^1\w*rej$')     ,'Enable',enable((get(ck1,'Value') & get(ck1rej,'Value'))+1))
+set(findobj(props.panel,'Tag','2str') ,'Enable',enable(get(ck2,'Value')+1))
+set(findobj(props.panel,'-regexp','Tag','^2(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(get(ck2,'Value')+1))
+set(findobj(props.panel,'-regexp','Tag','^2\w*rej$')    ,'Enable',enable((get(ck2,'Value') & get(ck2rej,'Value'))+1))
 
-ischecked = string(get(findobj('-regexp','Tag','ck(up|dwn)$'),'Value'))=="1";
+ischecked = string(get(findobj('-regexp','Tag','ck(1|2)$'),'Value'))=="1";
 if all(ischecked)
     set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','on')
 else
     set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','off')
 end
-    
+ 
 chparam(hObject)
 
 function duration(hObject,eventdata)
@@ -843,18 +902,18 @@ props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
 props.params(idx).ckdv = get(findobj(props.panel,'Tag','ckdv'),'Value');
-props.params(idx).ckup = get(findobj(props.panel,'Tag','ckup'),'Value');
-props.params(idx).ckdwn = get(findobj(props.panel,'Tag','ckdwn'),'Value');
-props.params(idx).ckuprej = get(findobj(props.panel,'Tag','ckuprej'),'Value');
-props.params(idx).ckdwnrej = get(findobj(props.panel,'Tag','ckdwnrej'),'Value');
-props.params(idx).updur = str2double(get(findobj(props.panel,'Tag','updur'),'String'));
-props.params(idx).upthr = str2double(get(findobj(props.panel,'Tag','upthr'),'String'));
+props.params(idx).ck1 = get(findobj(props.panel,'Tag','ck1'),'Value');
+props.params(idx).ck2 = get(findobj(props.panel,'Tag','ck2'),'Value');
+props.params(idx).ck1rej = get(findobj(props.panel,'Tag','ck1rej'),'Value');
+props.params(idx).ck2rej = get(findobj(props.panel,'Tag','ck2rej'),'Value');
+props.params(idx).dur1 = str2double(get(findobj(props.panel,'Tag','1dur'),'String'));
+props.params(idx).thr1 = str2double(get(findobj(props.panel,'Tag','1thr'),'String'));
 
-props.params(idx).uprej = str2double(get(findobj(props.panel,'Tag','uprej'),'String'));
-props.params(idx).dwnrej = str2double(get(findobj(props.panel,'Tag','dwnrej'),'String'));
+props.params(idx).rej1 = str2double(get(findobj(props.panel,'Tag','1rej'),'String'));
+props.params(idx).rej2 = str2double(get(findobj(props.panel,'Tag','2rej'),'String'));
 
-props.params(idx).dwndur = str2double(get(findobj(props.panel,'Tag','dwndur'),'String'));
-props.params(idx).dwnthr = str2double(get(findobj(props.panel,'Tag','dwnthr'),'String'));
+props.params(idx).dur2 = str2double(get(findobj(props.panel,'Tag','2dur'),'String'));
+props.params(idx).thr2 = str2double(get(findobj(props.panel,'Tag','2thr'),'String'));
 props.params(idx).gpdvdur = str2double(get(findobj(props.panel,'Tag','gpdvdur'),'String'));
 props.params(idx).gapdur = str2double(get(findobj(props.panel,'Tag','gapdur'),'String'));
 props.params(idx).ra = str2double(get(findobj(props.panel,'Tag','rearm'),'String'));
@@ -898,8 +957,8 @@ plotdata(hObject)
 set(allbut,'Enable','on')
 
 function [spikes, aspike, aspike2,logic] = detection_algorithm(params,W,data,data2,sf,tplt)
-updur = round(params.updur/1000/sf);% convert from time to # indices
-dwndur = round(params.dwndur/1000/sf);% convert from time to # indices
+dur1 = round(params.dur1/1000/sf);% convert from time to # indices
+dur2 = round(params.dur2/1000/sf);% convert from time to # indices
 gapdur = round(params.gapdur/1000/sf);% convert from time to # indices
 ra = round(params.ra/1000/sf);% convert from time to # indices
 
@@ -911,65 +970,81 @@ end
 sdata = repelem('n',length(data));
 stdata = std(data,"omitnan");
 logic = int8(zeros(length(data),1));
-if params.ckup
-    sidx = data>params.upthr*stdata;% find all values > threshold
-    sdata(sidx) = 'u';
+if params.ck1
+    if params.thr1>0
+        sidx = data>params.thr1*stdata;% find all values > threshold
+    else
+        sidx = data<params.thr1*stdata;% find all values > threshold
+    end
+    sdata(sidx) = '1';
     logic(sidx) = 1;
-    if nargin>5; set(tplt(1),'YData',[1 1]*params.upthr*stdata);end
-    pattern = ['u{' num2str(updur) ',}' ];
-%     pattern = repelem('u',updur);
+    if nargin>5; set(tplt(1),'YData',[1 1]*params.thr1*stdata);end
+    pattern = ['1{' num2str(dur1) ',}' ];
+%     pattern = repelem('u',dur1);
 elseif nargin>5
     set(tplt(1),'YData',nan(2,1))
 end
 
-if params.ckup && params.ckuprej
-    sidx = data>params.uprej*stdata;% find all values > threshold
+if params.ck1 && params.ck1rej
+    if params.rej1>0
+        sidx = data>params.rej1*stdata;% find all values > threshold
+    else
+        sidx = data<params.rej1*stdata;% find all values > threshold
+    end
     sdata(sidx) = 'r';
     logic(sidx) = 2;
-    if nargin>5; set(tplt(3),'YData',[1 1]*params.uprej*stdata);end
-    pattern = ['u{' num2str(updur) ',}'];
+    if nargin>5; set(tplt(3),'YData',[1 1]*params.rej1*stdata);end
     rpattern1 = ['r' pattern];
     rpattern2 = [pattern 'r'];
 elseif nargin>5
     set(tplt(3),'YData',nan(2,1))
 end
 
-if params.ckdwn
-    sidx = data<params.dwnthr*stdata;% find all values > threshold
-    sdata(sidx) = 'd';
+if params.ck2
+    if params.thr2>0
+        sidx = data>params.thr2*stdata;% find all values > threshold
+    else
+        sidx = data<params.thr2*stdata;% find all values > threshold
+    end
+    sdata(sidx) = '2';
     logic(sidx) = -1;
-    if nargin>5; set(tplt(2),'YData',[1 1]*params.dwnthr*stdata);end
-    pattern = ['d{' num2str(dwndur) ',}' ];
-%     pattern = repelem('d',dwndur);
+    if nargin>5; set(tplt(2),'YData',[1 1]*params.thr2*stdata);end
+    pattern = ['2{' num2str(dur2) ',}' ];
 elseif nargin>5
     set(tplt(2),'YData',nan(2,1))
 end
 
-if params.ckdwn && params.ckdwnrej
-    sidx = data<params.dwnrej*stdata;% find all values > threshold
+if params.ck2 && params.ck2rej
+    if params.rej2>0
+        sidx = data>params.rej2*stdata;% find all values > threshold
+    else
+        sidx = data<params.rej2*stdata;% find all values > threshold
+    end
     sdata(sidx) = 'r';
     logic(sidx) = -2;
-    if nargin>5; set(tplt(4),'YData',[1 1]*params.dwnrej*stdata);end
-    pattern = ['d{' num2str(dwndur) ',}' ];
+    if nargin>5; set(tplt(4),'YData',[1 1]*params.rej2*stdata);end
     rpattern1 = ['r' pattern];
     rpattern2 = [pattern 'r'];
 elseif nargin>5
     set(tplt(4),'YData',nan(2,1))
 end
 
-if params.ckup && params.ckdwn
-    warning('haven''t fixed this condition for rejection')
+if params.ck1 && params.ck2
+    if params.ck2rej || params.ck1rej
+        warning('haven''t fixed this condition for rejection')
+    end
     if gapdur>=0
-        pattern = ['u{' num2str(updur) ',}' '[udn]{' num2str(gapdur-updur) '}' 'd{' num2str(dwndur) ',}'];
-%         eval(['pattern = "' repelem('u',updur) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-updur) ' + "' repelem('d',dwndur) '";'])
+        pattern = ['1{' num2str(dur1) ',}' '[12n]{' num2str(gapdur-dur1) '}' '2{' num2str(dur2) ',}'];
+%         eval(['pattern = "' repelem('u',dur1) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-dur1) ' + "' repelem('d',dur2) '";'])
     else
-        pattern = ['d{' num2str(dwndur) ',}' '[udn]{' num2str(abs(gapdur)-dwndur) '}' 'u{' num2str(updur) ',}'];
-%         eval(['pattern = "' repelem('d',dwndur) '"' repmat(' + ("u"|"d"|"n")',1,abs(gapdur)-dwndur) ' + "' repelem('u',updur) '";'])
+        pattern = ['2{' num2str(dur2) ',}' '[12n]{' num2str(abs(gapdur)-dur2) '}' '1{' num2str(dur1) ',}'];
+%         eval(['pattern = "' repelem('d',dur2) '"' repmat(' + ("u"|"d"|"n")',1,abs(gapdur)-dur2) ' + "' repelem('u',dur1) '";'])
     end
 end
 
+
 spikes = regexp(sdata,pattern);
-if params.ckdwnrej || params.ckuprej
+if params.ck2rej || params.ck1rej
     rej = regexp(sdata,rpattern1);
     rejlog = arrayfun(@(x) any(rej==x-1),spikes);
     spikes(rejlog) = [];
