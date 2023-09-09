@@ -373,6 +373,7 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
                    'txttm',txttm,       'cpanel',cpanel,    'cdata',{cell(0,3)},...
                    'intan_tag',inputinfo,'athrp',athrp))
 
+chchannel(fig)
 detsp(fig)
 
 function plotthr(props,idx)
@@ -794,9 +795,9 @@ set(findobj(props.panel,'Tag','gapdur'),'String',num2str(props.params(idx).gapdu
 set(findobj(props.panel,'Tag','rearm'),'String',num2str(props.params(idx).ra,2));
 set(findobj(props.panel,'Tag','ckdv'),'Value',props.params(idx).ckdv);
 
-set(findobj(props.panel,'-regexp','Tag','^1(pUP|pDWN|units|dur|thr)(?!rej)') ,'Enable',enable(props.params(idx).ck1+1))
+set(findobj(props.panel,'-regexp','Tag','^1(pUP|pDWN|units|dur|thr|str)(?!rej)') ,'Enable',enable(props.params(idx).ck1+1))
 set(findobj(props.panel,'-regexp','Tag','^1\w*rej$')     ,'Enable',enable((props.params(idx).ck1 & props.params(idx).ck1rej)+1))
-set(findobj(props.panel,'-regexp','Tag','^2(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(props.params(idx).ck2+1))
+set(findobj(props.panel,'-regexp','Tag','^2(pUP|pDWN|units|dur|thr|str)(?!rej)'),'Enable',enable(props.params(idx).ck2+1))
 set(findobj(props.panel,'-regexp','Tag','^2\w*rej$')    ,'Enable',enable((props.params(idx).ck2 & props.params(idx).ck2rej)+1))
 
 if props.params(idx).ck1 && props.params(idx).ck2
