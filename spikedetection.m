@@ -878,9 +878,8 @@ set(findobj(props.panel,'Tag','2str') ,'Enable',enable(get(ck2,'Value')+1))
 set(findobj(props.panel,'-regexp','Tag','^2(pUP|pDWN|units|dur|thr)(?!rej)'),'Enable',enable(get(ck2,'Value')+1))
 set(findobj(props.panel,'-regexp','Tag','^2\w*rej$')    ,'Enable',enable((get(ck2,'Value') & get(ck2rej,'Value'))+1))
 
-ischecked = string(get(findobj('-regexp','Tag','ck(1|2)$'),'Value'))=="1";
-if all(ischecked)
-    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','on')
+if ck1.Value && ck2.Value
+    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','on') 
 else
     set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','off')
 end
