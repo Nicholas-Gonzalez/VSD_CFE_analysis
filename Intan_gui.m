@@ -4639,6 +4639,10 @@ else
     group = repmat(group,size(bmp,1),1);
     bmp(:,12:13) = diff(bmp(:,1:3),1,2);
     bmp(:,14) = (bmp(:,6)>0.5)+1;
+    spikes = props.BMP_analysis.spikes;
+    spikes = [repmat(props.BMP_analysis.BMP,1,1,size(spikes,3)) , spikes   ];
+    spikes(:,12:13) = diff(spikes(:,1:3),1,2);
+    spikes(:,14) = (spikes(:,6)>0.5)+1;
     head = ["protraction",...   1
     "transition",...            2
     "retraction",...            3
