@@ -4643,6 +4643,8 @@ else
     spikes = [repmat(props.BMP_analysis.BMP,1,1,size(spikes,3)) , spikes   ];
     spikes(:,12:13) = diff(spikes(:,1:3),1,2);
     spikes(:,14) = (spikes(:,6)>0.5)+1;
+    spikes = {spikes};
+    groups = group(1,:);
     head = ["protraction",...   1
     "transition",...            2
     "retraction",...            3
@@ -4663,6 +4665,10 @@ else
             vars = load(fn);
             bmp = [vars.bmp ; bmp];
             group = [vars.group; group];
+            if isfield(vars,'spikes')
+                spikes = [vars.spikes; spikes];
+                groups = [vars.groups; groups];
+            end
             disp(['BMPs were appended to ' fn])
             props.log = [props.log; 'Appended BMPs to ' fn];
         elseif strcmp(answer,'Cancel')
@@ -4673,7 +4679,7 @@ else
         disp(['BMPs were saved to ' fn])
         props.log = [props.log; 'Saved BMPs to ' fn];
     end
-    save(fn,'group','bmp','head')
+    save(fn,'group','bmp','head','spikes','groups')
 end
 
 function printlog(hObject,eventdata)
