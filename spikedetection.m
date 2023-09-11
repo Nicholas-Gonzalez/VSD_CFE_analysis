@@ -101,8 +101,8 @@ if isfield(inputdata,'spikedetection')
     fields = fieldnames(default);
     params = inputdata.spikedetection.params;
     nfields = fieldnames(params);
-    oldnm = ["ckdv","ckup","updur","upthr","ckuprej","uprej","ckdwn","dwndur","dwnthr","ckdwnrej","dwnrej","gapdur","gpdvdur","ra"];
-    newnm = ["ckdv","ck1" ,"dur1" ,"thr1" ,"ck1rej" ,"rej1" ,"ck2"  ,"dur2"  ,"thr2"  ,"ck2rej"  ,"rej2"  ,"gapdur","gpdvdur","ra"];
+    oldnm = ["ckup","updur","upthr","ckuprej","uprej","ckdwn","dwndur","dwnthr","ckdwnrej","dwnrej"];
+    newnm = ["ck1" ,"dur1" ,"thr1" ,"ck1rej" ,"rej1" ,"ck2"  ,"dur2"  ,"thr2"  ,"ck2rej"  ,"rej2"  ];
     for f=1:length(nfields)
         idx = find(oldnm==nfields{f});
         if ~isempty(idx)
