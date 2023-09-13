@@ -271,8 +271,8 @@ ax2.YLim = [-2 2];
 ax2.Toolbar.Visible = 'off';
 ax2.XLim = [min(tm),max(tm)];
 
-uicontrol('Units','normalized','Position',[0.23 0.04 0.05 0.03],'Style','text','String','Add channel');
-uicontrol('Units','normalized','Position',[0.28 0.04 0.05 0.03],'Style','popupmenu',...
+uicontrol('Units','normalized','Position',[0.63 0.015 0.05 0.03],'Style','text','String','Add channel');
+uicontrol('Units','normalized','Position',[0.68 0.02 0.05 0.03],'Style','popupmenu',...
     'Max',length(ch),'Min',1,'String',str','Tag','addchannels','Value',showidx(1),'Callback',@addchannel);
 
 
@@ -459,10 +459,10 @@ set(props.ax(1:end-1),'XTick',[])
 props.ax(end).XLabel.String = 'Time (s)';
 linkaxes(props.ax,'x')
 
-uicontrol('Units','normalized','Position',[props.ax(1).Position(1)+0.01 , Ys(end)+height-0.03 , 0.05 , 0.03],...
+uicontrol('Units','normalized','Position',[props.ax(1).Position(1)+0.45 , Ys(end)+height-0.03 , 0.05 , 0.03],...
     'Style','popupmenu','Max',length(props.ch),'Min',1,'String',props.str','Tag',['addchannels' num2str(p+1)],...
     'Value',hObject.Value,'Callback',@chaddchannel,'TooltipString','Change this channel');
-uicontrol('Units','normalized','Position',[props.ax(1).Position(1)+0.06 , Ys(end)+height-0.025 , 0.01 , 0.025],...
+uicontrol('Units','normalized','Position',[props.ax(1).Position(1)+0.50 , Ys(end)+height-0.045 , 0.02 , 0.05],...
     'Style','pushbutton','String','X','Callback',@rmaddchannel,'Tag',['rmchannels' num2str(p+1)],'TooltipString','Remove this channel')
 
 guidata(hObject,props)

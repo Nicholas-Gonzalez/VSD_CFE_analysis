@@ -4720,7 +4720,7 @@ end
 props.log = [props.log; string(['saved data on ',char(datetime)])];
 guidata(hObject,props)
 
-fields = ["plt","txt","chk","ax"];
+fields = ["plt","txt","chk","ax","ylim"];
 for f=1:length(fields)
     if isfield(props,fields{f})
         props = rmfield(props,fields{f});
@@ -4809,8 +4809,23 @@ for n=1:length(names)
 end
 
 
-save(fullfile(path,file),'props')
-disp(['Saved ' fullfile(path,file)])
+if isfield(props,'BMP_analysis')
+    bmp_fn = fieldnames(props.BMP_analysis);
+    for f=1:length(bmp_fn)
+        if isa(props.BMP_analysis.(bmp_fn{f}),'handle')
+            props.BMP_analysis = rmfield(props.BMP_analysis,bmp_fn{f});
+        end
+    end
+end
+
+
+try
+    save(fullfile(path,file),'props')
+    disp(['Saved ' fullfile(path,file)])
+catch exception
+    disp('>>>>>> Error >>>>>')
+    disp(getReport(exception))
+end
 
 set(allbut,'Enable','on')
 delete(buf)
