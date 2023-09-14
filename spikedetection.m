@@ -901,24 +901,36 @@ function chparam(hObject,eventdata)
 props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
-props.params(idx).ckdv = get(findobj(props.panel,'Tag','ckdv'),'Value');
-props.params(idx).ck1 = get(findobj(props.panel,'Tag','ck1'),'Value');
-props.params(idx).ck2 = get(findobj(props.panel,'Tag','ck2'),'Value');
-props.params(idx).ck1rej = get(findobj(props.panel,'Tag','ck1rej'),'Value');
-props.params(idx).ck2rej = get(findobj(props.panel,'Tag','ck2rej'),'Value');
-props.params(idx).dur1 = str2double(get(findobj(props.panel,'Tag','1dur'),'String'));
-props.params(idx).thr1 = str2double(get(findobj(props.panel,'Tag','1thr'),'String'));
-
-props.params(idx).rej1 = str2double(get(findobj(props.panel,'Tag','1rej'),'String'));
-props.params(idx).rej2 = str2double(get(findobj(props.panel,'Tag','2rej'),'String'));
-
-props.params(idx).dur2 = str2double(get(findobj(props.panel,'Tag','2dur'),'String'));
-props.params(idx).thr2 = str2double(get(findobj(props.panel,'Tag','2thr'),'String'));
-props.params(idx).gpdvdur = str2double(get(findobj(props.panel,'Tag','gpdvdur'),'String'));
-props.params(idx).gapdur = str2double(get(findobj(props.panel,'Tag','gapdur'),'String'));
-props.params(idx).ra = str2double(get(findobj(props.panel,'Tag','rearm'),'String'));
+props.params(idx) = getparams(fig);
 guidata(hObject.Parent,props)
 detsp(hObject)
+
+function params = getparams(hObject)
+params.ckdv = get(findobj(props.panel,'Tag','ckdv'),'Value');
+params.ck1 = get(findobj(props.panel,'Tag','ck1'),'Value');
+params.ck2 = get(findobj(props.panel,'Tag','ck2'),'Value');
+params.ck1rej = get(findobj(props.panel,'Tag','ck1rej'),'Value');
+params.ck2rej = get(findobj(props.panel,'Tag','ck2rej'),'Value');
+params.dur1 = str2double(get(findobj(props.panel,'Tag','1dur'),'String'));
+params.thr1 = str2double(get(findobj(props.panel,'Tag','1thr'),'String'));
+
+params.rej1 = str2double(get(findobj(props.panel,'Tag','1rej'),'String'));
+params.rej2 = str2double(get(findobj(props.panel,'Tag','2rej'),'String'));
+
+params.dur2 = str2double(get(findobj(props.panel,'Tag','2dur'),'String'));
+params.thr2 = str2double(get(findobj(props.panel,'Tag','2thr'),'String'));
+params.gpdvdur = str2double(get(findobj(props.panel,'Tag','gpdvdur'),'String'));
+params.gapdur = str2double(get(findobj(props.panel,'Tag','gapdur'),'String'));
+params.ra = str2double(get(findobj(props.panel,'Tag','rearm'),'String'));
+
+function params = read_default(fname)
+str = readlines(fname);
+params = cell(length(str),2);
+for s=1:length(str)
+    paramstr = strsplit(str{1},'\t');
+    params(s,:) = paramstr(1:2);
+end
+
 
 function detsp(hObject,eventdata)
 if nargin==2
