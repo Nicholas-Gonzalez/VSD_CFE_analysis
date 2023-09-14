@@ -76,29 +76,10 @@ sf = diff(tm(1:2));
 slidepos = 27;% default frame for image
 inc = 0.25;% increment increas for threshold
 
-default.ckdv = false;% default on whether to use a differential spike detection
-default.ck1 = true;% default whether upper threshold is used as criteria
-default.dur1 = 5;% default number of datapoints above threshold to detect spike.
-default.thr1 = 5;
-default.ck1rej = false;% default whether to reject spikes above a value
-default.rej1 = 10;% default value for rejection.  If data is above this then it rejects the spike.
-default.ck2 = false;% default whether lower threshold is used as criteria.
-default.dur2 = 5;
-default.thr2 = -1.75;
-default.ck2rej = false;
-default.rej2 = -4;
-default.gapdur = 15;
-default.gpdvdur = 15;% gap duration for dv threshold method
-default.ra = 20;% re-arm, the minimal amount of time to detect a subsequent spike (should be just longer than the concievable duration of a spike)
-
-default.dur1 = sf*default.dur1*1000;
-default.dur2 = sf*default.dur2*1000;
-default.gapdur = sf*default.gapdur*1000;
-default.gpdvdur = sf*default.gpdvdur*1000;
-default.ra = sf*default.ra*1000;
+default = read_default;
 
 if isfield(inputdata,'spikedetection')
-    fields = fieldnames(default);
+    fields = fieldnames(default.A);
     params = inputdata.spikedetection.params;
     nfields = fieldnames(params);
     oldnm = ["ckup","updur","upthr","ckuprej","uprej","ckdwn","dwndur","dwnthr","ckdwnrej","dwnrej"];
@@ -127,7 +108,15 @@ if isfield(inputdata,'spikedetection')
     end
     spikes = inputdata.spikedetection.spikes;
 else
-    params = repmat(default,length(ch),1);
+    fields = fieldnames(default);
+    for p=1:length(inputdata.ch)
+        params(p) = default.(fields{1});
+        for f=1:length(fields)
+            if regexp(inputdata.ch{p},['^' fields{f}])    
+                params(p) = default.(fields{f});
+            end
+        end
+    end
     spikes = repelem({zeros(1,0)},size(data,1));
 end
 
@@ -141,7 +130,9 @@ mi(1) = uimenu(m,'Text','Open Parameters','Callback',@opensaveparams,'Enable','o
 mi(3) = uimenu(m,'Text','Save Parameters','Callback',@opensaveparams,'Enable','on','Tag','save');
 mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','on','Tag','savem');
 mi(5) = uimenu(m,'Text','Send to Intan_Gui','Callback',@tointan,'Enable','on','Tag','savem');
-mi(6) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
+mi(6) = uimenu(m,'Text','Set Default','Callback',@setdefault,'Enable','on','Tag','savem');
+mi(7) = uimenu(m,'Text','Restore Default','Callback',@restoredefault,'Enable','on','Tag','savem');
+mi(8) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
 
 
 oppos = [120 327 40 20];
@@ -153,48 +144,48 @@ uicontrol(panel,'Position',[215 88 80 25],'Style','text','String','Gap','Enable'
 uicontrol(panel,'Position',[295 88 80 25],'Style','text','String','Reject','Enable','on');
 
 % dv threshold
-uicontrol(panel,'Position',[140 4 20 20],'Style','checkbox','Tag','ckdv','Callback',@dvthr,'Enable','on','Value',default.ckdv);
+uicontrol(panel,'Position',[140 4 20 20],'Style','checkbox','Tag','ckdv','Callback',@dvthr,'Enable','on','Value',params(showidx(1)).ckdv);
 uicontrol(panel,'Position',[160 1 15 20],'Style','text','String','dv','Enable','on');
 
 %threshold 1
-uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ck1','Callback',@activatethr,'Enable','on','Value',default.ck1);
+uicontrol(panel,'Position',[1 73 20 20],'Style','checkbox','Tag','ck1','Callback',@activatethr,'Enable','on','Value',params(showidx(1)).ck1);
 uicontrol(panel,'Position',[20  70  40 20],'Style','text','String','1Thr','Tag','1str','Enable','on');
 uicontrol(panel,'Position',[65  82  20 14],'Style','pushbutton','Tag','1pUPthr','String',char(708),'Callback',@chval,'Enable','on');
 uicontrol(panel,'Position',[65  69  20 14],'Style','pushbutton','Tag','1pDWNthr','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[85 73  30 20],'Style','edit','String',default.thr1,'Tag','1thr','Callback',@chparam,'Enable','on');
+uicontrol(panel,'Position',[85 73  30 20],'Style','edit','String',params(showidx(1)).thr1,'Tag','1thr','Callback',@chparam,'Enable','on');
 uicontrol(panel,'Position',[115 70  20 20],'Style','text','String','std','Tag','1units','Enable','on');
 
 uicontrol(panel,'Position',[145 82  20 14],'Style','pushbutton','Tag','1pUPdur','String',char(708),'Callback',@chval,'Enable','on');
 uicontrol(panel,'Position',[145 69  20 14],'Style','pushbutton','Tag','1pDWNdur','String',char(709),'Callback',@chval,'Enable','on');
-uicontrol(panel,'Position',[165 73  30 20],'Style','edit','String',num2str(default.dur1,2),'Tag','1dur','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[165 73  30 20],'Style','edit','String',num2str(params(showidx(1)).dur1,2),'Tag','1dur','Callback',@duration,'Enable','on');
 uicontrol(panel,'Position',[195 70  20 20],'Style','text','String','ms','Tag','1units','Enable','on');
 
-uicontrol(panel,'Position',[300 73 20 20],'Style','checkbox','Tag','ck1rej','Callback',@activatethr,'Enable','on','Value',default.ck1rej);
+uicontrol(panel,'Position',[300 73 20 20],'Style','checkbox','Tag','ck1rej','Callback',@activatethr,'Enable','on','Value',params(showidx(1)).ck1rej);
 uicontrol(panel,'Position',[320 82  20 14],'Style','pushbutton','Tag','1pUPrej','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[320 69  20 14],'Style','pushbutton','Tag','1pDWNrej','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[340 73  30 20],'Style','edit','String',num2str(default.rej1,2),'Tag','1rej','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[340 73  30 20],'Style','edit','String',num2str(params(showidx(1)).rej1,2),'Tag','1rej','Callback',@chparam,'Enable','off');
 uicontrol(panel,'Position',[370 70  20 20],'Style','text','String','std','Tag','1unitsrej','Enable','off');
 
 uicontrol(panel,'Position',[395 73  20 20],'Style','pushbutton','String','?','Tag','helps1','Callback',@helpf,'Enable','on');
 
 
 %threshold 2
-uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ck2','Callback',@activatethr,'Enable','on','value',default.ck2);
+uicontrol(panel,'Position',[1  43 20 20],'Style','checkbox','Tag','ck2','Callback',@activatethr,'Enable','on','value',params(showidx(1)).ck2);
 uicontrol(panel,'Position',[20  40 40 20],'Style','text','Tag','2str','String','2Thr','Enable','off');
 uicontrol(panel,'Position',[65  52 20 14],'Style','pushbutton','Tag','2pUPthr','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[65  39 20 14],'Style','pushbutton','Tag','2pDWNthr','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[85  43 30 20],'Style','edit','String',default.thr2,'Tag','2thr','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[85  43 30 20],'Style','edit','String',params(showidx(1)).thr2,'Tag','2thr','Callback',@chparam,'Enable','off');
 uicontrol(panel,'Position',[115  40 20 20],'Style','text','String','std','Tag','2units','Enable','off');
 
 uicontrol(panel,'Position',[145 52 20 14],'Style','pushbutton','Tag','2pUPdur','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[145 39 20 14],'Style','pushbutton','Tag','2pDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[165 43 30 20],'Style','edit','String',num2str(default.dur2,2),'Tag','2dur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[165 43 30 20],'Style','edit','String',num2str(params(showidx(1)).dur2,2),'Tag','2dur','Callback',@duration,'Enable','off');
 uicontrol(panel,'Position',[195 40 20 20],'Style','text','String','ms','Tag','2units','Enable','off');
 
-uicontrol(panel,'Position',[300 43 20 20],'Style','checkbox','Tag','ck2rej','Callback',@activatethr,'Enable','on','Value',default.ck2rej);
+uicontrol(panel,'Position',[300 43 20 20],'Style','checkbox','Tag','ck2rej','Callback',@activatethr,'Enable','on','Value',params(showidx(1)).ck2rej);
 uicontrol(panel,'Position',[320 52  20 14],'Style','pushbutton','Tag','2pUPrej','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[320 39  20 14],'Style','pushbutton','Tag','2pDWNrej','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[340 43  30 20],'Style','edit','String',num2str(default.rej2,2),'Tag','2rej','Callback',@chparam,'Enable','off');
+uicontrol(panel,'Position',[340 43  30 20],'Style','edit','String',num2str(params(showidx(1)).rej2,2),'Tag','2rej','Callback',@chparam,'Enable','off');
 uicontrol(panel,'Position',[370 40  20 20],'Style','text','String','std','Tag','2unitsrej','Enable','off');
 
 uicontrol(panel,'Position',[395 43 20 20],'Style','pushbutton','String','?','Tag','helps2','Callback',@helpf,'Enable','on');
@@ -202,7 +193,7 @@ uicontrol(panel,'Position',[395 43 20 20],'Style','pushbutton','String','?','Tag
 %gap start (only active when using dv threshold)
 uicontrol(panel,'Position',[220 82 20 14],'Style','pushbutton','Tag','gpdvpUPdur','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[220 69 20 14],'Style','pushbutton','Tag','gpdvpDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[240 73 35 20],'Style','edit','String',num2str(default.gpdvdur,2),'Tag','gpdvdur','Callback',@duration,'Enable','off',...
+uicontrol(panel,'Position',[240 73 35 20],'Style','edit','String',num2str(params(showidx(1)).gpdvdur,2),'Tag','gpdvdur','Callback',@duration,'Enable','off',...
     'Tooltip','Time difference between baseline and first point');
 uicontrol(panel,'Position',[275 70 20 20],'Style','text','String','ms','Tag','gpdvunits','Enable','off');
 
@@ -210,12 +201,12 @@ uicontrol(panel,'Position',[275 70 20 20],'Style','text','String','ms','Tag','gp
 %gap
 uicontrol(panel,'Position',[220 52 20 14],'Style','pushbutton','Tag','gappUPdur','String',char(708),'Callback',@chval,'Enable','off');
 uicontrol(panel,'Position',[220 39 20 14],'Style','pushbutton','Tag','gappDWNdur','String',char(709),'Callback',@chval,'Enable','off');
-uicontrol(panel,'Position',[240 43 35 20],'Style','edit','String',num2str(default.gapdur,2),'Tag','gapdur','Callback',@duration,'Enable','off');
+uicontrol(panel,'Position',[240 43 35 20],'Style','edit','String',num2str(params(showidx(1)).gapdur,2),'Tag','gapdur','Callback',@duration,'Enable','off');
 uicontrol(panel,'Position',[275 40 20 20],'Style','text','String','ms','Tag','gapunits','Enable','off');
 
 %rearming
 uicontrol(panel,'Position',[1  1 40 20],'Style','text','String','re-arm','Enable','on');
-uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',num2str(default.ra,2),'Tag','rearm','Callback',@duration,'Enable','on');
+uicontrol(panel,'Position',[40 4 30 20],'Style','edit','String',num2str(params(showidx(1)).ra,2),'Tag','rearm','Callback',@duration,'Enable','on');
 uicontrol(panel,'Position',[70 1 20 20],'Style','text','String','ms','Enable','on');
 uicontrol(panel,'Position',[90 4 20 20],'Style','pushbutton','String','?','Tag','helps3','Callback',@helpf,'Enable','on');
 
@@ -251,7 +242,7 @@ stddata = std(data(showidx(1),:));
 ax = axes('Position',[0.23 0.1 0.5 0.75]);
 plt = plot(tm,data(showidx(1),:));hold on
 
-tplt(1) = plot([min(tm) max(tm)],[mdata, mdata]+stddata*default.thr1);hold on
+tplt(1) = plot([min(tm) max(tm)],[mdata, mdata]+stddata*params(showidx(1)).thr1);hold on
 tplt(2) = plot([min(tm) max(tm)],nan(2,1));hold on
 tplt(3) = plot([min(tm) max(tm)],nan(2,1),':');hold on
 tplt(4) = plot([min(tm) max(tm)],nan(2,1),':');hold on
@@ -287,11 +278,11 @@ sp = 0.02; % space between graphs
 
 sax = axes('Position',[0.08 0.72 0.12 ht]);
 aplt = plot(W*sf*1000,nan(size(W)));hold on
-xv = [-default.gpdvdur,...
+xv = [-params(showidx(1)).gpdvdur,...
       0,...
-      default.dur1,...
-      default.gapdur + default.dur1,...
-      default.dur2 + default.gapdur + default.dur1];
+      params(showidx(1)).dur1,...
+      params(showidx(1)).gapdur + params(showidx(1)).dur1,...
+      params(showidx(1)).dur2 + params(showidx(1)).gapdur + params(showidx(1)).dur1];
 athrp = plot(xv,nan(size(xv)),'r');
 sax.XTick = [];
 sax.Title.String = 'Average detected spike';
@@ -906,6 +897,7 @@ guidata(hObject.Parent,props)
 detsp(hObject)
 
 function params = getparams(hObject)
+props = guidata(hObject);
 params.ckdv = get(findobj(props.panel,'Tag','ckdv'),'Value');
 params.ck1 = get(findobj(props.panel,'Tag','ck1'),'Value');
 params.ck2 = get(findobj(props.panel,'Tag','ck2'),'Value');
@@ -923,14 +915,52 @@ params.gpdvdur = str2double(get(findobj(props.panel,'Tag','gpdvdur'),'String'));
 params.gapdur = str2double(get(findobj(props.panel,'Tag','gapdur'),'String'));
 params.ra = str2double(get(findobj(props.panel,'Tag','rearm'),'String'));
 
-function params = read_default(fname)
-str = readlines(fname);
-params = cell(length(str),2);
-for s=1:length(str)
-    paramstr = strsplit(str{1},'\t');
-    params(s,:) = paramstr(1:2);
+function params = read_default
+parentf = fileparts(mfilename('fullpath'));
+fdir = dir(parentf);
+fdir = fdir(contains({fdir.name},'.param'));
+[~,idx] = sort({fdir.name});
+fdir = fdir(idx);
+for p=1:length(fdir)
+    fname = regexp(fdir(p).name,'(?<=_)[A-Z]','match');
+    str = readlines(fullfile(parentf,fdir(p).name));
+    for s=1:length(str)
+        paramstr = strsplit(str{s},'\t');
+        name = paramstr{1};
+        val = str2double(paramstr{2});
+        units = paramstr{3};
+        if strcmp(units,'logical')
+            val = logical(val);
+        end
+        param.(name) = val;
+    end
+    params.(fname{1}) = param;
 end
 
+function setdefault(hObject,eventdata)
+props = guidata(hObject);
+fig = findobj('Tag',props.apptag);
+idx = get(findobj('Tag','channels','Parent',fig),'Value');
+params = props.params(idx);
+ch = props.ch{idx};
+nm = regexp(ch,'^[A-Z]+','match');
+parentf = fileparts(mfilename('fullpath'));
+fdir = dir(parentf);
+fdir = fdir(contains({fdir.name},['Default_' nm{1} '.param']));
+str = readlines(fullfile(parentf,fdir.name));
+name = fdir.name;
+name = replace(name,'.param','_New.param');
+fid = fopen(fullfile(parentf,name),'W');
+for s=1:length(str)
+    paramstr = strsplit(str{s},'\t');
+    name = paramstr{1};
+    val = paramstr{2};
+    str{s} = replace(str{s},val,num2str(params.(name)));
+    fprintf(fid,[str{s} '\n']);
+end
+fclose(fid);
+
+function restoredefault(hObject,eventdata)
 
 function detsp(hObject,eventdata)
 if nargin==2
