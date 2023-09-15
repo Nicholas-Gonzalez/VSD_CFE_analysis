@@ -212,7 +212,8 @@ uicontrol(panel,'Position',[90 4 20 20],'Style','pushbutton','String','?','Tag',
 
 uicontrol(panel,'Position',[325 1 90 30],'Style','pushbutton','String','Image Average','Tag','avgim','Callback',@avgim,'Enable','on');
 uicontrol(panel,'Position',[225 1 100 30],'Style','pushbutton','String','Copy Parameters','Callback',@copyparam,'Enable','on');
-
+uicontrol(panel,'Position',[195 1 30 30],'Style','pushbutton','String','dft','Callback',@applydefault,...
+    'Enable','on','Tooltip','Returns values to default');
 
 uicontrol('Position',[220 125 60 20],'Style','text','String','# spikes:','Enable','on');
 uicontrol('Position',[280 125 40 20],'Style','text','String',' ','Tag','nspikes','Enable','on');
@@ -926,13 +927,15 @@ for p=1:length(fdir)
     str = readlines(fullfile(parentf,fdir(p).name));
     for s=1:length(str)
         paramstr = strsplit(str{s},'\t');
-        name = paramstr{1};
-        val = str2double(paramstr{2});
-        units = paramstr{3};
-        if strcmp(units,'logical')
-            val = logical(val);
+        if length(paramstr)>2
+            name = paramstr{1};
+            val = str2double(paramstr{2});
+            units = paramstr{3};
+            if strcmp(units,'logical')
+                val = logical(val);
+            end
+            param.(name) = val;
         end
-        param.(name) = val;
     end
     params.(fname{1}) = param;
 end
@@ -950,17 +953,52 @@ fdir = fdir(contains({fdir.name},['Default_' nm{1} '.param']));
 str = readlines(fullfile(parentf,fdir.name));
 name = fdir.name;
 name = replace(name,'.param','_New.param');
-fid = fopen(fullfile(parentf,name),'W');
-for s=1:length(str)
-    paramstr = strsplit(str{s},'\t');
-    name = paramstr{1};
-    val = paramstr{2};
-    str{s} = replace(str{s},val,num2str(params.(name)));
-    fprintf(fid,[str{s} '\n']);
+mstr = ['This will replace the default parameters for all channels starting with ' nm{1} '. This will not take affect unless you reopen the spike detection app.'];
+answer = questdlg(mstr);
+if strcmp(answer,'Yes') 
+    fid = fopen(fullfile(parentf,name),'W');
+    for s=1:length(str)
+        paramstr = strsplit(str{s},'\t');
+        name = paramstr{1};
+        val = paramstr{2};
+        str{s} = replace(str{s},val,num2str(params.(name)));
+        if s==length(str)
+            fprintf(fid,str{s});
+        else
+            fprintf(fid,[str{s} '\n']);
+        end
+    end
+    fclose(fid);
 end
-fclose(fid);
 
 function restoredefault(hObject,eventdata)
+props = guidata(hObject);
+fig = findobj('Tag',props.apptag);
+idx = get(findobj('Tag','channels','Parent',fig),'Value');
+ch = props.ch{idx};
+nm = regexp(ch,'^[A-Z]+','match');
+parentf = fileparts(mfilename('fullpath'));
+name = fullfile(parentf,['Default_' nm{1} '_New.param']);
+if exist(name,'file')
+    mstr = ['This will remove any new default parameters that you set for any channel starting with ' nm{1} '. This will not take affect unless you reopen the spike detection app.'];
+    answer = questdlg(mstr);
+    if strcmp(answer,'Yes')
+        delete(name)
+    end
+end
+
+function applydefault(hObject,eventdata)
+props = guidata(hObject);
+fig = findobj('Tag',props.apptag);
+idx = get(findobj('Tag','channels','Parent',fig),'Value');
+params = props.params(idx);
+ch = props.ch{idx};
+nm = regexp(ch,'^[A-Z]+','match');
+params = read_default;
+params = params.(nm{1});
+props.params(idx) = params;
+guidata(hObject,props)
+chchannel(fig);
 
 function detsp(hObject,eventdata)
 if nargin==2

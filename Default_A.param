@@ -1,7 +1,7 @@
 ckdv	0		logical		use differential(1) spike detection or raw(0)
 ck1		1		logical		include threshold 1
 dur1	0.33	ms			duration of datapoints that need to be consecutively above threshold
-thr1	5		std			magnitude of the threshold 1
+thr1	2.25		std			magnitude of the threshold 1
 ck1rej	0		logical		unclude rejection 1 
 rej1	10		std			magnitude of rejection threshold 1 (negative: data needs to be below, positive: data needs to be above)
 ck2		0		logical		include threshold 2
@@ -11,4 +11,4 @@ ck2rej	0		logical		include rejection 2
 rej2	-4		std			magnitude of rejection threshold 2 (negative: data needs to be below, positive: data needs to be above)
 gapdur	1		ms			duration between first and second threshold
 gpdvdur	1		ms			duration between baseline and datapoint (how far to look back), only used when ckdv is true.
-ra		1.33	ms			duration to avoid detecting the same spike multiple times
+ra		1.3	ms			duration to avoid detecting the same spike multiple times
