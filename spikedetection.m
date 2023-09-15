@@ -771,33 +771,32 @@ props = guidata(hObject);
 fig = findobj('Tag',props.apptag);
 idx = get(findobj('Tag','channels','Parent',fig),'Value');
 enable = ["off","on"];
-set(findobj(props.panel,'Tag','ck1'),'Value',props.params(idx).ck1)
-set(findobj(props.panel,'Tag','ck2'),'Value',props.params(idx).ck2)
-set(findobj(props.panel,'Tag','ck1rej'),'Value',props.params(idx).ck1rej)
-set(findobj(props.panel,'Tag','ck2rej'),'Value',props.params(idx).ck2rej)
-set(findobj(props.panel,'Tag','1dur'),'String',num2str(props.params(idx).dur1,2));
-set(findobj(props.panel,'Tag','1thr'),'String',props.params(idx).thr1);
+params = props.params(idx);
+set(findobj(props.panel,'Tag','ck1'),'Value',params.ck1)
+set(findobj(props.panel,'Tag','ck2'),'Value',params.ck2)
+set(findobj(props.panel,'Tag','ck1rej'),'Value',params.ck1rej)
+set(findobj(props.panel,'Tag','ck2rej'),'Value',params.ck2rej)
+set(findobj(props.panel,'Tag','1dur'),'String',num2str(params.dur1,2));
+set(findobj(props.panel,'Tag','1thr'),'String',params.thr1);
 
-set(findobj(props.panel,'Tag','1rej'),'String',props.params(idx).rej1);
-set(findobj(props.panel,'Tag','2rej'),'String',props.params(idx).rej2);
+set(findobj(props.panel,'Tag','1rej'),'String',params.rej1);
+set(findobj(props.panel,'Tag','2rej'),'String',params.rej2);
 
-set(findobj(props.panel,'Tag','2dur'),'String',num2str(props.params(idx).dur2,2));
-set(findobj(props.panel,'Tag','2thr'),'String',props.params(idx).thr2);
-set(findobj(props.panel,'Tag','gapdur'),'String',num2str(props.params(idx).gapdur,2));
-set(findobj(props.panel,'Tag','gpdvdur'),'String',num2str(props.params(idx).gpdvdur,2));
-set(findobj(props.panel,'Tag','rearm'),'String',num2str(props.params(idx).ra,2));
-set(findobj(props.panel,'Tag','ckdv'),'Value',props.params(idx).ckdv);
+set(findobj(props.panel,'Tag','2dur'),'String',num2str(params.dur2,2));
+set(findobj(props.panel,'Tag','2thr'),'String',params.thr2);
+set(findobj(props.panel,'Tag','gapdur'),'String',num2str(params.gapdur,2));
+set(findobj(props.panel,'Tag','gpdvdur'),'String',num2str(params.gpdvdur,2));
+set(findobj(props.panel,'Tag','rearm'),'String',num2str(params.ra,2));
+set(findobj(props.panel,'Tag','ckdv'),'Value',params.ckdv);
 
-set(findobj(props.panel,'-regexp','Tag','^1(pUP|pDWN|units|dur|thr|str)(?!rej)') ,'Enable',enable(props.params(idx).ck1+1))
-set(findobj(props.panel,'-regexp','Tag','^1\w*rej$')     ,'Enable',enable((props.params(idx).ck1 & props.params(idx).ck1rej)+1))
-set(findobj(props.panel,'-regexp','Tag','^2(pUP|pDWN|units|dur|thr|str)(?!rej)'),'Enable',enable(props.params(idx).ck2+1))
-set(findobj(props.panel,'-regexp','Tag','^2\w*rej$')    ,'Enable',enable((props.params(idx).ck2 & props.params(idx).ck2rej)+1))
+set(findobj(props.panel,'-regexp','Tag','^1(pUP|pDWN|units|dur|thr|str)(?!rej)') ,'Enable',enable(params.ck1+1))
+set(findobj(props.panel,'-regexp','Tag','^1\w*rej$')     ,'Enable',enable((props.params(idx).ck1 & params.ck1rej)+1))
+set(findobj(props.panel,'-regexp','Tag','^2(pUP|pDWN|units|dur|thr|str)(?!rej)'),'Enable',enable(params.ck2+1))
+set(findobj(props.panel,'-regexp','Tag','^2\w*rej$')    ,'Enable',enable((props.params(idx).ck2 & params.ck2rej)+1))
+set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable',enable((params.ck1 & params.ck2)+1))
+set(findobj(props.panel,'-regexp','Tag','^gpdv'),'Enable',enable(params.ckdv+1))
 
-if props.params(idx).ck1 && props.params(idx).ck2
-    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','on')
-else
-    set(findobj(props.panel,'-regexp','Tag','^gap'),'Enable','off')
-end
+
 detsp(hObject)
 
 function helpf(hObject,eventdata)
