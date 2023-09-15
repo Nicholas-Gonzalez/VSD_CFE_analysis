@@ -709,6 +709,14 @@ props = guidata(findobj('Tag',vsdprops.intan_tag));
 if isfield(props,'spikedetection')
     props = rmfield(props,'spikedetection');
 end
+
+if isfield(props, 'BMP_analysis')
+    props.BMP_analysis.BMP = zeros(0,3);
+    props.BMP_analysis.spikes = zeros(0,8,0);
+    props.BMP_analysis.btype = zeros(1,0);
+    props.BMP_analysis.Rn = zeros(0,8);
+end
+
 intch = isfield(vsdprops,'intan') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'intan'));
 vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd'));
 if intch && vsdch
@@ -818,8 +826,6 @@ if intch && vsdch
 
             if isfield(vsdprops.matprops,'BMP_analysis')
                 props.BMP_analysis.BMP = vsdprops.matprops.BMP_analysis.BMP;
-            else
-                props.BMP_analysis.BMP = zeros(0,3);
             end
 
             if isfield(vsdprops.matprops,'video')
@@ -2670,7 +2676,7 @@ fig = ancestor(hObject,'figure','toplevel');
 props = guidata(fig);
 [x, ~] = ginput(3);
 
-if ~isfield(props.BMP,'BMP') || ~isfield(props.BMP_analysis,'BMP') || isempty(props.BMP_analysis.BMP)
+if  ~isfield(props.BMP_analysis,'BMP') || isempty(props.BMP_analysis.BMP)
     b = 1;
     props.BMP_analysis.BMP = x';
 else
@@ -2703,8 +2709,8 @@ function props = reorderBMP(props)
 fig = findobj('Tag',props.intan_tag);
 [~,idx] = sort(props.BMP_analysis.BMP(:,1));
 props.BMP_analysis.BMP = props.BMP_analysis.BMP(idx,:);
-if isfield(props,'btype')
-    props.BMP_analysis.btype = props.BMP_analysis.btype(idx,:);
+if isfield(props.BMP_analysis,'btype')
+    props.BMP_analysis.btype = props.BMP_analysis.btype(idx);
     props.BMP_analysis.Rn = props.BMP_analysis.Rn(idx,:);
 end
 for i=1:length(idx)
