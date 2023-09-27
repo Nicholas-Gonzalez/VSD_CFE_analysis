@@ -1946,7 +1946,9 @@ switch type
         set(objs,'Visible','off')
         set(findobj(hObject.Parent,'Tag','fattlower'),'String','90')
         set(findobj(hObject.Parent,'Tag','fslower'),'String','52')
+        set(findobj(hObject.Parent,'Tag','fplower'),'String','53')
         set(findobj(hObject.Parent,'Tag','fshigher'),'String','68')
+        set(findobj(hObject.Parent,'Tag','fphigher'),'String','69')
 %         fpass = [str2double(get(findobj(hObject.Parent,'Tag','fplower'),'String')), ...
 %                 str2double(get(findobj(hObject.Parent,'Tag','fphigher'),'String'))];
 %         fstop = [str2double(get(findobj(hObject.Parent,'Tag','fslower'),'String')), ...
