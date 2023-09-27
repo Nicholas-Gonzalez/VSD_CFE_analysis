@@ -1270,17 +1270,21 @@ props.ylim.dwn = gobjects(nch,1);
 
 disp('plotting')
 
-if isfield(props,'BMP_analysis') && isfield(props.BMP_analysis,'axbmp')
-    delete(props.BMP_analysis.axbmp)
-    delete(findobj(props.axpanel,'Tag','makeprot'))
-    delete(findobj(props.axpanel,'Tag','makeret'))
-end
+% if isfield(props,'BMP_analysis') && isfield(props.BMP_analysis,'axbmp')
+%     delete(props.BMP_analysis.axbmp)
+%     delete(findobj(props.axpanel,'Tag','makeprot'))
+%     delete(findobj(props.axpanel,'Tag','makeret'))
+% end
+
+delete(findobj(props.axpanel,'Tag','axbmp'))
 delete(findobj(props.axpanel,'Tag','makeprot'))
+delete(findobj(props.axpanel,'Tag','makern'))
+keyboard
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+5 20 20],'Style','pushbutton',...
     'Callback',@makeBMP,'String','+','Tag','makeprot')
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+25 20 20],'Style','pushbutton',...
-    'Callback',@selectRn,'String','Rn','Tag','makeprot')
-props.BMP_analysis.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6]);
+    'Callback',@selectRn,'String','Rn','Tag','makern')
+props.BMP_analysis.axbmp = axes(props.axpanel,'Units','pixels','Position',[left   max(posy)+gsize/nch  props.axpanel.Position(3)-(right+left)  top-top/6],'Tag','axbmp');
 props.BMP_analysis.axbmp.XTick = [];
 props.BMP_analysis.axbmp.YTick = [1 2 3];
 props.BMP_analysis.axbmp.YLim = [0 4.8];
