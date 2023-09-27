@@ -1279,7 +1279,7 @@ disp('plotting')
 delete(findobj(props.axpanel,'Tag','axbmp'))
 delete(findobj(props.axpanel,'Tag','makeprot'))
 delete(findobj(props.axpanel,'Tag','makern'))
-keyboard
+
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+5 20 20],'Style','pushbutton',...
     'Callback',@makeBMP,'String','+','Tag','makeprot')
 uicontrol(props.axpanel,'Units','pixels','Position',[5 max(posy)+gsize/nch+25 20 20],'Style','pushbutton',...
@@ -1847,8 +1847,8 @@ meth = {'butter';'cheby1';'cheby2';'ellip'};
 filterp.meth = 'ellip';
 filterp.fr = 0.1;
 filterp.fatt = [40,40];
-filterp.fpass = [1,50];
-filterp.fstop = [0.1,1000];
+filterp.fpass = [5,80];
+filterp.fstop = [0.1,500];
 
 
 uicontrol('Position',[400 565 100 20],'Style','text','String','Select channel');
@@ -1942,8 +1942,16 @@ switch type
     case 'notch'
         set(uil,'Visible','on')
         set(uih,'Visible','on')
-        objs = findobj(hObject.Parent,'Tag','fatthigher','-or','Tag','fslower','-or','Tag','fshigher');
+        objs = findobj(hObject.Parent,'Tag','fatthigher','-or','Tag','fplower','-or','Tag','fphigher');
         set(objs,'Visible','off')
+        set(findobj(hObject.Parent,'Tag','fattlower'),'String','90')
+        set(findobj(hObject.Parent,'Tag','fslower'),'String','52')
+        set(findobj(hObject.Parent,'Tag','fshigher'),'String','68')
+%         fpass = [str2double(get(findobj(hObject.Parent,'Tag','fplower'),'String')), ...
+%                 str2double(get(findobj(hObject.Parent,'Tag','fphigher'),'String'))];
+%         fstop = [str2double(get(findobj(hObject.Parent,'Tag','fslower'),'String')), ...
+%                 str2double(get(findobj(hObject.Parent,'Tag','fshigher'),'String'))]; 
+
         if strcmp(meth,'butter')
             set(findobj(hObject.Parent,'Tag','fripple'),'Enable','off')
         end
@@ -2089,13 +2097,13 @@ switch hband.Tag
     case 'notch'
         switch meth{midx}
             case 'butter'
-                h = fdesign.notch('N,F0,BW', 2, mean(fpass), diff(fpass), sr);
+                h = fdesign.notch('N,F0,BW', 2, mean(fstop), diff(fstop), sr);
             case 'cheby1'
-                h = fdesign.notch('N,F0,BW,Ap', 2, mean(fpass), diff(fpass), fr, sr);
+                h = fdesign.notch('N,F0,BW,Ap', 2, mean(fstop), diff(fstop), fr, sr);
             case 'cheby2'
-                h = fdesign.notch('N,F0,BW,Ast', 2, mean(fpass), diff(fpass), fatt(1), sr);
+                h = fdesign.notch('N,F0,BW,Ast', 2, mean(fstop), diff(fstop), fatt(1), sr);
             case 'ellip'
-                h = fdesign.notch('N,F0,BW,Ap,Ast', 2, mean(fpass), diff(fpass), fr, fatt(1), sr);
+                h = fdesign.notch('N,F0,BW,Ap,Ast', 2, mean(fstop), diff(fstop), fr, fatt(1), sr);
         end
 end
 
@@ -2120,6 +2128,8 @@ fstop = [str2double(get(findobj(hObject.Parent,'Tag','fslower'),'String')), ...
          str2double(get(findobj(hObject.Parent,'Tag','fshigher'),'String'))]; 
 meth =   get(findobj(hObject.Parent,'Tag','fmeth'),'String'); 
 midx =   get(findobj(hObject.Parent,'Tag','fmeth'),'Value'); 
+hband = get(findobj(hObject.Parent,'Tag','fband'),'SelectedObject');
+notch = strcmp(hband.Tag,'notch');
 
 if diff(fpass)<=0
     set(hObject,'ForegroundColor','r','TooltipString','Upper value must be greater than lower');
@@ -2127,13 +2137,21 @@ if diff(fpass)<=0
 end
 
 if fpass(1) - fstop(1)<=0
-    set(hObject,'ForegroundColor','r','TooltipString','Lower passband value must be greater than lower stopband');
-    return
+    if ~notch
+        set(hObject,'ForegroundColor','r','TooltipString','Lower passband value must be greater than lower stopband');
+        return
+    else
+        set(findobj(hObject.Parent,'Tag','fplower'),'String',num2str(fstop(1)+1))
+    end
 end
 
 if fstop(2) - fpass(2)<=0
-    set(hObject,'ForegroundColor','r','TooltipString','Upper stopband value must be greater than upper passband');
-    return
+    if ~notch
+        set(hObject,'ForegroundColor','r','TooltipString','Upper stopband value must be greater than upper passband');
+        return
+    else
+        set(findobj(hObject.Parent,'Tag','fphigher'),'String',num2str(fstop(2)+1))
+    end
 end
 
 obj = findobj(hObject.Parent,'Tag','fripple','-or','Tag','fattlower','-or','Tag','fatthigher','-or','Tag','fplower',...
