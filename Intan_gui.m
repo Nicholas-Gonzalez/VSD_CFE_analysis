@@ -348,7 +348,7 @@ uicontrol('Position',[500 10 60 20],'Style','pushbutton','String',"Open",'Callba
 uicontrol('Position',[440 10 60 20],'Style','pushbutton','String',"Cancel",'Callback',@cancelvsd);
 uicontrol('Position',[380 10 60 20],'Style','pushbutton','String',"Help",'Callback',@helpvsd);
 uicontrol('Position',[145 10 90 20],'Style','pushbutton','String',"Load Matlab File",'Callback',@loadmat);
-uicontrol('Position',[85 25 60 20],'Style','text','String','','Tag','matprog');
+uicontrol('Position',[145 30 90 20],'Style','text','String','','Tag','matprog');
 
 uicontrol('Position',[250 10 20 20],'Style','checkbox','Tag','loadvid','Value',0);
 uicontrol('Position',[270 8 60 20],'Style','text','String','Load video');
@@ -547,9 +547,13 @@ for f=1:size(vsdprops.files,1)
     end
 end
 
+tags = ["tifc","tifo","detc","deto","tsmc","tsmo","rhsc","rhso","xlsxc","xlsxo"];
+for t=1:length(tags)
+    logics.(tags{t}) = get(findobj(hObject.Parent,'Tag',tags{t}),'Value')==1;
+end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
-    if fex(vsdprops.files(:,1)=="tiffns") && get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="tiffns") && logics.tifc && ~logics.tifo
         for f=1:3
             try
                 imp = double(imread(vsdprops.files(vsdprops.files(:,1)=="tiffns",2),'Index',f));
@@ -563,33 +567,33 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
         end
         vsdprops.im = im;
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"loaded");
-    elseif get(findobj(hObject.Parent,'Tag','tifc'),'Value')==1
+    elseif logics.tifc
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"not found",'ForegroundColor','r');
     end
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','detp'),'String'),'loaded')
-    if fex(vsdprops.files(:,1)=="detfns") && get(findobj(hObject.Parent,'Tag','detc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="detfns") && logics.detc && ~logics.deto
         [vsdprops.det,vsdprops.pixels,vsdprops.kern_center,kernel_size,vsdprops.kernpos] = ...
             readdet(vsdprops.files(vsdprops.files(:,1)=="detfns",2),size(vsdprops.im,2));
         set(findobj(hObject.Parent,'Tag','detp'),'String',"loaded");
-    elseif get(findobj(hObject.Parent,'Tag','detc'),'Value')==1
+    elseif logics.detc && ~logics.deto
         set(findobj(hObject.Parent,'Tag','detp'),'String',"not found",'ForegroundColor','r');
     end
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','xlsxp'),'String'),'loaded')
-    if fex(vsdprops.files(:,1)=="xlsxfns") && get(findobj(hObject.Parent,'Tag','xlsxc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="xlsxfns") && logics.xlsxc && ~logics.xlsxo
         vsdprops.note = string(readcell(vsdprops.files(vsdprops.files(:,1)=="xlsxfns",2)));
         set(findobj(hObject.Parent,'Tag','xlsxp'),'String',"loaded");
-    elseif get(findobj(hObject.Parent,'Tag','xlsxc'),'Value')==1
+    elseif logics.xlsxc
         set(findobj(hObject.Parent,'Tag','xlsxp'),'String',"not found",'ForegroundColor','r');
     end
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
     tsm_prog = findobj(hObject.Parent,'Tag','tsmp');
-    if fex(vsdprops.files(:,1)=="tsmfns") && get(findobj(hObject.Parent,'Tag','tsmc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="tsmfns") && logics.tsmc && logics.tsmo
         tsm = vsdprops.files(vsdprops.files(:,1)=="tsmfns",2);
         det = vsdprops.files(vsdprops.files(:,1)=="detfns",2);
         if ~fex(vsdprops.files(:,1)=="detfns")
@@ -634,14 +638,14 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
             save(replace(vsdprops.files(vsdprops.files(:,1)=="tsmfns",2),'.tsm','.mat'),'vsdprops')
             set(tsm_prog,'String','loaded','ForegroundColor','k')
         end
-    elseif  get(findobj('Tag','tsmc'),'Value')==1
+    elseif  logics.tsmc && logics.tsmo
         set(findobj(hObject.Parent,'Tag','tsmp'),'String',"not found",'ForegroundColor','r');
     end 
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
     rhs_prog = findobj(hObject.Parent,'Tag','rhsp');
-    if fex(vsdprops.files(:,1)=="rhsfns") && get(findobj(hObject.Parent,'Tag','rhsc'),'Value')==1
+    if fex(vsdprops.files(:,1)=="rhsfns") && logics.rhsc && logics.rhso
         rfn = vsdprops.files{vsdprops.files(:,1)=="rhsfns",2};
         set(rhs_prog,'String',"loading...",'ForegroundColor','b');
         pause(0.1)
@@ -701,7 +705,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         vsdprops.intan.notes = notes;
         
         set(rhs_prog,'String','loaded','ForegroundColor','k')
-    elseif  get(findobj('Tag','rhsc'),'Value')==1
+    elseif  logics.rhsc && logics.rhso
         set(findobj(hObject.Parent,'Tag','rhsp'),'String',"not found",'ForegroundColor','r');
     end 
 end
