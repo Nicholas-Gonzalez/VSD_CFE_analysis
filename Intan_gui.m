@@ -290,53 +290,71 @@ function loadapp(hObject,eventdata)
 props = guidata(hObject);
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off','DeleteFcn',@reenable);
 intan = findobj('Tag',props.intan_tag);
-f2.Position = [intan.Position(1:2)+intan.Position(3:4)/2 540 300];
+f2.Position = [intan.Position(1:2)+intan.Position(3:4)/2 560 300];
 
 
-uicontrol('Position',[480 280 60 20],'Style','text','String','Include');
+uicontrol('Position',[500 280 60 20],'Style','text','String','Include');
+uicontrol('Position',[5 280 40 20],'Style','text','String','Orig','HorizontalAlignment','left','Tooltip','Keep data from currently open file');
 
-uicontrol('Position',[50 280 200 20],'Style','text','String',"Select Frame file (.tif)");
-frm = uicontrol('Position',[10 260 315 20],'Style','edit','String','','Tag','tiffns','HorizontalAlignment','left','Callback',@setvsdfile);
-uicontrol('Position',[325 260 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','tiffn');
-uicontrol('Position',[385 260 60 20],'Style','pushbutton','String',"Generate",'Callback',@findkframe,'Tag','tiffn');
-uicontrol('Position',[445 260 60 20],'Style','text','String','','Tag','tifp');
-uicontrol('Position',[505 260 60 20],'Style','checkbox','Tag','tifc','Value',1);
+uicontrol('Position',[70 280 200 20],'Style','text','String',"Select Frame file (.tif)");
+uicontrol('Position',[5 257 25 25],'Style','checkbox','Tag','tifo','Value',0,'Callback',@loadorig,...
+    'Tooltip','Keep the tif file from currently open file.  Unchecked will reload tif file even if the same name');
+frm = uicontrol('Position',[30 260 315 20],'Style','edit','String','','Tag','tiffns','HorizontalAlignment','left','Callback',@setvsdfile);
+uicontrol('Position',[345 260 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','tiffn');
+uicontrol('Position',[405 260 60 20],'Style','pushbutton','String',"Generate",'Callback',@findkframe,'Tag','tiffn');
+uicontrol('Position',[465 260 60 20],'Style','text','String','','Tag','tifp');
+uicontrol('Position',[525 260 60 20],'Style','checkbox','Tag','tifc','Value',1);
 
-uicontrol('Position',[50 230 200 20],'Style','text','String',"Select ROI file (.det)");
-vsd = uicontrol('Position',[10 210 315 20],'Style','edit','String','','Tag','detfns','HorizontalAlignment','left','Callback',@setvsdfile);
-uicontrol('Position',[325 210 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','detfn');
-uicontrol('Position',[445 210 60 20],'Style','text','String','','Tag','detp');
-uicontrol('Position',[505 210 60 20],'Style','checkbox','Tag','detc','Value',1);
+uicontrol('Position',[70 230 200 20],'Style','text','String',"Select ROI file (.det)");
+uicontrol('Position',[5 207 25 25],'Style','checkbox','Tag','deto','Value',0,'Callback',@loadorig,...
+    'Tooltip','Keep the det data from currently open file. Unchecked will reload the det file even if the same name.');
+vsd = uicontrol('Position',[30 210 315 20],'Style','edit','String','','Tag','detfns','HorizontalAlignment','left','Callback',@setvsdfile);
+uicontrol('Position',[345 210 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','detfn');
+uicontrol('Position',[465 210 60 20],'Style','text','String','','Tag','detp');
+uicontrol('Position',[525 210 60 20],'Style','checkbox','Tag','detc','Value',1);
 
-uicontrol('Position',[50 180 200 20],'Style','text','String',"Select VSD file (.tsm)");
-vsd = uicontrol('Position',[10 160 315 20],'Style','edit','String','','Tag','tsmfns','HorizontalAlignment','left','Callback',@setvsdfile);
-uicontrol('Position',[325 160 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','tsmfn');
-uicontrol('Position',[445 160 60 20],'Style','text','String','','Tag','tsmp');
-uicontrol('Position',[505 160 60 20],'Style','checkbox','Tag','tsmc','Value',1);
+uicontrol('Position',[70 180 200 20],'Style','text','String',"Select VSD file (.tsm)");
+uicontrol('Position',[5 157 25 25],'Style','checkbox','Tag','tsmo','Value',0,'Callback',@loadorig,...
+    'Tooltip','Keep the tsm (VSD) data from currently open file. Unchecked will reload the tsm file even if the same name.');
+vsd = uicontrol('Position',[30 160 315 20],'Style','edit','String','','Tag','tsmfns','HorizontalAlignment','left','Callback',@setvsdfile);
+uicontrol('Position',[345 160 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','tsmfn');
+uicontrol('Position',[465 160 60 20],'Style','text','String','','Tag','tsmp');
+uicontrol('Position',[525 160 60 20],'Style','checkbox','Tag','tsmc','Value',1);
 
-uicontrol('Position',[50 130 200 20],'Style','text','String',"Select CFE file (.rhs)");
-vsd = uicontrol('Position',[10 110 315 20],'Style','edit','String','','Tag','rhsfns','HorizontalAlignment','left','Callback',@setvsdfile);
-uicontrol('Position',[325 110 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','rhsfn');
-uicontrol('Position',[445 110 60 20],'Style','text','String','','Tag','rhsp');
-uicontrol('Position',[505 110 60 20],'Style','checkbox','Tag','rhsc','Value',1);
+uicontrol('Position',[70 130 200 20],'Style','text','String',"Select CFE file (.rhs)");
+uicontrol('Position',[5 107 25 25],'Style','checkbox','Tag','rhso','Value',0,'Callback',@loadorig,...
+    'Tooltip','Keep the rhs (intan) data from currently open file. Unchecked will reload the rhs file even if the same name.');
+vsd = uicontrol('Position',[30 110 315 20],'Style','edit','String','','Tag','rhsfns','HorizontalAlignment','left','Callback',@setvsdfile);
+uicontrol('Position',[345 110 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','rhsfn');
+uicontrol('Position',[465 110 60 20],'Style','text','String','','Tag','rhsp');
+uicontrol('Position',[525 110 60 20],'Style','checkbox','Tag','rhsc','Value',1);
 
-uicontrol('Position',[50 80 200 20],'Style','text','String',"Select notes file (.xlsx)");
-vsd = uicontrol('Position',[10 60 315 20],'Style','edit','String','','Tag','xlsxfns','HorizontalAlignment','left','Callback',@setvsdfile);
-uicontrol('Position',[325 60 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','xlsxfn');
-uicontrol('Position',[445 60 60 20],'Style','text','String','','Tag','xlsxp');
-uicontrol('Position',[505 60 60 20],'Style','checkbox','Tag','xlsxc','Value',1);
+uicontrol('Position',[70 80 200 20],'Style','text','String',"Select notes file (.xlsx)");
+uicontrol('Position',[5 57 25 25],'Style','checkbox','Tag','xlsxo','Value',0,'Callback',@loadorig,...
+    'Tooltip','Keep the notes (xlsx) data from currently open file. Unchecked will reload the notes file even if the same name.');
+vsd = uicontrol('Position',[30 60 315 20],'Style','edit','String','','Tag','xlsxfns','HorizontalAlignment','left','Callback',@setvsdfile);
+uicontrol('Position',[345 60 60 20],'Style','pushbutton','String',"Browse",'Callback',@getvsdfile,'Tag','xlsxfn');
+uicontrol('Position',[465 60 60 20],'Style','text','String','','Tag','xlsxp');
+uicontrol('Position',[525 60 60 20],'Style','checkbox','Tag','xlsxc','Value',1);
 
-uicontrol('Position',[480 10 60 20],'Style','pushbutton','String',"Open",'Callback',@loadall);
-uicontrol('Position',[420 10 60 20],'Style','pushbutton','String',"Cancel",'Callback',@cancelvsd);
-uicontrol('Position',[360 10 60 20],'Style','pushbutton','String',"Help",'Callback',@helpvsd);
-uicontrol('Position',[125 10 90 20],'Style','pushbutton','String',"Load Matlab File",'Callback',@loadmat);
-uicontrol('Position',[65 10 60 20],'Style','text','String','','Tag','matprog');
+uicontrol('Position',[5 27 25 25],'Style','checkbox','Tag','bmpo','Value',0,'Tooltip','Transfer BMP when loading.');
+uicontrol('Position',[5 2 25 25],'Style','checkbox','Tag','spdo','Value',0,...
+    'Tooltip','Transfer spike detection parameters.  Parameters will only tranfer for the intan or VSD channels if rhs or tsm boxes checked');
+uicontrol('Position',[30 25 100 20],'Style','text','String','Keep BMP','HorizontalAlignment','left');
+uicontrol('Position',[30 0  100 20],'Style','text','String','Keep SP detection','HorizontalAlignment','left');
 
-uicontrol('Position',[230 10 20 20],'Style','checkbox','Tag','loadvid','Value',0);
-uicontrol('Position',[250 8 60 20],'Style','text','String','Load video');
 
-uicontrol('Position',[230 30 20 20],'Style','checkbox','Tag','warproi','Value',0);
-uicontrol('Position',[250 28 60 20],'Style','text','String','Warp ROI');
+uicontrol('Position',[500 10 60 20],'Style','pushbutton','String',"Open",'Callback',@loadall);
+uicontrol('Position',[440 10 60 20],'Style','pushbutton','String',"Cancel",'Callback',@cancelvsd);
+uicontrol('Position',[380 10 60 20],'Style','pushbutton','String',"Help",'Callback',@helpvsd);
+uicontrol('Position',[145 10 90 20],'Style','pushbutton','String',"Load Matlab File",'Callback',@loadmat);
+uicontrol('Position',[85 25 60 20],'Style','text','String','','Tag','matprog');
+
+uicontrol('Position',[250 10 20 20],'Style','checkbox','Tag','loadvid','Value',0);
+uicontrol('Position',[270 8 60 20],'Style','text','String','Load video');
+
+uicontrol('Position',[250 30 20 20],'Style','checkbox','Tag','warproi','Value',0);
+uicontrol('Position',[270 28 60 20],'Style','text','String','Warp ROI');
 
 load_tag = ['load_tag' num2str(randi(1e4,1))];
 hmenu = hObject.Parent;
@@ -352,6 +370,20 @@ set(allbut,'Enable','off')
 vsdprops.allbut = allbut;
 
 guidata(f2,vsdprops)
+
+function loadorig(hObject,eventdata)
+vsdprops = guidata(hObject);
+props = guidata(findobj('Tag',vsdprops.intan_tag));
+fig = hObject.Parent;
+tag = replace(hObject.Tag,'o','fns');
+if hObject.Value
+    fn = props.finfo.files;
+    fn = fn(fn(:,1)==tag,2);
+    set(findobj(fig,'Tag',tag),'String',fn)
+    fph = findobj(fig,'Tag',replace(tag,'fns','p'));
+    set(fph,'String','')
+end
+guidata(hObject,vsdprops)
 
 function reenable(hObject,eventdata)
 vsdprops = guidata(hObject);
