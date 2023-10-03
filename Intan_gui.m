@@ -378,10 +378,17 @@ fig = hObject.Parent;
 tag = replace(hObject.Tag,'o','fns');
 if hObject.Value
     fn = props.finfo.files;
-    fn = fn(fn(:,1)==tag,2);
-    set(findobj(fig,'Tag',tag),'String',fn)
+    fn1 = fn(fn(:,1)==tag,2);
+    set(findobj(fig,'Tag',tag),'String',fn1)
     fph = findobj(fig,'Tag',replace(tag,'fns','p'));
     set(fph,'String','')
+end
+if strcmp(hObject.Tag,'tsmo')
+    fn1 = fn(fn(:,1)=='detfns',2);
+    set(findobj(fig,'Tag','detfns'),'String',fn1)
+    fph = findobj(fig,'Tag','detp');
+    set(fph,'String','') 
+    set(findobj(fig,'Tag','deto'),'Value',1)
 end
 guidata(hObject,vsdprops)
 
@@ -567,8 +574,10 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
         end
         vsdprops.im = im;
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"loaded");
-    elseif logics.tifc
+    elseif logics.tifc && logics.tifo
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"not found",'ForegroundColor','r');
+    elseif logics.tifo
+        set(findobj(hObject.Parent,'Tag','tifp'),'String',"loaded");
     end
 end
 
@@ -579,6 +588,8 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','detp'),'String'),'loaded')
         set(findobj(hObject.Parent,'Tag','detp'),'String',"loaded");
     elseif logics.detc && ~logics.deto
         set(findobj(hObject.Parent,'Tag','detp'),'String',"not found",'ForegroundColor','r');
+    elseif logics.deto
+        set(findobj(hObject.Parent,'Tag','detp'),'String',"loaded");
     end
 end
 
@@ -586,14 +597,16 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','xlsxp'),'String'),'loaded')
     if fex(vsdprops.files(:,1)=="xlsxfns") && logics.xlsxc && ~logics.xlsxo
         vsdprops.note = string(readcell(vsdprops.files(vsdprops.files(:,1)=="xlsxfns",2)));
         set(findobj(hObject.Parent,'Tag','xlsxp'),'String',"loaded");
-    elseif logics.xlsxc
+    elseif logics.xlsxc && ~logics.xlsxo
         set(findobj(hObject.Parent,'Tag','xlsxp'),'String',"not found",'ForegroundColor','r');
+    elseif logics.xlsxo
+        set(findobj(hObject.Parent,'Tag','xlsxp'),'String',"loaded");
     end
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
     tsm_prog = findobj(hObject.Parent,'Tag','tsmp');
-    if fex(vsdprops.files(:,1)=="tsmfns") && logics.tsmc && logics.tsmo
+    if fex(vsdprops.files(:,1)=="tsmfns") && logics.tsmc && ~logics.tsmo
         tsm = vsdprops.files(vsdprops.files(:,1)=="tsmfns",2);
         det = vsdprops.files(vsdprops.files(:,1)=="detfns",2);
         if ~fex(vsdprops.files(:,1)=="detfns")
@@ -638,14 +651,16 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
             save(replace(vsdprops.files(vsdprops.files(:,1)=="tsmfns",2),'.tsm','.mat'),'vsdprops')
             set(tsm_prog,'String','loaded','ForegroundColor','k')
         end
-    elseif  logics.tsmc && logics.tsmo
+    elseif  logics.tsmc && ~logics.tsmo
         set(findobj(hObject.Parent,'Tag','tsmp'),'String',"not found",'ForegroundColor','r');
+    elseif logics.tsmo
+        set(tsm_prog,'String','loaded','ForegroundColor','k')
     end 
 end
 
 if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
     rhs_prog = findobj(hObject.Parent,'Tag','rhsp');
-    if fex(vsdprops.files(:,1)=="rhsfns") && logics.rhsc && logics.rhso
+    if fex(vsdprops.files(:,1)=="rhsfns") && logics.rhsc && ~logics.rhso
         rfn = vsdprops.files{vsdprops.files(:,1)=="rhsfns",2};
         set(rhs_prog,'String',"loading...",'ForegroundColor','b');
         pause(0.1)
@@ -705,8 +720,10 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','rhsp'),'String'),'loaded')
         vsdprops.intan.notes = notes;
         
         set(rhs_prog,'String','loaded','ForegroundColor','k')
-    elseif  logics.rhsc && logics.rhso
-        set(findobj(hObject.Parent,'Tag','rhsp'),'String',"not found",'ForegroundColor','r');
+    elseif  logics.rhsc && ~logics.rhso
+        set(rhs_prog,'String',"not found",'ForegroundColor','r');
+    elseif logics.rhso
+        set(rhs_prog,'String','loaded','ForegroundColor','k')
     end 
 end
 
@@ -753,26 +770,37 @@ if isfield(props, 'BMP_analysis')
     props.BMP_analysis.Rn = zeros(0,8);
 end
 
+tags = ["tifc","tifo","detc","deto","tsmc","tsmo","rhsc","rhso","xlsxc","xlsxo"];
+for t=1:length(tags)
+    logics.(tags{t}) = get(findobj(hObject.Parent,'Tag',tags{t}),'Value')==1;
+end
+
 intch = isfield(vsdprops,'intan') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'intan'));
 vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd'));
 if intch && vsdch
     if isfield(vsdprops,'intan')
-        intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
-        itm = vsdprops.intan.tm(1:2:end);
-        if isfield(vsdprops,'vsd')
-            vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
-            props.vsd.d2uint = vsdprops.vsd.d2uint;
-            props.vsd.min = vsdprops.vsd.min;
-            tm = vsdprops.vsd.tm;
-            if isfield(vsdprops.vsd,'fparam')
-                props.fparam = vsdprops.vsd.fparam;
-            end
+        if ~logics.rhso
+            intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
+            itm = vsdprops.intan.tm(1:2:end);
         else
-            vsd = convert_uint(vsdprops.matprops.vsd.data, vsdprops.matprops.vsd.d2uint,...
-                vsdprops.matprops.vsd.min,'double');
-            props.vsd.d2uint = vsdprops.matprops.vsd.d2uint;
-            props.vsd.min = vsdprops.matprops.vsd.min;
-            tm = vsdprops.matprops.vsd.tm;
+            intan = props.data;keyboard
+        end
+        if ~logics.tsmo
+            if isfield(vsdprops,'vsd')
+                vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
+                props.vsd.d2uint = vsdprops.vsd.d2uint;
+                props.vsd.min = vsdprops.vsd.min;
+                tm = vsdprops.vsd.tm;
+                if isfield(vsdprops.vsd,'fparam')
+                    props.fparam = vsdprops.vsd.fparam;
+                end
+            else
+                vsd = convert_uint(vsdprops.matprops.vsd.data, vsdprops.matprops.vsd.d2uint,...
+                    vsdprops.matprops.vsd.min,'double');
+                props.vsd.d2uint = vsdprops.matprops.vsd.d2uint;
+                props.vsd.min = vsdprops.matprops.vsd.min;
+                tm = vsdprops.matprops.vsd.tm;
+            end
         end
         sr = diff(vsdprops.vsd.tm(1:2));
         vtm = min(itm):sr:max(itm);
@@ -1983,8 +2011,8 @@ switch type
         set(findobj(hObject.Parent,'Tag','fattlower'),'String','90')
         set(findobj(hObject.Parent,'Tag','fslower'),'String','52')
         set(findobj(hObject.Parent,'Tag','fplower'),'String','53')
-        set(findobj(hObject.Parent,'Tag','fshigher'),'String','68')
-        set(findobj(hObject.Parent,'Tag','fphigher'),'String','69')
+        set(findobj(hObject.Parent,'Tag','fshigher'),'String','69')
+        set(findobj(hObject.Parent,'Tag','fphigher'),'String','68')
 %         fpass = [str2double(get(findobj(hObject.Parent,'Tag','fplower'),'String')), ...
 %                 str2double(get(findobj(hObject.Parent,'Tag','fphigher'),'String'))];
 %         fstop = [str2double(get(findobj(hObject.Parent,'Tag','fslower'),'String')), ...
