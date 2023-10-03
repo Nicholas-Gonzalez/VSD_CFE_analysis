@@ -750,12 +750,25 @@ if strcmp(answer,'Cancel')
     pause(0.1)
 else
     guidata(hObject,vsdprops)
-    stitchvsd(hObject)
+    transfer_data(hObject)
     close(hObject.Parent)
     loadplotwidgets(iObject,eventdata)
 end
 
-function stitchvsd(hObject)
+function [data,vtmo] = stitchdata(intan,vsd,itm,vtm)
+sr = diff(vtm(1:2));
+vtmo = min(itm):sr:max(itm);
+prsz = length(min(itm):sr:min(vtm)-sr);
+posz = length(max(vtm)+sr:sr:max(itm));
+vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
+if length(vtmo)>size(vsd,2)
+    vtmo = vtmo(1:size(vsd,2));
+end
+vsd = interp1(vtmo, vsd', itm);
+vsd = vsd';
+data = [intan ; vsd];
+
+function transfer_data(hObject)
 % combines the vsd and the intan data.  Function used by loadall.
 vsdprops = guidata(hObject);
 props = guidata(findobj('Tag',vsdprops.intan_tag));
@@ -777,60 +790,92 @@ end
 
 intch = isfield(vsdprops,'intan') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'intan'));
 vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd'));
-if intch && vsdch
-    if isfield(vsdprops,'intan')
-        if ~logics.rhso
-            intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
-            itm = vsdprops.intan.tm(1:2:end);
+if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
+    if isfield(vsdprops,'matprops')
+        for x=1
+        fields = fieldnames(vsdprops.matprops);
+
+        fields(ismember(fields,{'video','data'})) = [];% set all fields
+        for f=1:length(fields)
+            props.(fields{f}) = vsdprops.matprops.(fields{f});
+        end
+
+        if isfield(vsdprops.matprops,'BMP_analysis')
+            props.BMP_analysis.BMP = vsdprops.matprops.BMP_analysis.BMP;
         else
-            intan = props.data;keyboard
+            props.BMP_analysis.BMP = zeros(0,3);
         end
-        if ~logics.tsmo
-            if isfield(vsdprops,'vsd')
-                vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
-                props.vsd.d2uint = vsdprops.vsd.d2uint;
-                props.vsd.min = vsdprops.vsd.min;
-                tm = vsdprops.vsd.tm;
-                if isfield(vsdprops.vsd,'fparam')
-                    props.fparam = vsdprops.vsd.fparam;
+
+        props.finfo.files = vsdprops.files;
+        props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');
+
+        if isfield(vsdprops.matprops,'log')
+            props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
+        else
+            props.log = string(['loaded data  ',char(datetime)]);
+        end
+
+        if isfield(vsdprops.matprops,'video')
+            props.video = vsdprops.matprops.video;disp('added video')
+            fieldn = ["imdata","imdataroi","imdatar"];
+            for f=1:length(fieldn)
+                if isfield(props.video,fieldn{f})
+                    d2uint = vsdprops.matprops.video.(['d2uint' num2str(f)]);
+                    minv = vsdprops.matprops.video.(['min' num2str(f)]);
+                    props.video.(fieldn{f}) = double(props.video.(fieldn{f}))/d2uint + minv;
                 end
-            else
-                vsd = convert_uint(vsdprops.matprops.vsd.data, vsdprops.matprops.vsd.d2uint,...
-                    vsdprops.matprops.vsd.min,'double');
-                props.vsd.d2uint = vsdprops.matprops.vsd.d2uint;
-                props.vsd.min = vsdprops.matprops.vsd.min;
-                tm = vsdprops.matprops.vsd.tm;
             end
         end
-        sr = diff(vsdprops.vsd.tm(1:2));
-        vtm = min(itm):sr:max(itm);
-        prsz = length(min(itm):sr:min(tm)-sr);
-        posz = length(max(tm)+sr:sr:max(itm));
-        vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
-        if length(vtm)>size(vsd,2)
-            vtm = vtm(1:size(vsd,2));
         end
-        props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
-        props.vsd.tm = vtm;
-        vsd = interp1(vtm, vsd', itm);
-        vsd = vsd';
+    else
+        props.ch = strings(0,1);
+        if isfield(vsdprops,'vsd')
+            vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
+            data = vsd;
+            props.vsd.d2uint = vsdprops.vsd.d2uint;
+            props.vsd.min = vsdprops.vsd.min;
+            vtm = vsdprops.vsd.tm;
+            if isfield(vsdprops.vsd,'fparam')
+                props.fparam = vsdprops.vsd.fparam;
+            end
+            props.tm = vtm;
+            props.ch = [props.ch; string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
+        end    
+    
+        if isfield(vsdprops,'intan')
+            intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
+            props.intan = vsdprops.intan;
+            props.tm = vsdprops.intan.tm(1:2:end);
         
-        props.data = [intan ; vsd];
+            [data,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
+            props.data = data;
+            props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
+            props.vsd.tm = vtmo;
+            if isfield(vsdprops,'vsd')
+                [data,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
+                props.ch = [vsdprops.intan.ch ; props.ch];
+            end
+            props.notes = vsdprops.intan.notes;
+            props.finfo = vsdprops.intan.finfo;
+        end
+        
+        props.data = data;
+
         if isfield(vsdprops,'note')
-            for c=1:length(vsdprops.intan.ch)
-                nstr = replace(vsdprops.intan.ch(c),'A-','A');
-                idx = contains(vsdprops.note(:,1),nstr);
-                if any(idx) && ~ismissing(vsdprops.note(idx,2))  
-                    nsp = replace(vsdprops.intan.ch(c),'-0','');
-                    nsp = replace(nsp,'ALOG-IN','');
-                    vsdprops.intan.ch(c) = join([nsp vsdprops.note(idx,2)],'-');
+            props.note = vsdprops.note;
+            if isfield(vsdprops,'intan')
+                for c=1:length(vsdprops.intan.ch)
+                    nstr = replace(vsdprops.intan.ch(c),'A-','A');
+                    idx = contains(vsdprops.note(:,1),nstr);
+                    if any(idx) && ~ismissing(vsdprops.note(idx,2))  
+                        nsp = replace(vsdprops.intan.ch(c),'-0','');
+                        nsp = replace(nsp,'ALOG-IN','');
+                        vsdprops.intan.ch(c) = join([nsp vsdprops.note(idx,2)],'-');
+                    end
                 end
             end
         end
-        props.intan = vsdprops.intan;
         props.BMP = zeros(0,3); 
-        props.ch = [vsdprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
-        props.tm = itm;
         showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
         props.showlist = props.ch(showidx);
         props.showidx = showidx;
@@ -838,111 +883,12 @@ if intch && vsdch
         props.hidelist = props.ch(hideidx);
         props.hideidx = hideidx;
         props.Max = size(props.data,1);
-        props.finfo = vsdprops.intan.finfo;
         props.finfo.files = vsdprops.files;
-        props.notes = vsdprops.intan.notes;
-        props.note = vsdprops.note;
         props.log = string(['loaded data on ',char(datetime)]);
         props.curdir = fileparts(vsdprops.files{1,2});
-    else
-        if isfield(vsdprops,'vsd')
-            intan = convert_uint(vsdprops.matprops.intan.data, vsdprops.matprops.intan.d2uint,...
-                vsdprops.matprops.intan.min, 'double');
-            itm = vsdprops.matprops.intan.tm;  
-            vsd = vsdprops.vsd.data;
-            tm = vsdprops.vsd.tm;
-            props.vsd.tm = vsdprops.vsd.tm;
-            props.vsd.d2uint = vsdprops.vsd.d2uint;
-            props.vsd.min = vsdprops.vsd.min;
-            sr = diff(vsdprops.vsd.tm(1:2));
-            vtm = min(itm):sr:max(itm);
-            prsz = length(min(itm):sr:min(tm)-sr);
-            posz = length(max(tm)+sr:sr:max(itm));
-            vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
-
-            props.vsd.data = vsd;
-            props.vsd.tm = vtm;
-            vsd = convert_uint(vsd, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');% removed d from vsdprops.vsd.mind
-            vsd = interp1(vtm, vsd', itm);
-            vsd = vsd';
-            
-            props.data = [intan ; vsd];
-            props.ch = [vsdprops.matprops.intan.ch ;  string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
-            props.tm = itm;
-            showidx = [(1:size(intan,1)/2)  (1:size(vsd,2))+size(intan,1)];
-            props.showlist = props.ch(showidx);
-            props.showidx = showidx;
-            hideidx = size(intan,1)/2+1:size(intan,1);
-            props.hidelist = props.ch(hideidx);
-            props.hideidx = hideidx;
-            props.Max = size(props.data,1);
-            props.finfo = vsdprops.matprops.intan.finfo;
-            props.finfo.files = vsdprops.files;
-            props.notes = vsdprops.matprops.intan.notes;
-            if isfield(vsdprops.matprops,'log')
-                props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
-            else
-                props.log = string(['loaded data on ',char(datetime)]);
-            end
-            if isfield(vsdprops.matprops,'note')
-                props.note = vsdprops.matprops.note;
-            end
-
-            if isfield(vsdprops.matprops,'BMP_analysis')
-                props.BMP_analysis.BMP = vsdprops.matprops.BMP_analysis.BMP;
-            end
-
-            if isfield(vsdprops.matprops,'video')
-                props.video = vsdprops.matprops.video;disp('added video')
-                fieldn = ["imdata","imdataroi","imdatar"];
-                for f=1:length(fieldn)
-                    if isfield(props.video,fieldn{f})
-                        d2uint = vsdprops.matprops.video.(['d2uint' num2str(f)]);
-                        minv = vsdprops.matprops.video.(['min' num2str(f)]);
-                        props.video.(fieldn{f}) = double(props.video.(fieldn{f}))/d2uint + minv;
-                    end
-                end
-            end
-        else
-            fields = fieldnames(vsdprops.matprops);
-
-            fields(ismember(fields,{'video','data'})) = [];% set all fields
-            for f=1:length(fields)
-                props.(fields{f}) = vsdprops.matprops.(fields{f});
-            end
-%             if ~isfield(props,'imback')
-%                 props.imback = props.im;
-%             end
-
-            if isfield(vsdprops.matprops,'BMP_analysis')
-                props.BMP_analysis.BMP = vsdprops.matprops.BMP_analysis.BMP;
-            else
-                props.BMP_analysis.BMP = zeros(0,3);
-            end
-
-            props.finfo.files = vsdprops.files;
-            props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');
-
-            if isfield(vsdprops.matprops,'log')
-                props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
-            else
-                props.log = string(['loaded data  ',char(datetime)]);
-            end
-
-            if isfield(vsdprops.matprops,'video')
-                props.video = vsdprops.matprops.video;disp('added video')
-                fieldn = ["imdata","imdataroi","imdatar"];
-                for f=1:length(fieldn)
-                    if isfield(props.video,fieldn{f})
-                        d2uint = vsdprops.matprops.video.(['d2uint' num2str(f)]);
-                        minv = vsdprops.matprops.video.(['min' num2str(f)]);
-                        props.video.(fieldn{f}) = double(props.video.(fieldn{f}))/d2uint + minv;
-                    end
-                end
-            end
-        end
     end
-elseif vsdch
+elseif vsdch % loaded only vsd data (matlab file or raw)
+    for x=1
     nch = size(vsdprops.vsd.data,1);
     props.ch = string([repelem('V-',nch,1) num2str((1:nch)','%03u')]);
     
@@ -962,7 +908,9 @@ elseif vsdch
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.log = string(['loaded data on ',char(datetime)]);
     props.curdir = fileparts(filename);
-else
+    end
+else % loaded only intan data (matlab or raw)
+    for x=1
     if isfield(vsdprops,'note')
         for c=1:length(vsdprops.intan.ch)
             nstr = replace(vsdprops.intan.ch(c),'A-','A');
@@ -989,6 +937,7 @@ else
     props.im = ones(512,512,3);
     props.log = string(['loaded data on ',char(datetime)]);
     props.curdir = fileparts(vsdprops.files{1,2});
+    end
 end
 props.files = vsdprops.files;
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
