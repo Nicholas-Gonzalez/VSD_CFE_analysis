@@ -755,16 +755,16 @@ else
     loadplotwidgets(iObject,eventdata)
 end
 
-function [data,vtmo] = stitchdata(intan,vsd,itm,vtm)
+function [data,vsdpre,vtmo] = stitchdata(intan,vsd,itm,vtm)
 sr = diff(vtm(1:2));
 vtmo = min(itm):sr:max(itm);
 prsz = length(min(itm):sr:min(vtm)-sr);
 posz = length(max(vtm)+sr:sr:max(itm));
-vsd = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
-if length(vtmo)>size(vsd,2)
-    vtmo = vtmo(1:size(vsd,2));
+vsdpre = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
+if length(vtmo)>size(vsdpre,2)
+    vtmo = vtmo(1:size(vsdpre,2));
 end
-vsd = interp1(vtmo, vsd', itm);
+vsd = interp1(vtmo, vsdpre', itm);
 vsd = vsd';
 data = [intan ; vsd];
 
@@ -831,39 +831,36 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         props.ch = strings(0,1);
         if isfield(vsdprops,'vsd')
             vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
-            data = vsd;
+            props.data = vsd;
             props.vsd.d2uint = vsdprops.vsd.d2uint;
             props.vsd.min = vsdprops.vsd.min;
             vtm = vsdprops.vsd.tm;
+            props.vsd.tm = vtm;
             if isfield(vsdprops.vsd,'fparam')
                 props.fparam = vsdprops.vsd.fparam;
             end
             props.tm = vtm;
             props.ch = [props.ch; string([repelem('V-',size(vsd,1),1) num2str((1:size(vsd,1))','%03u')])];
+            props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
+            props.vsd.tm = vtm;
         end    
     
         if isfield(vsdprops,'intan')
             intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
             props.intan = vsdprops.intan;
             props.tm = vsdprops.intan.tm(1:2:end);
-        
-            [data,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
-            props.data = data;
-            props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
-            props.vsd.tm = vtmo;
+
             if isfield(vsdprops,'vsd')
-                [data,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
-                props.ch = [vsdprops.intan.ch ; props.ch];
+                [props.data,vsd,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
+                props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
+                props.vsd.tm = vtmo;
+            else
+                props.data = intan;
             end
             props.notes = vsdprops.intan.notes;
             props.finfo = vsdprops.intan.finfo;
-        end
-        
-        props.data = data;
-
-        if isfield(vsdprops,'note')
-            props.note = vsdprops.note;
-            if isfield(vsdprops,'intan')
+            if isfield(vsdprops,'note')
+                props.note = vsdprops.note;
                 for c=1:length(vsdprops.intan.ch)
                     nstr = replace(vsdprops.intan.ch(c),'A-','A');
                     idx = contains(vsdprops.note(:,1),nstr);
@@ -874,7 +871,9 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
                     end
                 end
             end
+            props.ch = [vsdprops.intan.ch ; props.ch];
         end
+
         props.BMP = zeros(0,3); 
         showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
         props.showlist = props.ch(showidx);
