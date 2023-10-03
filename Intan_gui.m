@@ -828,7 +828,7 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         end
         end
     else
-        props.ch = strings(0,1);
+        props.ch = strings(0,1);keyboard
         if isfield(vsdprops,'vsd')
             vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
             props.data = vsd;
@@ -888,15 +888,27 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
     end
 elseif vsdch % loaded only vsd data (matlab file or raw)
     for x=1
+    vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
+    props.vsd.d2uint = vsdprops.vsd.d2uint;
+    props.vsd.min = vsdprops.vsd.min;
+    if logics.rhso
+        keyboard
+        idx = arrayfun(@(x) find(props.ch==x),props.intan.ch);
+        intan = props.data(idx,:);
+        [props.data,vsd,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
+        props.vsd.data = vsd;
+        props.vsd.tm = vtmo;
+        props.ch = [props.intan.ch ; string([repelem('V-',nch,1) num2str((1:nch)','%03u')])];
+    else
+        props.data = vsd;
+        props.ch = string([repelem('V-',nch,1) num2str((1:nch)','%03u')]);
+        props.tm = vsdprops.vsd.tm;
+    end
     nch = size(vsdprops.vsd.data,1);
-    props.ch = string([repelem('V-',nch,1) num2str((1:nch)','%03u')]);
-    
-    props.tm = vsdprops.vsd.tm;
     props.showlist = props.ch;
     props.showidx = 1:nch;
     props.hidelist = [];
     props.hideidx = [];
-    props.data = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
     [path,filename ] = fileparts(vsdprops.vsd.info.Filename);
     props.finfo.file = filename;
     props.finfo.files = vsdprops.files;
