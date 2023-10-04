@@ -783,10 +783,12 @@ if isfield(props, 'BMP_analysis')
     props.BMP_analysis.Rn = zeros(0,8);
 end
 
-tags = ["tifc","tifo","detc","deto","tsmc","tsmo","rhsc","rhso","xlsxc","xlsxo"];% add BMP
+tags = ["tifc","tifo","detc","deto","tsmc","tsmo","rhsc","rhso","xlsxc","xlsxo","bmpo","spdo"];% add BMP
 for t=1:length(tags)
     logics.(tags{t}) = get(findobj(hObject.Parent,'Tag',tags{t}),'Value')==1;
 end
+
+dwnsp = 2;  % downsample the intan data (need to make this an option)
 
 intch = isfield(vsdprops,'intan') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'intan'));
 vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdprops.matprops,'vsd'));
@@ -828,7 +830,7 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         end
         end
     else
-        for x=1 % add BMP
+        for x=1 
         props.ch = strings(0,1);
         if isfield(vsdprops,'vsd')
             vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
@@ -845,11 +847,11 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
             props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
             props.vsd.tm = vtm;
         end    
-    
+        
         if isfield(vsdprops,'intan')
-            intan = convert_uint(vsdprops.intan.data(:,1:2:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
+            intan = convert_uint(vsdprops.intan.data(:,1:dwnsp:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
             props.intan = vsdprops.intan;
-            props.tm = vsdprops.intan.tm(1:2:end);
+            props.tm = vsdprops.intan.tm(1:dwnsp:end);
 
             if isfield(vsdprops,'vsd')
                 [props.data,vsd,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
@@ -922,7 +924,9 @@ elseif vsdch % loaded only vsd data (raw)
     props.finfo.files = vsdprops.files;
     props.finfo.path = path;
     props.finfo.duration = max(props.tm);
-    props.BMP_analysis.BMP = zeros(0,3);
+    if ~logics.bmpo
+        props.BMP_analysis.BMP = zeros(0,3);
+    end
     props.finfo.date = vsdprops.vsd.info.FileModDate;
     props.notes = struct('note1',"",'note2',"",'note3',"");
     props.log = string(['loaded data on ',char(datetime)]);
@@ -941,15 +945,30 @@ else % loaded only intan data (raw)
             end
         end
     end
+    intan = convert_uint(vsdprops.intan.data(:,1:dwnsp:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
+    if logics.tsmo
+        if max(props.tm)~=max(vsdprops.intan.ch)
+            errordlg('Intan file must have same recording duration as current file.  Please select another rhs file.')
+            return
+        end
+        idx = startsWith(props.ch,'V-');
+        props.data = [intan; props.data(idx,:)];
+        props.ch = [vsdprops.intan.ch; props.ch(idx)];
+    else
+        props.data = intan;
+        props.intan = vsdprops.intan.data;
+        props.ch = vsdprops.intan.ch;
+        props.showlist = vsdprops.intan.ch;
+        props.tm = vsdprops.intan.tm(:,1:dwnsp:end);
+    end
     nch = length(vsdprops.intan.ch);
-    props.ch = vsdprops.intan.ch;
-    props.tm = vsdprops.intan.tm;
-    props.showlist = vsdprops.intan.ch;
+
     props.showidx = 1:nch;
     props.hidelist = [];
     props.hideidx = [];
-    props.BMP_analysis.BMP = zeros(0,3);
-    props.data = convert_uint(vsdprops.intan.data, vsdprops.intan.d2uint, vsdprops.intan.min,'double');
+    if ~logics.bmpo
+        props.BMP_analysis.BMP = zeros(0,3);
+    end
     props.finfo = vsdprops.intan.finfo;
     props.finfo.files = vsdprops.files;
     props.notes = struct('note1',"",'note2',"",'note3',"");
