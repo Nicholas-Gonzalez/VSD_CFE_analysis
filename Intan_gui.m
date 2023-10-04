@@ -783,7 +783,7 @@ if isfield(props, 'BMP_analysis')
     props.BMP_analysis.Rn = zeros(0,8);
 end
 
-tags = ["tifc","tifo","detc","deto","tsmc","tsmo","rhsc","rhso","xlsxc","xlsxo"];
+tags = ["tifc","tifo","detc","deto","tsmc","tsmo","rhsc","rhso","xlsxc","xlsxo"];% add BMP
 for t=1:length(tags)
     logics.(tags{t}) = get(findobj(hObject.Parent,'Tag',tags{t}),'Value')==1;
 end
@@ -828,7 +828,8 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         end
         end
     else
-        props.ch = strings(0,1);keyboard
+        for x=1 % add BMP
+        props.ch = strings(0,1);
         if isfield(vsdprops,'vsd')
             vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
             props.data = vsd;
@@ -885,16 +886,21 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         props.finfo.files = vsdprops.files;
         props.log = string(['loaded data on ',char(datetime)]);
         props.curdir = fileparts(vsdprops.files{1,2});
+        end
     end
-elseif vsdch % loaded only vsd data (matlab file or raw)
-    for x=1
+elseif vsdch % loaded only vsd data (raw)
+    for x=1 % add BMP
     vsd = convert_uint(vsdprops.vsd.data, vsdprops.vsd.d2uint, vsdprops.vsd.min,'double');
     props.vsd.d2uint = vsdprops.vsd.d2uint;
     props.vsd.min = vsdprops.vsd.min;
+    nch = size(vsdprops.vsd.data,1);
+    if isfield(vsdprops.vsd,'fparam')
+        props.fparam = vsdprops.vsd.fparam;
+    end
     if logics.rhso
-        keyboard
         idx = arrayfun(@(x) find(props.ch==x),props.intan.ch);
         intan = props.data(idx,:);
+        vtm = vsdprops.vsd.tm;
         [props.data,vsd,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
         props.vsd.data = vsd;
         props.vsd.tm = vtmo;
@@ -904,11 +910,13 @@ elseif vsdch % loaded only vsd data (matlab file or raw)
         props.ch = string([repelem('V-',nch,1) num2str((1:nch)','%03u')]);
         props.tm = vsdprops.vsd.tm;
     end
-    nch = size(vsdprops.vsd.data,1);
-    props.showlist = props.ch;
-    props.showidx = 1:nch;
-    props.hidelist = [];
-    props.hideidx = [];
+    props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
+    showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
+    props.showlist = props.ch(showidx);
+    props.showidx = showidx;
+    hideidx = find(cellfun(@(x) contains(x,'stim'),props.ch));
+    props.hidelist = props.ch(hideidx);
+    props.hideidx = hideidx;
     [path,filename ] = fileparts(vsdprops.vsd.info.Filename);
     props.finfo.file = filename;
     props.finfo.files = vsdprops.files;
@@ -920,8 +928,8 @@ elseif vsdch % loaded only vsd data (matlab file or raw)
     props.log = string(['loaded data on ',char(datetime)]);
     props.curdir = fileparts(filename);
     end
-else % loaded only intan data (matlab or raw)
-    for x=1
+else % loaded only intan data (raw)
+    for x=1 % add data and BMP
     if isfield(vsdprops,'note')
         for c=1:length(vsdprops.intan.ch)
             nstr = replace(vsdprops.intan.ch(c),'A-','A');
