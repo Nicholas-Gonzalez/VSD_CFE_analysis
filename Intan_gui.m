@@ -439,7 +439,7 @@ fields = ["BMP_analysis","BMP","btype","rn","video","spikedetection","log","filt
 for f=1:length(fields)
     if isfield(matprops.props,fields{f})
         if strcmp(fields{f},"BMP") || strcmp(fields{f},"btype") || strcmp(fields{f},"rn")
-            if ~isfield(matprops.props.BMP_analysis,fields{f})
+            if ~isfield(matprops.props,'BMP_analysis') || ~isfield(matprops.props.BMP_analysis,fields{f})
                 vsdprops.matprops.BMP_analysis.(fields{f}) = matprops.props.(fields{f});
             end
         else
@@ -583,6 +583,7 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tifp'),'String'),'loaded')
     elseif logics.tifc && ~logics.tifo
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"not found",'ForegroundColor','r');
     elseif logics.tifo
+        vsdprops.im = props.im;
         set(findobj(hObject.Parent,'Tag','tifp'),'String',"loaded");
     end
 end
@@ -637,7 +638,12 @@ if ~strcmp(get(findobj(hObject.Parent,'Tag','tsmp'),'String'),'loaded')
                 disp(['found ' framefile])
                 
                 [data,tm,info,imdata,imtm,im,Dwarp,Dwall] = extractTSM(tsm{1}, det,[],[],warproi,frame.frame);
-
+                if tifo && ~all(size(im)==vsdprops.im)
+                    errordlg('Frame size of the tsm file does not equal frame size of current file.  Either select a another tif file or uncheck the orig checkbox')
+                    set(allbut,'Enable','on')
+                    pause(0.1)
+                    return
+                end
                 rwstr = replace(tsm{1},'.tsm',  '_ROIwarp.tif');
                 imwrite(imdata(:,:,:,1),rwstr)
                 for i=2:size(imdata,4)
