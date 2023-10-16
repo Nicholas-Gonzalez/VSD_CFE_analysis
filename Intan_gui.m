@@ -1,15 +1,29 @@
-function Intan_gui(monitor) % main app
+function Intan_gui(monitor,style) % main app
 % Input:
 % monitor = which monitor you would like to use for the GUI, default is largest. 
-
+% style = color mode 'normal', 'dark', 'white'
 
 intan_tag = ['intan_tag' num2str(randi(1e4,1))];
 mpos = get(0,'MonitorPositions');
-if nargin==0
+if nargin==0 || isempty(monitor)
     [~,monitor] = max(prod(mpos(:,3:end),2));% gets the larger monitor
 end
+
+bcolor = [0.94 0.94 0.94];
+scolor = [0.7 0.7 0.7];
+hcolor = [1 1 1];
+tcolor = [0 0 0];
+if nargin==2
+    switch style
+        case 'dark'
+            bcolor = [0.3 0.3 0.3];
+            scolor = [0.5 0.5 0.5];
+            hcolor = [0.6 0.6 0.6];
+            tcolor = [0.7 0.7 0.7];
+    end
+end
 figsize = mpos(monitor,:);
-f = figure('OuterPosition',figsize,'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
+fig = figure('OuterPosition',figsize,'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag,'Color',bcolor);
 % f = figure('Position',[100 0 1700 900],'Name','Intan_Gui','NumberTitle','off','Tag',intan_tag);
 
 % it = axes('Units','pixels','Position',[0 0 f.Position(3) f.Position(4)],...
@@ -55,104 +69,114 @@ csz = [nan 300 figsize(3)*0.25];% size of ROI and channels
 menusz = 90;
 insz = 250;
 % ----------------------------------
-axpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[0                       10     figsize(3)-sum(csz(2:3)) figsize(4)-menusz ],'Title','','Tag','axpanel');
-chpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) insz   csz(2)                 figsize(4)-insz-menusz],'Title','channels','Tag','chpanel');
-cmpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-sum(csz(2:3)) 0     sum(csz(2:3))-300       insz],'Title','Controls','Tag','cmpanel');
-inpanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-300           0     300                     insz],'Title','File information','Tag','inpanel');
-ropanel = uipanel('Units','pixels','FontSize',fontsz,'OuterPosition',[figsize(3)-csz(3)        insz   csz(3)                  figsize(4)-insz-menusz],'Title','ROI','Tag','ropanel');
+axpanel = uipanel('Units','pixels','FontSize',fontsz,...
+    'OuterPosition',[0                       10     figsize(3)-sum(csz(2:3)) figsize(4)-menusz ],'Title','',...
+    'Tag','axpanel','BackgroundColor',bcolor,'ShadowColor',scolor,'HighlightColor',hcolor,'ForegroundColor',tcolor);
+chpanel = uipanel('Units','pixels','FontSize',fontsz,...
+    'OuterPosition',[figsize(3)-sum(csz(2:3)) insz   csz(2)                 figsize(4)-insz-menusz],'Title','channels',...
+    'Tag','chpanel','BackgroundColor',bcolor,'ShadowColor',scolor,'HighlightColor',hcolor,'ForegroundColor',tcolor);
+cmpanel = uipanel('Units','pixels','FontSize',fontsz,...
+    'OuterPosition',[figsize(3)-sum(csz(2:3)) 0     sum(csz(2:3))-300       insz],'Title','Controls',...
+    'Tag','cmpanel','BackgroundColor',bcolor,'ShadowColor',scolor,'HighlightColor',hcolor,'ForegroundColor',tcolor);
+inpanel = uipanel('Units','pixels','FontSize',fontsz,...
+    'OuterPosition',[figsize(3)-300           0     300                     insz],'Title','File information',...
+    'Tag','inpanel','BackgroundColor',bcolor,'ShadowColor',scolor,'HighlightColor',hcolor,'ForegroundColor',tcolor);
+ropanel = uipanel('Units','pixels','FontSize',fontsz,...
+    'OuterPosition',[figsize(3)-csz(3)        insz   csz(3)                  figsize(4)-insz-menusz],'Title','ROI',...
+    'Tag','ropanel','BackgroundColor',bcolor,'ShadowColor',scolor,'HighlightColor',hcolor,'ForegroundColor',tcolor);
 
 
 % ======== channel panel ==========
-uicontrol(chpanel,'Units','normalized','Position',[0 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Show')
+uicontrol(chpanel,'Units','normalized','Position',[0 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Show','BackgroundColor',bcolor,'ForegroundColor',tcolor)
 uicontrol(chpanel,'Units','normalized','Position',[0 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
-              'Callback',@selection,'String',"",'Tag','showgraph');
+              'Callback',@selection,'String',"",'Tag','showgraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
-uicontrol(chpanel,'Units','normalized','Position',[0.55 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Hide')
+uicontrol(chpanel,'Units','normalized','Position',[0.55 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Hide','BackgroundColor',bcolor,'ForegroundColor',tcolor)
 uicontrol(chpanel,'Units','normalized','Position',[0.55 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
-              'Callback',@selection,'String',"",'Tag','hidegraph');
+              'Callback',@selection,'String',"",'Tag','hidegraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 uicontrol(chpanel,'Units','normalized','Position',[0.43 0.97 0.15 0.03],'Style','pushbutton','Tag','showsort',...
-              'Callback',@sortlist,'String',[char(8593) 'sort'],'Enable','off');
+              'Callback',@sortlist,'String',[char(8593) 'sort'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(chpanel,'Units','normalized','Position',[0.43 0.94 0.15 0.03],'Style','pushbutton','Tag','showsort',...
-              'Callback',@sortlist,'String',[char(8595) 'sort'],'Enable','off');
+              'Callback',@sortlist,'String',[char(8595) 'sort'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 uicontrol(chpanel,'Units','normalized','Position',[0.45 0.55 0.1 0.04],'Style','pushbutton','Tag','adjust',...
-              'Callback',@modtxt,'String',char(8594),'FontSize',20,'Enable','off');
+              'Callback',@modtxt,'String',char(8594),'FontSize',20,'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(chpanel,'Units','normalized','Position',[0.45 0.45 0.1 0.04],'Style','pushbutton','Tag','adjust',...
-              'Callback',@modtxt,'String',char(8592),'FontSize',20,'Enable','off');
+              'Callback',@modtxt,'String',char(8592),'FontSize',20,'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 % --------------------------
   
 % ======== control panel ==========
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.9 0.19 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@autoscale,'String','autoscale xy','Enable','off');
+              'Callback',@autoscale,'String','autoscale xy','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.19 0.9 0.07 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@autoscale,'String','x','Enable','off');
+              'Callback',@autoscale,'String','x','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.26 0.9 0.07 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@autoscale,'String','y','Enable','off');
+              'Callback',@autoscale,'String','y','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.8 0.33 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@centerbl,'String','center zeros','Enable','off');
+              'Callback',@centerbl,'String','center zeros','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.7 0.165 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@zoom,'String',[char(8593) ' y-scale'],'Enable','off');
+              'Callback',@zoom,'String',[char(8593) ' y-scale'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.165 0.7 0.165 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@zoom,'String',[char(8595) ' y-scale'],'Enable','off');
+              'Callback',@zoom,'String',[char(8595) ' y-scale'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@setylim,'String','set y-limits','Enable','off');
+              'Callback',@setylim,'String','set y-limits','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
           
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@zero_region,'String','Zero region','Enable','off',...
-              'TooltipString','zeros a region of data.  Sometimes it is not effective');
+              'TooltipString','zeros a region of data.  Sometimes it is not effective','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.8 0.33 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@edit_undo,'String','Edit undo','Enable','off');
+              'Callback',@edit_undo,'String','Edit undo','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.7 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@restore_channel,'String','Restore Channel','Enable','off',...
-              'Tooltip','Restores data from a channel to the original');
+              'Tooltip','Restores data from a channel to the original','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust_not_finished',...
               'Callback',@decimateit,'String','Reduce sampling','Enable','off',...
-              'TooltipString','Reduces the number or samples by half using the decimate function');
+              'TooltipString','Reduces the number or samples by half using the decimate function','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.5 0.33 0.1],'Style','pushbutton','Tag','filter',...
               'Callback',@filterit,'String','Filter','Enable','off',...
-              'Tag','filter','TooltipString','Filters the data');
+              'Tag','filter','TooltipString','Filters the data','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.4 0.33 0.1],'Style','pushbutton','Tag','filter',...
               'Callback',@remove_artifact,'String','Remove artifact','Enable','off',...
-              'Tag','filter','Tooltip','Removes stimulation artifact of data');
+              'Tag','filter','Tooltip','Removes stimulation artifact of data','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@xcorrelation,'String','XCorr','Enable','off',...
-              'Tag','filter','TooltipString','Calculates the cross correlation');
+              'Tag','filter','TooltipString','Calculates the cross correlation','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.8 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@spiked,'String','spike detection','Enable','off',...
-              'Tag','filter','Tooltip','detect spike activity in the traces');
+              'Tag','filter','Tooltip','detect spike activity in the traces','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.8 0.07 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@plotspikes,'String','show','Enable','off',...
-              'Tag','filter','Tooltip','Add spikes to the graphs');
+              'Tag','filter','Tooltip','Add spikes to the graphs','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.92 0.8 0.07 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@plotspikes,'String','hide','Enable','off',...
-              'Tag','filter','Tooltip','Add spikes to the graphs');
+              'Tag','filter','Tooltip','Add spikes to the graphs','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.7 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','scale bar Add','Enable','off',...
-              'Tag','filter','TooltipString','add scale bar');
+              'Tag','filter','TooltipString','add scale bar','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.7 0.14 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','Remove','Enable','off',...
-              'Tag','filter','TooltipString','remove scale bar');
+              'Tag','filter','TooltipString','remove scale bar','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@baseline,'String','remove baseline','Enable','off',...
-              'Tag','filter','TooltipString','detect');
+              'Tag','filter','TooltipString','detect','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.5 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@videoprompt,'String','Video','Enable','off',...
-              'Tag','filter','TooltipString','generate a video of recording');
+              'Tag','filter','TooltipString','generate a video of recording','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.4 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@imhistogram,'String','Image histogram','Enable','off',...
-              'Tag','filter','Tooltip','Generates a histogram of the pixel intensities');
+              'Tag','filter','Tooltip','Generates a histogram of the pixel intensities','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.2 0.33 0.1],'Style','pushbutton','Tag','plotagain',...
               'Callback',@loadplotwidgets,'String','Plot again','Enable','off',...
-              'Tag','filter','TooltipString','Plots the data again');
+              'Tag','filter','TooltipString','Plots the data again','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 
 
@@ -170,7 +194,7 @@ uicontrol(ropanel,'Units','pixels','Position',[170 0 60 20],'Style','pushbutton'
 uicontrol(ropanel,'Units','pixels','Position',[230 0 80 20],'Style','pushbutton','Tag','adjcont',...
             'Callback',@adjcontrast,'String','Contrast','Enable','off','Visible','off')
 
-guidata(f,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
+guidata(fig,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
                  'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
 
 
