@@ -1768,7 +1768,7 @@ if tf
     yidx = yidx([true diff(yidx)>ra]);
     deltax = floor(mean(diff(yidx)));
     prew = 5;
-    trim = 100;
+    trim = 20;
     avg = zeros(1,deltax - trim);
     yidx(yidx<=prew) = [];
     yidx(yidx>length(props.data)-length(avg)-1) = [];
@@ -1799,6 +1799,7 @@ if tf
         widx = yidx(x) - prew:yidx(x) + length(avg) - prew - 1;
         ridx = find(abs(props.data(idx,widx))>abs(y),1,'last');
         props.data(idx,widx) = props.data(idx,widx) - avg;
+        ridx(ridx>length(widx)-5) = [];
         props.data(idx,widx(1:ridx + 5)) = 0;
     end
     toc

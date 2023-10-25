@@ -1114,16 +1114,15 @@ if params.ck1 && params.ck2
         warning('haven''t fixed this condition for rejection')
     end
     if gapdur>=0
-        pattern = ['1{' num2str(dur1) ',}' '[12n]{' num2str(gapdur-dur1) '}' '2{' num2str(dur2) ',}'];
+        pattern = ['1{' num2str(dur1) '}' '[12n]{' num2str(gapdur-dur1) '}' '2{' num2str(dur2) '}'];
 %         eval(['pattern = "' repelem('u',dur1) '"' repmat(' + ("u"|"d"|"n")',1,gapdur-dur1) ' + "' repelem('d',dur2) '";'])
     else
-        pattern = ['2{' num2str(dur2) ',}' '[12n]{' num2str(abs(gapdur)-dur2) '}' '1{' num2str(dur1) ',}'];
+        pattern = ['2{' num2str(dur2) '}' '[12n]{' num2str(abs(gapdur)-dur2) '}' '1{' num2str(dur1) '}'];
 %         eval(['pattern = "' repelem('d',dur2) '"' repmat(' + ("u"|"d"|"n")',1,abs(gapdur)-dur2) ' + "' repelem('u',dur1) '";'])
     end
 end
 
 
-spikes = regexp(sdata,pattern);
 if params.ck2rej || params.ck1rej
     rej = regexp(sdata,rpattern1);
     rejlog = arrayfun(@(x) any(rej==x-1),spikes);
