@@ -2892,6 +2892,7 @@ if isfield(props,'spikedetection')
     btypes = ["R","I"];
     phase = ["Prot","Retr"];
     props.BMP_analysis.spikes = zeros(nbmp, 8, length(props.ch) );
+    props.BMP_analysis.spikehead = ["protraction", "transition", "retraction", "sp protr", "sp retr", "protraction spike rate", "retraction spike rate", "prot dur", "ret dur", "prot/retr dur"];
     for c=1:length(props.ch)
         spike = props.spikedetection.spikes{c};
         spike = props.tm(spike);
@@ -4832,7 +4833,8 @@ else
         disp(['BMPs were saved to ' fn])
         props.log = [props.log; 'Saved BMPs to ' fn];
     end
-    save(fn,'group','bmp','head','spikes','groups')
+    spikehead = props.BMP_analysis.spikehead;
+    save(fn,'group','bmp','head','spikes','groups','spikehead')
 end
 
 function printlog(hObject,eventdata)
