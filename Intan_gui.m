@@ -2891,8 +2891,7 @@ if isfield(props,'spikedetection')
     nbmp = size(props.BMP_analysis.BMP,1);
     btypes = ["R","I"];
     phase = ["Prot","Retr"];
-    props.BMP_analysis.spikes = zeros(nbmp, 8, length(props.ch) );
-    props.BMP_analysis.spikehead = ["protraction", "transition", "retraction", "sp protr", "sp retr", "protraction spike rate", "retraction spike rate", "prot dur", "ret dur", "prot/retr dur"];
+    props.BMP_analysis.spikes = zeros(nbmp, 14, length(props.ch) );
     for c=1:length(props.ch)
         spike = props.spikedetection.spikes{c};
         spike = props.tm(spike);
@@ -2902,7 +2901,7 @@ if isfield(props,'spikedetection')
                 pdur = [0 0];
                 for p=1:2
                     sp = spike(spike>x(p) & spike<x(p+1));
-                    props.BMP_analysis.spikes(b,p+3,c) = length(sp);
+                    props.BMP_analysis.spikes(b,p+6,c) = length(sp);
                     rdursp = diff(sp);
                     if length(sp)>1
                         bursts = [0 find(rdursp>=4)];
@@ -2917,13 +2916,16 @@ if isfield(props,'spikedetection')
                         pdur(p) = sum(rdursp(rdursp<4));
                     end
                 end
-                props.BMP_analysis.spikes(b,6:7,c) = props.BMP_analysis.spikes(b,4:5)./diff(props.BMP_analysis.BMP(b,1:3));
-                analysis = [pdur(1)  pdur(2)  pdur(2)/sum(pdur)  props.BMP_analysis.spikes(b,7,c)/sum(props.BMP_analysis.spikes(b,6:7,c))];
-                props.BMP_analysis.spikes(b,[1:3 8],c) = analysis;                
+                props.BMP_analysis.spikes(b,4:6,c) =  [pdur(1)  pdur(2)  pdur(2)/sum(pdur)]; %[protraction spike duration,  retraction spike duration, retr/(prot +ret) dur]         
             end
         end
-    end       
-
+    end    
+    props.BMP_analysis.spikes(:,1:3,:) = repmat(props.BMP_analysis.BMP(:,1:3),1,1,length(props.ch));% [protraction transition retraction]
+    props.BMP_analysis.spikes(:,9:10,:) = props.BMP_analysis.spikes(:,7:8,:)./diff(props.BMP_analysis.BMP(:,1:3,:),1,2);% [protraction spike rate, retraction spike rate]
+    props.BMP_analysis.spikes(:,11,:) = props.BMP_analysis.spikes(:,10,:)./sum(props.BMP_analysis.spikes(:,9:10,:),2);% retr/(prot+ret) spike rate
+    props.BMP_analysis.spikes(:,12:13,:) = diff(props.BMP_analysis.spikes(:,1:3,:),1,2);% [protraction duration, retraction duration]
+    props.BMP_analysis.spikes(:,14,:) = props.BMP_analysis.spikes(:,6,:)>0.5+1;% >0.5 is a retraction neuron.
+    
     % count rn spikes
     if isfield(props.BMP_analysis,'rn')
         ridx = props.BMP_analysis.rn;
@@ -4793,11 +4795,7 @@ else
     group = repmat(group,size(bmp,1),1);
     bmp(:,12:13) = diff(bmp(:,1:3),1,2);
     bmp(:,14) = (bmp(:,6)>0.5)+1;
-    spikes = props.BMP_analysis.spikes;
-    spikes = [repmat(props.BMP_analysis.BMP,1,1,size(spikes,3)) , spikes   ];
-    spikes(:,12:13) = diff(spikes(:,1:3),1,2);
-    spikes(:,14) = (spikes(:,6)>0.5)+1;
-    spikes = {spikes};
+    spikes = {props.BMP_analysis.spikes};
     groups = group(1,:);
     head = ["protraction",...   1
     "transition",...            2
@@ -4833,8 +4831,7 @@ else
         disp(['BMPs were saved to ' fn])
         props.log = [props.log; 'Saved BMPs to ' fn];
     end
-    spikehead = props.BMP_analysis.spikehead;
-    save(fn,'group','bmp','head','spikes','groups','spikehead')
+    save(fn,'group','bmp','head','spikes','groups')
 end
 
 function printlog(hObject,eventdata)
