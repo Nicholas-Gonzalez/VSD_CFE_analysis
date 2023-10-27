@@ -247,7 +247,7 @@ tplt(1) = plot([min(tm) max(tm)],[mdata, mdata]+stddata*params(showidx(1)).thr1)
 tplt(2) = plot([min(tm) max(tm)],nan(2,1));hold on
 tplt(3) = plot([min(tm) max(tm)],nan(2,1),':');hold on
 tplt(4) = plot([min(tm) max(tm)],nan(2,1),':');hold on
-splt = scatter(nan,nan,'x');hold on
+splt = scatter(nan,nan,'xr');hold on
 
 ax.XLabel.String = 'Time (s)';
 
@@ -1122,6 +1122,8 @@ if params.ck1 && params.ck2
     end
 end
 
+
+spikes = regexp(sdata,pattern);
 
 if params.ck2rej || params.ck1rej
     rej = regexp(sdata,rpattern1);
