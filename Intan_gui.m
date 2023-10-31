@@ -108,7 +108,7 @@ uicontrol(chpanel,'Units','normalized','Position',[0.45 0.45 0.1 0.04],'Style','
 % --------------------------
   
 % ======== control panel ==========
-
+% column 1
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.9 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@autoscale,'String','autoscale xy','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0.19 0.9 0.07 0.1],'Style','pushbutton','Tag','adjust',...
@@ -126,7 +126,7 @@ uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.33 0.1],'Style','push
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.5 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@setxlim,'String','set x-limits','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
-          
+% column 2         
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@zero_region,'String','Zero region','Enable','off',...
               'TooltipString','zeros a region of data.  Sometimes it is not effective','BackgroundColor',bcolor,'ForegroundColor',tcolor);
@@ -145,29 +145,32 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.4 0.33 0.1],'Style','p
               'Callback',@remove_artifact,'String','Remove artifact','Enable','off',...
               'Tag','filter','Tooltip','Removes stimulation artifact of data','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
-
+% column 3
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
-              'Callback',@xcorrelation,'String','XCorr','Enable','off',...
-              'Tag','filter','TooltipString','Calculates the cross correlation','BackgroundColor',bcolor,'ForegroundColor',tcolor);
-uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.8 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@spiked,'String','spike detection','Enable','off',...
               'Tag','filter','Tooltip','detect spike activity in the traces','BackgroundColor',bcolor,'ForegroundColor',tcolor);
-uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.8 0.07 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.8 0.095 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@plotspikes,'String','show','Enable','off',...
               'Tag','filter','Tooltip','Add spikes to the graphs','BackgroundColor',bcolor,'ForegroundColor',tcolor);
-uicontrol(cmpanel,'Units','normalized','Position',[0.92 0.8 0.07 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.755 0.8 0.095 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@plotspikes,'String','hide','Enable','off',...
+              'Tag','filter','Tooltip','Remove spikes from the graphs','BackgroundColor',bcolor,'ForegroundColor',tcolor);
+uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.8 0.14 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@scprops,'String','properties','Enable','off',...
               'Tag','filter','Tooltip','Add spikes to the graphs','BackgroundColor',bcolor,'ForegroundColor',tcolor);
-uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.7 0.19 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@xcorrelation,'String','XCorr','Enable','off',...
+              'Tag','filter','TooltipString','Calculates the cross correlation','BackgroundColor',bcolor,'ForegroundColor',tcolor);
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.5 0.19 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','scale bar Add','Enable','off',...
               'Tag','filter','TooltipString','add scale bar','BackgroundColor',bcolor,'ForegroundColor',tcolor);
-uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.7 0.14 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.85 0.5 0.14 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@scalebar,'String','Remove','Enable','off',...
               'Tag','filter','TooltipString','remove scale bar','BackgroundColor',bcolor,'ForegroundColor',tcolor);
-uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.4 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@baseline,'String','remove baseline','Enable','off',...
               'Tag','filter','TooltipString','detect','BackgroundColor',bcolor,'ForegroundColor',tcolor);
-uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.5 0.33 0.1],'Style','pushbutton','Tag','adjust',...
+uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.3 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@videoprompt,'String','Video','Enable','off',...
               'Tag','filter','TooltipString','generate a video of recording','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
@@ -196,7 +199,12 @@ uicontrol(ropanel,'Units','pixels','Position',[170 0 60 20],'Style','pushbutton'
 uicontrol(ropanel,'Units','pixels','Position',[230 0 80 20],'Style','pushbutton','Tag','adjcont',...
             'Callback',@adjcontrast,'String','Contrast','Enable','off','Visible','off')
 
-guidata(fig,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,...
+scstyle.value = 'threshold';
+scstyle.marker = 'diamond';
+scstyle.size = 5;
+scstyle.color = 'red';
+
+guidata(fig,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,'scstyle',scstyle,...
                  'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
 
 
@@ -2556,14 +2564,31 @@ props = guidata(hObject);
 showidx = props.showidx;
 data = props.data(showidx,:);
 if isfield(props,'spikedetection')
+    delete(findobj('Tag','scplot'))
     spikes = props.spikedetection.spikes(showidx);
     ax = props.ax;
     if strcmp(hObject.String,'show')
+        color = props.scstyle.color;
+        value = props.scstyle.value;
+        marker = props.scstyle.marker;
+        sizev = props.scstyle.size;
         for p=1:length(ax)
             if ~isempty(spikes{p})
                 axes(ax(p))
                 hold on
-                scatter(props.tm(spikes{p}), data(p,spikes{p}),'rd','filled')
+                if isstring(value) || ischar(value)
+                    if strcmp(value,'threshold')
+                        vals = props.data(p,spikes{p});
+                    elseif strcmp(value,'min')
+                        vals = ones(size(spikes{p}))*ax(p).YLim(1) + diff(ax(p).YLim)*0.05;
+                    elseif strcmp(value,'max')
+                        vals = ones(size(spikes{p}))*ax(p).YLim(2) - diff(ax(p).YLim)*0.05;
+                    end
+                else
+                    vals = ones(size(spikes{p}))*value;
+                end
+                scatter(props.tm(spikes{p}), vals,'filled','Marker',marker,...
+                    'MarkerFaceColor',color,'MarkerEdgeColor',color,'SizeData',sizev,'Tag','scplot')
             end
         end
     else
@@ -2576,6 +2601,47 @@ else
     msgbox('You have not run spike detection for this data yet')
 end
 guidata(hObject,props)
+
+function scprops(hObject,eventdata)
+props = guidata(hObject);
+if isfield(props,'spikedetection')
+    pos = hObject.Parent.Parent.Position;
+    posit = [pos(1)+pos(3)/2   pos(2)+pos(4)/2   150  150];
+    delete(findobj('Name','Spike Properties'))
+    fig = figure("MenuBar","none","Position",posit,'Name','Spike Properties','NumberTitle','off');
+    
+    uicontrol("Style","edit","Units","normalized","Position",[0.5 0.8 0.4 0.1],'String',props.scstyle.marker,'Tag','scMarker')
+    uicontrol("Style","edit","Units","normalized","Position",[0.5 0.7 0.4 0.1],'String',props.scstyle.size,'Tag','scSize')
+    uicontrol("Style","edit","Units","normalized","Position",[0.5 0.6 0.4 0.1],'String',props.scstyle.color,'Tag','scColor')
+    uicontrol("Style","edit","Units","normalized","Position",[0.5 0.5 0.4 0.1],'String',props.scstyle.value,'Tag','scValue')
+    
+    uicontrol("Style","text","Units","normalized","Position",[0.05 0.8 0.4 0.1],'String',"Marker",'HorizontalAlignment','right')
+    uicontrol("Style","text","Units","normalized","Position",[0.05 0.7 0.4 0.1],'String',"Size",'HorizontalAlignment','right')
+    uicontrol("Style","text","Units","normalized","Position",[0.05 0.6 0.4 0.1],'String',"Color",'HorizontalAlignment','right')
+    uicontrol("Style","text","Units","normalized","Position",[0.05 0.5 0.4 0.1],'String',"Value",'HorizontalAlignment','right')
+    
+    uicontrol("Style","pushbutton","Units","normalized","Position",[0.2 0.1 0.6 0.2],'Callback',@setscprop,'String',"Apply")
+    guidata(fig,{props,fig})
+else
+    msgbox('You have not run spike detection for this data yet')
+end
+
+function setscprop(hObject,eventdata)
+fprops = guidata(hObject);
+props = fprops{1};
+intan = findobj('Tag',props.intan_tag);
+% sc = findobj('Tag','scplot');
+props.scstyle.marker = get(findobj('Tag','scMarker'),'String');
+props.scstyle.size = str2double(get(findobj('Tag','scSize'),'String'));
+props.scstyle.color = get(findobj('Tag','scColor'),'String');
+props.scstyle.value = get(findobj('Tag','scValue'),'String');
+if ~isnan(str2double(props.scstyle.value))
+    props.scstyle.value = str2double(props.scstyle.value);
+end
+guidata(intan,props)
+plotspikes(findobj(intan,'String','show'))
+figure(fprops{2})
+
 
 %% baseline app
 function baseline(hObject,eventdata)
