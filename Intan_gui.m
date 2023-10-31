@@ -123,6 +123,8 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.165 0.7 0.165 0.1],'Style',
               'Callback',@zoom,'String',[char(8595) ' y-scale'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(cmpanel,'Units','normalized','Position',[0 0.6 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@setylim,'String','set y-limits','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
+uicontrol(cmpanel,'Units','normalized','Position',[0 0.5 0.33 0.1],'Style','pushbutton','Tag','adjust',...
+              'Callback',@setxlim,'String','set x-limits','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
           
 uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
@@ -1502,7 +1504,29 @@ function moveright(hObject,eventdata)
 props = guidata(hObject);
 set(props.ax(1),'XLim',props.ax(1).XLim + range(props.ax(1).XLim)*0.7)
 
-%% YLimit app
+%% XYLimit app
+function setxlim(hObject,eventdata)
+props = guidata(hObject);
+pos = hObject.Parent.Parent.Position;
+posit = [pos(1)+pos(3)/2   pos(2)+pos(4)/2   150  80];
+fig = figure("MenuBar","none","Position",posit,'Name','Set x-limits','NumberTitle','off');
+
+uicontrol("Style","edit","Units","normalized","Position",[0.075 0.5 0.4 0.2],'Tag','xlimlower')
+uicontrol("Style","edit","Units","normalized","Position",[0.525 0.5 0.4 0.2],'Tag','xlimhigher')
+
+uicontrol("Style","text","Units","normalized","Position",[0.075 0.7 0.4 0.2],'String',"Lower")
+uicontrol("Style","text","Units","normalized","Position",[0.525 0.7 0.4 0.2],'String',"Upper")
+
+uicontrol("Style","pushbutton","Units","normalized","Position",[0.3 0.1 0.4 0.3],'String',"Apply",'Callback',@apply_xlim)
+
+guidata(fig,props.ax(1))
+
+function apply_xlim(hObject,eventdata)
+ax = guidata(hObject);
+lowlim = str2double(get(findobj('Tag','xlimlower'),'String'));
+uplim = str2double(get(findobj('Tag','xlimhigher'),'String'));
+set(ax,'XLim',[lowlim uplim])
+
 function setylim(hObject,eventdata)
 validatech(hObject)
 props = guidata(hObject);
@@ -2924,7 +2948,25 @@ if isfield(props,'spikedetection')
     props.BMP_analysis.spikes(:,9:10,:) = props.BMP_analysis.spikes(:,7:8,:)./diff(props.BMP_analysis.BMP(:,1:3,:),1,2);% [protraction spike rate, retraction spike rate]
     props.BMP_analysis.spikes(:,11,:) = props.BMP_analysis.spikes(:,10,:)./sum(props.BMP_analysis.spikes(:,9:10,:),2);% retr/(prot+ret) spike rate
     props.BMP_analysis.spikes(:,12:13,:) = diff(props.BMP_analysis.spikes(:,1:3,:),1,2);% [protraction duration, retraction duration]
-    props.BMP_analysis.spikes(:,14,:) = props.BMP_analysis.spikes(:,6,:)>0.5+1;% >0.5 is a retraction neuron.
+    pref = mean(props.BMP_analysis.spikes(:,11,:));
+    props.BMP_analysis.spikes(:,14,pref<0.1) = 1; % protraction;
+    props.BMP_analysis.spikes(:,14,pref>=0.1) = 2; % both;
+    props.BMP_analysis.spikes(:,14,pref>=0.9) = 3; % retraction;
+
+    props.BMP_analysis.head = ["protraction",...   1
+                                "transition",...            2
+                                "retraction",...            3
+                                "Sp protr dur",...          4
+                                "Sp retr dur",...           5
+                                "Sp activity dur (retr / (prot + ret))",... 6
+                                "Sp protr",...                           7
+                                "Sp retr",...                            8
+                                "Protraction spike rate (Hz)",...        9
+                                "Retraction spike rate (Hz)",...         10
+                                "Activity Hz (retr / (prot + ret))",...  11
+                                "Prot dur",...  12
+                                "Retr dur",...  13
+                                "Type of neuron"];%       14
     
     % count rn spikes
     if isfield(props.BMP_analysis,'rn')
