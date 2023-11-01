@@ -1844,12 +1844,12 @@ end
 
 function sortlist(hObject,eventdata)
 props = guidata(hObject);
-[~,sidx] = sort(props.showlist);
+[~,sidx] = sort(props.showidx);
 if contains(hObject.String,char(8595))
     sidx = flipud(sidx);
 end
 props.showlist = props.showlist(sidx);
-props.showidx = props.showidx;
+props.showidx = props.showidx(sidx);
 set(findobj('Tag','showgraph'),'String',props.showlist);
 guidata(hObject,props)
 plotdata(findobj('Tag',props.intan_tag))
@@ -2580,9 +2580,9 @@ if isfield(props,'spikedetection')
                     if strcmp(value,'threshold')
                         vals = props.data(p,spikes{p});
                     elseif strcmp(value,'min')
-                        vals = ones(size(spikes{p}))*ax(p).YLim(1) + diff(ax(p).YLim)*0.05;
+                        vals = ones(size(spikes{p}))*ax(p).YLim(1) + diff(ax(p).YLim)*0.08;
                     elseif strcmp(value,'max')
-                        vals = ones(size(spikes{p}))*ax(p).YLim(2) - diff(ax(p).YLim)*0.05;
+                        vals = ones(size(spikes{p}))*ax(p).YLim(2) - diff(ax(p).YLim)*0.08;
                     end
                 else
                     vals = ones(size(spikes{p}))*value;
