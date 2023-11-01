@@ -2578,7 +2578,7 @@ if isfield(props,'spikedetection')
                 hold on
                 if isstring(value) || ischar(value)
                     if strcmp(value,'threshold')
-                        vals = props.data(p,spikes{p});
+                        vals = props.data(showidx(p),spikes{p});
                     elseif strcmp(value,'min')
                         vals = ones(size(spikes{p}))*ax(p).YLim(1) + diff(ax(p).YLim)*0.08;
                     elseif strcmp(value,'max')
