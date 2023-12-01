@@ -98,11 +98,16 @@ if isfield(inputdata,'spikedetection')
             params = rmfield(params,oldnm{f});
         end
     end
-
+    
+    vsdch = contains(ch,'V-');
     for f = 1:length(fields)
         if ~isfield(params,fields{f})
             for p=1:length(params)
-                params(p).(fields{f}) = default.(fields{f});
+                if vsdch(p)
+                    params(p).(fields{f}) = default.V.(fields{f});
+                else
+                    params(p).(fields{f}) = default.A.(fields{f});
+                end
             end
         end
     end
