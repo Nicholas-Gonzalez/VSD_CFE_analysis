@@ -896,7 +896,6 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         
         if isfield(vsdprops,'intan')
             intan = convert_uint(vsdprops.intan.data(:,1:dwnsp:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
-            props.intan = vsdprops.intan;
             props.tm = vsdprops.intan.tm(1:dwnsp:end);
 
             if isfield(vsdprops,'vsd')
@@ -921,6 +920,8 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
                 end
             end
             props.ch = [vsdprops.intan.ch ; props.ch];
+
+            props.intan = vsdprops.intan;
         end
 
         props.BMP = zeros(0,3); 
