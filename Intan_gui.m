@@ -456,8 +456,7 @@ if isfield(matprops.props.vsdprops,'vsd')% this tempfix for some improperly save
     vsdprops.matprops.vsd = matprops.props.vsdprops.vsd;
     vsdprops.matprops.vsd.tm = matprops.props.vsdprops.vsd.tm;
 else
-    vsdprops.matprops.vsd.data = matprops.props.vsd.data;
-    vsdprops.matprops.vsd.tm = matprops.props.vsd.tm;
+    vsdprops.matprops.vsd = matprops.props.vsd;
 end
 vsdprops.matprops.data = matprops.props.data;
 vsdprops.matprops.min = matprops.props.min;
@@ -1710,6 +1709,7 @@ if isfield(props,'databackup')
     for c=1:length(props.showidx)
         props.ax(c).Children.YData = props.data(props.showidx(c),:);pause(0.01)
     end
+    disp('replaced data with backup')
     props.log = [props.log; 'replaced data with backup'];
     guidata(hObject,props)
 else
@@ -1732,6 +1732,12 @@ str = join(str,'');
 [idx,tf] = listdlg('liststring',str,'OKString','Restore');
 vst = find(contains(props.ch,'V-'),1,'first');
 if tf
+
+    props.bmin = min(props.data,[],2);
+    props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+    props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
+    props.log = [props.log; 'updated backup of data'];
+
     idxd = zeros(0,1);
     for i=1:length(idx)
         cidx = contains(props.intan.ch,props.ch{idx(i)});  
@@ -1751,12 +1757,8 @@ if tf
         end
     end
 
-    props.bmin = min(props.data,[],2);
-    props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
-    props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
-    props.log = [props.log; 'updated backup of data'];
-
     props.log = [props.log; ['Restored channels ' num2str(idxd) ' back to original.']];
+    disp(['Restored channels ' num2str(idxd) ' back to original.'])
     guidata(hObject,props)
     plotdata(hObject)
 end
