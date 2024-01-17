@@ -31,29 +31,23 @@ fig = figure('OuterPosition',figsize,'Name','Intan_Gui','NumberTitle','off','Tag
 %           'XGrid','off','YGrid','off','Tag','grid','HitTest','off','YTick',[],'XTick',[]);
 % it.Toolbar.Visible = 'off';
 
-
+% 
 appfile = fullfile(fileparts(which('Intan_gui.m')),'Intan_gui_appdata.txt');
 if exist(appfile,'file')
-    fid = fopen(appfile);
-    str = textscan(fid,'%s','delimiter','\n');
-    fclose(fid);
-    str = string(str{1});
-    recent = struct('file',string(strsplit(str{1}(1:end-1),' '))',...
-                    'path',string(strsplit(str{2}(1:end-1),' '))');
+    recent = readmatrix('Intan_gui_appdata.txt','Delimiter','\n','OutputType','string');
 else
-    recent = struct('file',strings(0,1),'path',strings(0,1));
+    recent = "";
 end
 
 
 m = uimenu('Text','Intan');
 mi(1) = uimenu(m,'Text','Open','Callback',@loadapp);
-% mi(2) = uimenu(m,'Text','Open Recent');%Depricated
-% for r=1:length(recent.file)%Depricated
-%     rm(r) = uimenu(mi(2),'Text',recent.file{r},'Callback',@loadRHS);%Depricated
-% end
-% if isempty(recent.file)%Depricated
-%     rm = [];%Depricated
-% end
+mi(2) = uimenu(m,'Text','Open Recent');
+
+for r=1:length(recent)
+    rm(r) = uimenu(mi(2),'Text',recent{r},'Callback',@openrecent);
+end
+
 mi(3) = uimenu(m,'Text','Generate Tiffs','Callback',@all_kframe,'Enable','on','Tag','kframe');
 mi(4) = uimenu(m,'Text','Average Image','Callback',@avgtsm,'Enable','on');
 mi(5) = uimenu(m,'Text','Save','Callback',@saveit,'Enable','off','Tag','savem');
@@ -204,7 +198,7 @@ scstyle.marker = 'diamond';
 scstyle.size = 5;
 scstyle.color = 'red';
 
-guidata(fig,struct('show',[],'hide',[],'info',[],'recent',recent,'appfile',appfile,'mi',mi,'mn',m,'scstyle',scstyle,...
+guidata(fig,struct('show',[],'hide',[],'info',[],'appfile',appfile,'mi',mi,'mn',m,'scstyle',scstyle,...
                  'intan_tag',intan_tag,'axpanel',axpanel,'chpanel',chpanel,'cmpanel',cmpanel,'inpanel',inpanel,'ropanel',ropanel,'figsize',figsize))
 
 
@@ -320,7 +314,7 @@ end
 
 %% loading methods
 % This is the app that loads that data into the guidata
-function loadapp(hObject,eventdata)
+function f2 = loadapp(hObject,eventdata)
 props = guidata(hObject);
 f2 = figure('MenuBar','None','Name','Open File','NumberTitle','off','DeleteFcn',@reenable);
 intan = findobj('Tag',props.intan_tag);
@@ -391,15 +385,16 @@ uicontrol('Position',[250 30 20 20],'Style','checkbox','Tag','warproi','Value',0
 uicontrol('Position',[270 28 60 20],'Style','text','String','Warp ROI');
 
 load_tag = ['load_tag' num2str(randi(1e4,1))];
-hmenu = hObject.Parent;
-hintan = hmenu.Parent;
+% hmenu = hObject.Parent;
+% hintan = hmenu.Parent;
 
 vsdprops.files = strings(5,2);
 vsdprops.files(:,1) = ["tiffns";"detfns";"tsmfns";"rhsfns";"xlsxfns"];
 vsdprops.load_tag = load_tag;
-vsdprops.intan_tag = hintan.Tag;
+% vsdprops.intan_tag = hintan.Tag;
+vsdprops.intan_tag = props.intan_tag;
 
-allbut = findobj(hintan,'Type','Uicontrol','Enable','on');
+allbut = findobj(intan,'Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
 vsdprops.allbut = allbut;
 
@@ -436,12 +431,18 @@ set(vsdprops.allbut,'Enable','on')
 
 function loadmat(hObject,eventdata)
 vsdprops = guidata(hObject);
-[file, path, id] = uigetfile('C:\Users\cneveu\Desktop\Data\*.mat','Select frame file');
+if isfield(vsdprops,'recent')
+    [path,file,ext] = fileparts(vsdprops.recent);
+    file = [file ext];
+else
+    [file, path, id] = uigetfile('C:\Users\cneveu\Desktop\Data\*.mat','Select frame file');
+end
 if ~file;return;end
 matprog = findobj('Tag','matprog');
 set(matprog,'String','loading...','ForeGroundColor','b')
 pause(0.1)
-matprops = load(fullfile(path,file));
+vsdprops.matprops.matfile = fullfile(path,file);
+matprops = load(vsdprops.matprops.matfile);
 set(matprog,'String','loaded','ForeGroundColor','k')
 if isfield(matprops.props.vsdprops,'intan')
     vsdprops.matprops.intan = matprops.props.vsdprops.intan;
@@ -874,6 +875,9 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
                 end
             end
         end
+
+        writerecent(props)
+
         end
     else
         for x=1 
@@ -1242,6 +1246,39 @@ for s=1:size(strs,2)
     validate(findobj(hObject.Parent,'Tag',strs(1,s)))
 end
 guidata(hObject,vsdprops)
+
+function writerecent(props)
+str = strings(0,1);
+if exist(props.appfile,'file')
+    fid = fopen(props.appfile);
+    str = textscan(fid,'%s','delimiter','\n');
+    fclose(fid);
+    str = string(str{1});
+end
+
+if isfield(props,'matfile')
+    str(contains(str,props.matfile)) = [];
+    str = [props.matfile;str];
+end
+
+writematrix(str,props.appfile)
+
+delete(props.mi(2).Children)
+for r=1:length(str)
+    uimenu(props.mi(2),'Text',str{r},'Callback',@openrecent);
+end
+
+function openrecent(hObject,eventdata)
+recent = hObject.Text;
+if exist(recent,'file')
+    loadfig = loadapp(hObject);
+    vsdprops = guidata(loadfig);
+    vsdprops.recent = hObject.Text;
+    guidata(loadfig,vsdprops)
+    loadmat(loadfig)
+else
+    message('File does not exist')
+end
 
 %% main app methods
 % does the plotting and the adjusting y axis
