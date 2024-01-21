@@ -3012,7 +3012,8 @@ str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],leng
 str(props.hideidx,2) = "gray";
 str(:,4) = string(props.ch);
 str = join(str,'');
-props.rn = listdlg('liststring',str);
+props.rn = listdlg('liststring',str);%i don't think this is needed
+props.BMP_Analysis.rn = props.rn;
 props = countspikes(props);
 guidata(hObject,props)
 
@@ -3078,7 +3079,8 @@ if isfield(props,'spikedetection')
     if isfield(props.BMP_analysis,'rn')
         ridx = props.BMP_analysis.rn;
     else
-        ridx = contains(props.ch,'-Rn');
+        ridx = contains(props.ch,'-Rn','IgnoreCase',true);
+        props.BMP_analysis.rn = ridx;
     end
     if any(ridx)
         rspike = props.spikedetection.spikes{ridx};
@@ -3124,8 +3126,9 @@ if isfield(props,'spikedetection')
         end
     end
 end
+disp(props.BMP_analysis.BMP)
 
-function adjustline(hObject,eventdata)
+function adjustline(hObject,eventdata)%< --- something is wrong, it doesn't seem to be updating the BMP, plot again doesn't see it.
 fig = ancestor(hObject,'figure','toplevel');
 props = guidata(fig);
 if eventdata.Button==1
@@ -3269,7 +3272,13 @@ set(sc,'Tag',replace(sc.Tag,'endtag',''))
 set(gcf,'WindowButtonMotionFcn',[])
 set(gcf,'WindowButtonDownFcn',[])
 delete(findobj(hObject,'-regexp','Tag','snap_marker'))
+
+idx = double(string(regexp(sc.Tag,'\d*','Match')));
+phase = contains(sc.Tag,'Retr');
+tp = string(regexp(sc.Tag,'(?<=\d)[se]','Match'))=="e";
+
 props = guidata(hObject);
+props.BMP_analysis.BMP(idx,phase+tp+1) = sc.XData;
 props = countspikes(props);
 guidata(hObject,props)
 
