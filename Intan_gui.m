@@ -4995,10 +4995,14 @@ guidata(hObject,props)
 
 function saveit(hObject,eventdata)
 props = guidata(hObject);
+
 fidx = find(props.files(:,2)~="",1,'first');
 nn = regexprep(props.files{fidx,2},'.(tif|mat|det|rhs|tsm|xlsx)','.mat');
 
 [file,path,indx] = uiputfile(nn);
+
+props.matfile = fullfile(path,file);
+writerecent(props)
 
 if ~file
     return
