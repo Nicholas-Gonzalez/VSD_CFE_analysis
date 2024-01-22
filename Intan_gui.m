@@ -3016,9 +3016,11 @@ end
 str(:,4) = string(props.ch);
 str = join(str,'');
 props.rn = listdlg('liststring',str);%i don't think tying to props.rn is needed
-props.BMP_analysis.rn = props.rn;
-props = countspikes(props);
-guidata(hObject,props)
+if ~isempty(props.rn)
+    props.BMP_analysis.rn = props.rn;
+    props = countspikes(props);
+    guidata(hObject,props)
+end
 
 function props = countspikes(props)
 if isfield(props,'spikedetection')
