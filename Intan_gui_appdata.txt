@@ -1,6 +1,0 @@
-D:\Data\CFE_VSD\24-01-11\003_filtered.mat
-D:\Data\CFE_VSD\24-01-11\002_filtered.mat
-D:\Data\CFE_VSD\24-01-08\002_filtered.mat
-D:\Data\CFE_VSD\24-01-04\001_filtered.mat
-D:\Data\CFE_VSD\24-01-11\002_filter_test.mat
-D:\Data\CFE_VSD\23-12-11\001_filtered.mat
