@@ -3010,6 +3010,9 @@ function selectRn(hObject,eventdata)
 props = guidata(hObject);
 str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
 str(props.hideidx,2) = "gray";
+if isfield(props,'BMP_analysis') && isfield(props.BMP_analysis,'rn')
+    str(props.BMP_analysis.rn,2) = "red";assignin('base','str',str)
+end
 str(:,4) = string(props.ch);
 str = join(str,'');
 props.rn = listdlg('liststring',str);%i don't think tying to props.rn is needed
