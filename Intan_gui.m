@@ -3012,8 +3012,8 @@ str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],leng
 str(props.hideidx,2) = "gray";
 str(:,4) = string(props.ch);
 str = join(str,'');
-props.rn = listdlg('liststring',str);%i don't think this is needed
-props.BMP_Analysis.rn = props.rn;
+props.rn = listdlg('liststring',str);%i don't think tying to props.rn is needed
+props.BMP_analysis.rn = props.rn;
 props = countspikes(props);
 guidata(hObject,props)
 
@@ -4968,12 +4968,14 @@ else
     "Prot dur",...  12
     "Retr dur",...  13
     "Type"];%       14
+    rn = {props.BMP_analysis.rn};
     if exist(fn,'file')
         answer = questdlg('Would you like to append to this file or overwrite?','Action','Append','Overwrite','Cancel','Append');
         if strcmp(answer,'Append')
             vars = load(fn);
             bmp = [vars.bmp ; bmp];
             group = [vars.group; group];
+            rn = [rn; vars.rn];
             if isfield(vars,'spikes')
                 spikes = [vars.spikes; spikes];
                 groups = [vars.groups; groups];
@@ -4988,7 +4990,7 @@ else
         disp(['BMPs were saved to ' fn])
         props.log = [props.log; 'Saved BMPs to ' fn];
     end
-    save(fn,'group','bmp','head','spikes','groups')
+    save(fn,'group','bmp','head','spikes','groups','rn')
 end
 
 function printlog(hObject,eventdata)
