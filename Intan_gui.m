@@ -942,6 +942,9 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         if isfield(props,'spikedetection')
             props = rmfield(props,'spikedetection');
         end
+        if isfield(props,'BMP_analysis')
+            props = rmfield(props,'BMP_analysis');
+        end
         end
     end
 elseif vsdch % loaded only vsd data (raw)
@@ -4947,9 +4950,10 @@ if ~isfield(props,'BMP_analysis')
     msgbox('You have no BMPs to save')
     return
 end
-[file,path] = uiputfile('BMP_analysis.mat','Select BMP file');
+nn = replace(props.files{1,2},'_frame.tif','_BMP_analysis.mat');
+[file,path] = uiputfile(nn,'Select BMP file');
 s = dir(fullfile(path,file));
-if s.bytes>1e6
+if ~isempty(s) && s.bytes>1e6
     answer = questdlg('The file you are overwriting seems too big for a BMP_analysis file.  Are you sure this is the correct file?','WARNING!','Proceed','Cancel','Cancel');
     if strcmp(answer,'Cancel')
         return
