@@ -842,17 +842,16 @@ vsdch = isfield(vsdprops,'vsd') || (isfield(vsdprops,'matprops') && isfield(vsdp
 if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
     if isfield(vsdprops,'matprops')
         for x=1
-        fields = fieldnames(vsdprops.matprops);
 
+        fieldsr = ["spikedetection","BMP_analysis"];
+        for f=1:length(fieldsr)
+            try props = rmfield(props,fieldsr{f});end
+        end
+
+        fields = fieldnames(vsdprops.matprops);
         fields(ismember(fields,{'video','data'})) = [];% set all fields
         for f=1:length(fields)
             props.(fields{f}) = vsdprops.matprops.(fields{f});
-        end
-        
-        if isfield(vsdprops.matprops,'BMP_analysis')
-            props.BMP_analysis = vsdprops.matprops.BMP_analysis;
-        else
-            props.BMP_analysis.BMP = zeros(0,3);
         end
 
         props.finfo.files = vsdprops.files;
@@ -2962,6 +2961,7 @@ if  ~isfield(props.BMP_analysis,'BMP') || isempty(props.BMP_analysis.BMP)
 else
     b = size(props.BMP_analysis.BMP,1)+1;
     props.BMP_analysis.BMP = [props.BMP_analysis.BMP; x'];
+    props.BMP_analysis.btype(props.BMP_analysis.btype==0) = [];
 end
 
 
@@ -2989,9 +2989,11 @@ function props = reorderBMP(props)
 fig = findobj('Tag',props.intan_tag);
 [~,idx] = sort(props.BMP_analysis.BMP(:,1));
 props.BMP_analysis.BMP = props.BMP_analysis.BMP(idx,:);
-if isfield(props.BMP_analysis,'btype')
-    props.BMP_analysis.btype = props.BMP_analysis.btype(idx);
-    props.BMP_analysis.Rn = props.BMP_analysis.Rn(idx,:);
+if isfield(props.BMP_analysis,'btype') && isfield(props.BMP_analysis,'Rn') 
+    if ~isempty(props.BMP_analysis.btype) && ~isempty(props.BMP_analysis.Rn) 
+        props.BMP_analysis.btype = props.BMP_analysis.btype(idx);
+        props.BMP_analysis.Rn = props.BMP_analysis.Rn(idx,:);
+    end
 end
 for i=1:length(idx)
     set(findobj(fig,'Tag',['Prot' num2str(i)]),'Tag', ['Prot' num2str(idx(i)) 'reordered'])
@@ -3134,7 +3136,6 @@ if isfield(props,'spikedetection')
         end
     end
 end
-disp(props.BMP_analysis.BMP)
 
 function adjustline(hObject,eventdata)%< --- something is wrong, it doesn't seem to be updating the BMP, plot again doesn't see it.
 fig = ancestor(hObject,'figure','toplevel');
@@ -3156,7 +3157,7 @@ else
     choice = questdlg('Delete motor pattern?','Question','Yes','No','Yes');
     if strcmp(choice,'Yes')
         idxs = char(regexp(hObject.Tag,'\d+','match'));
-        idx = str2double(idxs);disp(idx)
+        idx = str2double(idxs);
         delete(findobj(fig,'Tag',['Prot' idxs]))
         delete(findobj(fig,'Tag',['Prot' idxs 's']))
         delete(findobj(fig,'Tag',['Prot' idxs 'e']))
@@ -3181,11 +3182,16 @@ else
         end
 
         props.BMP_analysis.BMP(idx,:) = [];
-
-        delete(props.BMP_analysis.btxt(idx))
-        props.BMP_analysis.btxt(idx) = [];
-        props.BMP_analysis.btype(idx) = [];
-        props.BMP_analysis.Rn(idx,:) = [];
+        if isfield(props.BMP_analysis,'btxt')
+            delete(props.BMP_analysis.btxt(idx))
+            props.BMP_analysis.btxt(idx) = [];
+        end
+        if isfield(props.BMP_analysis,'btype')
+            props.BMP_analysis.btype(idx) = [];
+        end
+        if isfield(props.BMP_analysis,'Rn')
+            props.BMP_analysis.Rn(idx,:) = [];
+        end
 
         rnln = findobj(fig,'-regexp','Tag',[num2str(idx) '(Prot|Retr)r']);
         delete(rnln)
