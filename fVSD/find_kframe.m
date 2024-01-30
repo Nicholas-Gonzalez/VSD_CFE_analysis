@@ -105,6 +105,7 @@ while a==0
     frm_sub1=frmd;% retain for next loop to compare
     act_frm=act_frm+1;
 end
+rpic = pic;
 pic=pic/max(max(max(pic(10:end-10,10:end-10))));
 
 
@@ -124,6 +125,7 @@ end
 idx=I+sum(dist_mean(1:I-1)==0);
 frame=real_frm(idx)*round(all_frm / numfrm);
 frame_pic=pic(:,:,idx);
+frame_pic_raw = rpic(:,:,idx);
 
 imwrite(pic(:,:,1),fullfile(folder,[fname  '_imstack.tif']))
 for i=2:size(pic,3)
@@ -131,7 +133,7 @@ for i=2:size(pic,3)
 end
 
 imwrite(frame_pic,fullfile(folder, [fname  '_frame.tif']))
-save(fullfile(folder, [fname '_' date]),'frame','frame_pic')
+save(fullfile(folder, [fname '_' date]),'frame','frame_pic','rpic','frame_pic_raw')
 
 %generate data figure
 close(findobj(0, 'Name', 'Contrast'))
