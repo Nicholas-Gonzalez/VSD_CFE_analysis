@@ -394,6 +394,13 @@ vsdprops.load_tag = load_tag;
 % vsdprops.intan_tag = hintan.Tag;
 vsdprops.intan_tag = props.intan_tag;
 
+vsdprops.recent2 = 'C:\Users\cneveu\Desktop\Data\*.mat';
+appfile = fullfile(fileparts(which('Intan_gui.m')),'Intan_gui_appdata.txt');
+if exist(appfile,'file')
+    recent = readmatrix('Intan_gui_appdata.txt','Delimiter','\n','OutputType','string');
+    vsdprops.recent2 = recent{1};
+end
+
 allbut = findobj(intan,'Type','Uicontrol','Enable','on');
 set(allbut,'Enable','off')
 vsdprops.allbut = allbut;
@@ -435,7 +442,7 @@ if isfield(vsdprops,'recent')
     [path,file,ext] = fileparts(vsdprops.recent);
     file = [file ext];
 else
-    [file, path, id] = uigetfile('C:\Users\cneveu\Desktop\Data\*.mat','Select frame file');
+    [file, path, id] = uigetfile(vsdprops.recent2,'Select matlab file');
 end
 if ~file;return;end
 matprog = findobj('Tag','matprog');
@@ -4956,19 +4963,32 @@ if ~isfield(props,'BMP_analysis')
     msgbox('You have no BMPs to save')
     return
 end
+
 nn = replace(props.files{1,2},'_frame.tif','_BMP_analysis.mat');
-[file,path] = uiputfile(nn,'Select BMP file');
-s = dir(fullfile(path,file));
-if ~isempty(s) && s.bytes>1e6
-    answer = questdlg('The file you are overwriting seems too big for a BMP_analysis file.  Are you sure this is the correct file?','WARNING!','Proceed','Cancel','Cancel');
-    if strcmp(answer,'Cancel')
-        return
-    end
+cnt = 1;
+drive = 'ABCDEFG';
+while ~exist(fileparts(nn),'dir')
+    nn(1) = drive(cnt);
+    cnt = cnt + 1;
 end
+if cnt>2
+    disp(['Drive has changed to ' drive(cnt-1) ':\']); 
+end
+[file,path] = uiputfile(nn,'Select BMP file');
+
+
 
 if isequal(file,0) || isequal(path,0)
     disp('Canceled')
 else
+    s = dir(fullfile(path,file));
+    if ~isempty(s) && s.bytes>2e6
+        answer = questdlg('The file you are overwriting seems too big for a BMP_analysis file.  Are you sure this is the correct file?','WARNING!','Proceed','Cancel','Cancel');
+        if strcmp(answer,'Cancel')
+            return
+        end
+    end
+
     fn = fullfile(path,file);
     bmp = [props.BMP_analysis.BMP props.BMP_analysis.Rn];
     group = [string(props.intan.finfo.date), props.notes.note1];
@@ -5013,7 +5033,20 @@ else
         disp(['BMPs were saved to ' fn])
         props.log = [props.log; 'Saved BMPs to ' fn];
     end
-    save(fn,'group','bmp','head','spikes','groups','rn')
+    ch = props.ch;
+    bmp_head = ["Protraction start","Retraction start","Retraction end"];
+    im = props.im;
+    kern_center = props.kern_center;
+    kernpos = props.kernpos;
+    det = props.det;
+    spikedetection = props.spikedetection;
+    tm = props.tm;
+    matfile = props.matfile;
+    save(fn,'group','bmp','head','spikes','groups','rn','ch','bmp_head','im',...
+        'matfile','kern_center','kernpos','det','spikedetection','tm')
+    disp(['BMPs were saved to ' fn])
+    props.log = [props.log; ['BMP_analysis file saved to ' fn]];
+    guidata(hObject,props)
 end
 
 function printlog(hObject,eventdata)
