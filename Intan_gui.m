@@ -81,11 +81,11 @@ ropanel = uipanel('Units','pixels','FontSize',fontsz,...
 
 
 % ======== channel panel ==========
-uicontrol(chpanel,'Units','normalized','Position',[0 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Show','BackgroundColor',bcolor,'ForegroundColor',tcolor)
+uicontrol(chpanel,'Units','normalized','Position',[0 0.94 0.45 0.02],'Style','text','FontSize',fontsz,'String','Show','BackgroundColor',bcolor,'ForegroundColor',tcolor)
 uicontrol(chpanel,'Units','normalized','Position',[0 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
               'Callback',@selection,'String',"",'Tag','showgraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
-uicontrol(chpanel,'Units','normalized','Position',[0.55 0.95 0.45 0.04],'Style','text','FontSize',fontsz,'String','Hide','BackgroundColor',bcolor,'ForegroundColor',tcolor)
+uicontrol(chpanel,'Units','normalized','Position',[0.55 0.94 0.45 0.02],'Style','text','FontSize',fontsz,'String','Hide','BackgroundColor',bcolor,'ForegroundColor',tcolor)
 uicontrol(chpanel,'Units','normalized','Position',[0.55 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
               'Callback',@selection,'String',"",'Tag','hidegraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
@@ -93,6 +93,9 @@ uicontrol(chpanel,'Units','normalized','Position',[0.43 0.97 0.15 0.03],'Style',
               'Callback',@sortlist,'String',[char(8593) 'sort'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 uicontrol(chpanel,'Units','normalized','Position',[0.43 0.94 0.15 0.03],'Style','pushbutton','Tag','showsort',...
               'Callback',@sortlist,'String',[char(8595) 'sort'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
+
+uicontrol(chpanel,'Units','normalized','Position',[0.58 0.97 0.42 0.03],'Style','pushbutton','Tag','rename',...
+              'Callback',@rename,'String','Rename channels','Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 uicontrol(chpanel,'Units','normalized','Position',[0.45 0.55 0.1 0.04],'Style','pushbutton','Tag','adjust',...
               'Callback',@modtxt,'String',char(8594),'FontSize',20,'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
@@ -1286,7 +1289,7 @@ if exist(recent,'file')
     guidata(loadfig,vsdprops)
     loadmat(loadfig)
 else
-    message('File does not exist')
+    msgbox('File does not exist')
 end
 
 %% main app methods
@@ -1378,6 +1381,7 @@ end
 set(findobj(hObject.Parent,'Tag','savem'),'Enable','on');
 set(findobj(props.chpanel,'Tag','showgraph'),'Enable','on');
 set(findobj(props.chpanel,'Tag','hidegraph'),'Enable','on');
+set(findobj(props.chpanel,'Tag','rename'),'Enable','on');
 if isfield(props,'yaxis')
     set(props.yaxis,'Parent',hObject.Parent,'Enable','on')
 end
@@ -1727,6 +1731,53 @@ guidata(intan,props)
 close(hObject.Parent)
 
 %% cosmetic stuff
+function rename(hObject,eventdata)
+props = guidata(hObject);
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
+str(props.hideidx,2) = "gray";
+str(:,4) = string(props.ch);
+str = join(str,'');
+
+fig = figure('Name','Rename channel','NumberTitle','off','MenuBar','none');
+fig.Position(3:4) = [300 100];
+uicontrol('Units','normalized','Position',[0    0.8 0.3 0.2],'Style','text','String','Channel')
+uicontrol('Units','normalized','Position',[0.3 0.8 0.4 0.2],'Style','popupmenu','String',str,'Value',1,'Tag','oldname')
+uicontrol('Units','normalized','Position',[0    0.5 0.3 0.2],'Style','text','String','New Name')
+uicontrol('Units','normalized','Position',[0.3  0.5 0.4 0.2],'Style','edit','String','','Tag','newname','HorizontalAlignment','left')
+
+uicontrol('Units','normalized','Position',[0.2  0.1 0.6 0.3],'Style','pushbutton','String','Apply','Callback',@rename_apply)
+
+guidata(fig,props.intan_tag)
+
+function rename_apply(hObject,eventdata)
+renprops = guidata(hObject);
+intan = findobj('Tag',renprops);
+props = guidata(intan);
+
+chidx = get(findobj('Tag','oldname'),'Value');
+newname = get(findobj('Tag','newname'),'String');
+
+set(findobj('String',props.ch{chidx}),'String',newname);
+
+showobj = findobj(intan,'Tag','showgraph');
+set(showobj,'String',replace(showobj.String,props.ch{chidx},newname))
+props.showlist = replace(props.showlist,props.ch{chidx},newname);
+
+hideobj = findobj(intan,'Tag','hidegraph');
+set(hideobj,'String',replace(hideobj.String,props.ch{chidx},newname))
+props.hidelist = replace(props.hidelist,props.ch{chidx},newname);
+
+props.ch{chidx} = newname;
+
+guidata(intan,props)
+close(hObject.Parent)
+
+%     props.log = [props.log; ['Renamed channels ' str{idx} ' to .']];
+% disp(['Renamed channels ' str{idx} ' to .'])
+% guidata(hObject,props)
+% plotdata(hObject)
+
+
 function adjylim(hObject,eventdata)
 props = guidata(hObject);
 tag = hObject.Tag;
