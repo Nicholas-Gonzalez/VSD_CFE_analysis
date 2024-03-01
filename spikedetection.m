@@ -132,6 +132,7 @@ fig = figure('Position',[ofigsize(1) ofigsize(4)*0.1+ofigsize(2) ofigsize(3) ofi
 
 m = uimenu('Text','Spike Tools');
 mi(1) = uimenu(m,'Text','Open Parameters','Callback',@opensaveparams,'Enable','on','Tag','open');
+mi(2) = uimenu(m,'Text','Get Parameters','Callback',@getspikeparams,'Enable','on','Tag','open');
 mi(3) = uimenu(m,'Text','Save Parameters','Callback',@opensaveparams,'Enable','on','Tag','save');
 mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','on','Tag','savem');
 mi(5) = uimenu(m,'Text','Send to Intan_Gui','Callback',@tointan,'Enable','on','Tag','savem');
@@ -400,9 +401,6 @@ if ckdv
     yv(2:3) =  YData(xidx(1));
 end
 
-
-
-
 function tointan(hObject,eventdata)
 aprops = guidata(hObject);
 intan = findobj('Tag',aprops.intan_tag);
@@ -591,6 +589,54 @@ else
 end
 disp(['File ' str ' :'])
 disp(fname)
+guidata(hObject,props)
+chchannel(hObject)
+
+function getspikeparams(hObject,eventdata)
+props = guidata(hObject);
+if ~isempty(props.files)
+    folder = [];
+    t=1;
+    while t>0
+        if ~isempty(props.files{t,2})
+            folder = fileparts(props.files{t,2});
+            t = -1;
+        else
+            t = t+1;
+        end
+        if t>size(props.files,1)
+            t = -1;
+        end
+    end
+end
+fname = fullfile(folder,'*.mat');
+[file,path] = uigetfile(fname,'Select recording or BMP file');
+fdata = load(fullfile(path,file));
+if isfield(fdata,'props')
+    params = fdata.props.spikedetection.params;
+    oprops = fdata.props;
+elseif isfield(fdata,'spikedetection')
+    params = fdata.spikedetection.params;
+    oprops = fdata;
+else
+    msgbox('spike parameters not found in file.')
+end
+
+str = repmat(["<HTML><FONT color=""", "black", """>", "", ...
+    "......[","" ,"]..thr1 = ","", ",....[","","]..thr2 = ","",".....dv [","","]</FONT></HTML>"],length(oprops.ch),1);
+if isfield(oprops,'hideidx')
+    str(oprops.hideidx,2) = "gray";
+end
+str(:,4) = string(oprops.ch);
+str(:,6) = string({params.ck1});
+str(:,8) = string({params.thr1});
+str(:,10) = string({params.ck1});
+str(:,12) = string({params.thr2});
+str(:,14) = string({params.ckdv});
+str = join(str,'');
+[idx,tf] = listdlg('liststring',str,'ListSize',[300 300]);
+cidx = get(findobj('Tag','channels','Parent',hObject.Parent.Parent),'Value');
+props.params(cidx) = params(idx);
 guidata(hObject,props)
 chchannel(hObject)
 
