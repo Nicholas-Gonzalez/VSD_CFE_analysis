@@ -83,11 +83,11 @@ ropanel = uipanel('Units','pixels','FontSize',fontsz,...
 % ======== channel panel ==========
 uicontrol(chpanel,'Units','normalized','Position',[0 0.94 0.45 0.02],'Style','text','FontSize',fontsz,'String','Show','BackgroundColor',bcolor,'ForegroundColor',tcolor)
 uicontrol(chpanel,'Units','normalized','Position',[0 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
-              'Callback',@selection,'String',"",'Tag','showgraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
+              'String',"",'Tag','showgraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 uicontrol(chpanel,'Units','normalized','Position',[0.55 0.94 0.45 0.02],'Style','text','FontSize',fontsz,'String','Hide','BackgroundColor',bcolor,'ForegroundColor',tcolor)
 uicontrol(chpanel,'Units','normalized','Position',[0.55 0    0.45 0.94],'Style','listbox','Max',1,'Min',1,...
-              'Callback',@selection,'String',"",'Tag','hidegraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
+              'String',"",'Tag','hidegraph','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
 uicontrol(chpanel,'Units','normalized','Position',[0.43 0.97 0.15 0.03],'Style','pushbutton','Tag','showsort',...
               'Callback',@sortlist,'String',[char(8593) 'sort'],'Enable','off','BackgroundColor',bcolor,'ForegroundColor',tcolor);
@@ -2062,15 +2062,6 @@ end
 guidata(hObject,props)
 plotdata(hObject)
 updateroi(hObject)
-
-function selection(hObject,eventdata)
-props = guidata(hObject);
-if strcmp(hObject.Tag,'showgraph')
-    props.hide = hObject.Value;
-else
-    props.show = hObject.Value;
-end
-guidata(hObject,props)
 
 function yaxis(hObject,eventdata)% turns on/off the y-axis
 props = guidata(hObject);

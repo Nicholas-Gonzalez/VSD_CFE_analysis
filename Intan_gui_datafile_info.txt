@@ -1,0 +1,21 @@
+============== Overview ==================
+The data files are typically labeled starting with a number "001,002,etc" which is simply an index of the recording "1st, 2nd, etc."  The remainder of the name is somewhat arbitrary.  I usually name it filtered indicating that I have filtered the traces.  The file is composed of a single variable called props (ie., properties) with all of the relevant information as fields.  The following is a description of each field.
+(temp) means that this field is temporary use for the Intan_gui app and not likely to provide you with information about the file.
+(depr) means it is depricated, may be present in some files but is no longer used for anything.
+==========================================
+show (depr)
+hide (depr)
+appfile = location of the text file listing the recently opened files.
+scstyle = appearance properties of the scatter to represent the spike occurance
+intan_tag = object identification tag of the figure.  
+figsize = the size of the Intan_gui figure.  This is adjusted by the app based on the size of the monitor.
+matfile = the name of the matlab file
+intan = the data acquired by the intan computer (nerves and/or carbon fiber recordings)
+intan.tm = the time vector of the original intan data.  This is likely different than the actual data that is stitched together with the VSD.
+intan.data = the original data from the intan computer.  This data is encoded in uint16.  The key to decode it into double precision is intan.min and intan.d2uint. See the nested function out = convert_uint(data,d2uint,mind,vtype) in Intan_gui.m.
+intan.min = the minimum data value when in double-precision.  This is used to convert from uint16 to double-precision.
+intan.d2uint = the scale factor from uint16 to double-precision.
+intan.ch = the name of the channels from the intan computer
+intan.finfo = information of the original intan data
+intan.notes = the notes typed for each recording session in the notes.xlsx found in each folder of the recording.
+
