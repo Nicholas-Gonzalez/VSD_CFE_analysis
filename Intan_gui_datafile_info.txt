@@ -1,21 +1,105 @@
 ============== Overview ==================
 The data files are typically labeled starting with a number "001,002,etc" which is simply an index of the recording "1st, 2nd, etc."  The remainder of the name is somewhat arbitrary.  I usually name it filtered indicating that I have filtered the traces.  The file is composed of a single variable called props (ie., properties) with all of the relevant information as fields.  The following is a description of each field.
+This list is likely in the same order as they appear in the data file.
 (temp) means that this field is temporary use for the Intan_gui app and not likely to provide you with information about the file.
 (depr) means it is depricated, may be present in some files but is no longer used for anything.
+[ dim1, dim2] this labels what the deminsons are of the array.
 ==========================================
 show (depr)
 hide (depr)
-appfile = location of the text file listing the recently opened files.
-scstyle = appearance properties of the scatter to represent the spike occurance
-intan_tag = object identification tag of the figure.  
-figsize = the size of the Intan_gui figure.  This is adjusted by the app based on the size of the monitor.
-matfile = the name of the matlab file
-intan = the data acquired by the intan computer (nerves and/or carbon fiber recordings)
-intan.tm = the time vector of the original intan data.  This is likely different than the actual data that is stitched together with the VSD.
-intan.data = the original data from the intan computer.  This data is encoded in uint16.  The key to decode it into double precision is intan.min and intan.d2uint. See the nested function out = convert_uint(data,d2uint,mind,vtype) in Intan_gui.m.
-intan.min = the minimum data value when in double-precision.  This is used to convert from uint16 to double-precision.
+appfile      = location of the text file listing the recently opened files.
+scstyle      = appearance properties of the scatter to represent the spike occurance
+intan_tag    = object identification tag of the figure.  
+figsize      = the size of the Intan_gui figure.  This is adjusted by the app based on the size of the monitor.
+matfile      = the name of the matlab file
+intan        = the data acquired by the intan computer (nerves and/or carbon fiber recordings)
+intan.tm     = the time vector of the original intan data.  This is likely different than the actual data that is stitched together with the VSD.
+intan.data   = the original data from the intan computer [nerve, time].  This data is encoded in uint16.  The key to decode it into double precision is intan.min and intan.d2uint. See the nested function out = convert_uint(data,d2uint,mind,vtype) in Intan_gui.m.
+intan.min    = the minimum data value when in double-precision.  This is used to convert from uint16 to double-precision.
 intan.d2uint = the scale factor from uint16 to double-precision.
-intan.ch = the name of the channels from the intan computer
-intan.finfo = information of the original intan data
-intan.notes = the notes typed for each recording session in the notes.xlsx found in each folder of the recording.
+intan.ch     = the name of the channels from the intan computer
+intan.finfo  = information of the original intan data
+intan.notes  = the notes typed for each recording session in the notes.xlsx found in each folder of the recording.
+vsd          = the data acquired by the computer that does voltage-sensitive dye imaging.
+vsd.min      = the minimum data value in each trace when data is in double-precision.  Used to convert data from uint16 to double-precision.
+vsd.d2uint   = the scale factor for converting from double-precision to uint16.
+vsd.data     = the vsd data [neuron, time]
+vsd.tm       = time vector for vsd data
+vsd.info     = the information of the original vsd data file (.tsm). This information is populated by the Turbo-SM data acquisition app.
+min          = the minimum value of each channel of props.data when in double-precison. Use this to convert from uint16 to double.  See the nested function out = convert_uint(data,d2uint,mind,vtype) in Intan_gui.m.
+d2uint       = the scale factor to convert from uint16 to double precision
+showlist     = list of channel names that is currently displayed in the intan_gui.  This list is arbitrarily selected by the user of Intan_gui, but it may be a list of neurons with the most interesting activity or the clearest signals.  But not necessarily.
+hidelist     = list of all the channels hidden or not displayed.
+showidx      = the index of the channels in props.data that are shown.  props.ch(props.showidx) = props.showlist
+hideidx      = the index of the channels in props.data that are not shown. props.ch(props.hideidx) = props.hidelist
+notes        = the notes of this data.  Most times this is equivalent to props.intan.notes, but the user can add info in the Intan_gui interface.
+BMP_analysis = the metrics of the buccal motor patterns.  This is manually annotated for each recording.  If this isn't present or is empty (or contains dummy values like ones or zeros), then the user has not defined any BMPs.
+BMP_analysis.BMP          = the timing of the BMPs. Each BMP is along the 1st dimension.  Protraction start is first column, retraction start 2nd column, and retraction end third column
+BMP_analysis.rn           = the index of the radula nerve used to classify the motor patterns
+BMP_analysis.spikes       = metrics of the spike activity of each channel in props.data.  The user would have needed to run the spike detection algorithm for this data to be important.  The first dimension is each BMP, props.BMP_analysis.head specifies the meaning of each column in the 2nd dimension, the third dimension is each channel in props.data.
+BMP_analysis.head         = the labels for each column in props.BMP_analysis.spikes
+BMP_analysis.Rn           = metrics of the spike activity of only the rn channel.  Each row is a BMP and each column is specified in props.BMP_analysis.rnratio_head.
+BMP_analysis.rnratio_head = the labels for the columns in props.BMP_analysis.Rn
+BMP_analysis.btype        = the classification of each BMP 1 = rejection, 2 = ingestion
+log          = a running log of every action done to the data.  I added this feature later on so this may not capture every single action, but I think I got the important ones like filtering, adjusting baseline, saving, etc.
+filter       = the currently applied filters on the data in the order they were applied.
+filter.fr    = filter ripple, a parameter of the filtering alogorithm.  My feeble mind can't get a concrete understanding of what this is, but changing the value sometimes helps get better filtering results.
+filter.fatt  = the amount in decibles of attenuation for the frequency band. Left is the highpass filter (reduces the amplitude of lower frequencies) and right is lowpass (reduces the amplitude of higher frequences.  This order is used throughout.
+filter.fpass = the frequency at which no attenuation occurs
+filter.fstop = the frequency at which the amount of attenuation = fitler.fatt
+filter.meth  = the filter method used
+filter.idx   = the channel index in props.data that the filter was applied to.
+filter.type  = the type of filter applied.  Many filter methods have multiple types.  lowpass attenuates higher frequencies, highpass attenuates lower frequencies, bandpass attenuates frequencies outside a range, notch attenuates frequencies within a range.
+databackup   = data as it was before a modification was done.  This allows for the previous action in the Intan_gui to be undone.  Sometimes not present in saved data.
+bmin         = minimum value for the backup data to convert from uint16 to double-precision
+bd2uint      = scale factor to convert backup data from uint16 to double-precision
+imadj             = the image and parameters defining the displayed image in Intan_Gui.manually
+imadj.imback      = the backup image before most recent adjustments
+imadj.params      = the current parameters for displayed microscope image.  Each row is the contrast of red, green, and blue.  First column is the pixel intensity assigned to black, and the second column is the pixel intensity attributed to full color of that channel.  This allows the adjustment of the brightness and contrast of each RGB channel.
+imadj.imtemp      = the temporary image
+imadj.params_back = the backup image parameters before recent adjustments (see imadj.params).
+imadj.params_temp = the temporary parameters.
+note         = the entire notes.xlsx file in cell format
+Max(depr)    = the number of channels
+tm           = time vector for props.data
+ch           = name of each channel
+im           = current microscopic image displayed in Intad_gui.m (possibly depricated, but I doubt fully exponged from being used)
+det          = the .det file verbatum, this contain the pixel index for each region of interest (aka neuron).  Each roi is separated by a zero.
+kern_center  = the center position of each roi, calculated as the mean of the x values and y values of all pixels in each roi.  Calculated by VSD_CFE_analysis\fVSD\readdet.m 
+kernpos      = the index of each roi in props.det
+curdir       = the directory of the matlab file.  A bit redudant with props.matfile.
+data         = the data where the vsd and intan is stitched together and all the filters and baseline subtractions and other changes are applied.
+files        = list of all of the locations of the file names.  tiffns is the image file.  detfns is the .det file encoding all the pixel indexes of all the roi's.  tsmfns is the Turbo-SM imaging file (contains file info).  rhsfns is the intan nerve file.  xlsxfns is the notes file. Note that the exact location may be different if the matlab file has been moved. The relative location is likely correct.
+vsdprops         = the field used during for the loading application to load the data files.  some of this information is redundant
+vsdprops.files   = likely equivalent to props.files
+vsdprops.recent  = (temp) most recently opened file chosen by the user from the recent menu in Intan_gui
+vsdprops.recent2 = (temp) the last opened file location while the Intan_gui was opened.  So you don't have to renavigate to the folder you are currently working in.
+vsdprops.allbut  = (temp) all the buttons on the load app that are currently active.  This allows a rapid activate and deactivate while things are loading to prevent user from button-mashing when things are taking longer than expected.
+load_tag         = loading app object identifiet (temp)
+intan_tag        = Intan_gui object identifier (temp)
+newim        = logical, whether the user has loaded an image to be added as one of the RGB channels.
+color        = color pallete of the the intan_gui
+spikedetection        = all of the info and data pertaining to spike detection
+spikedetection.params = the parameters used to detect the spikes.  Structure array.  Each row is a channel in props.data. 
+                        ckdv    = logical, whether the threshold is relative to the difference
+						ck1     = logical, whether the first threshold is used. If ck1 == 0 disregard all params ending in 1 (i.e., dur1 and thr1).
+						dur1    = the duration (ms) that the data needs to be consecutavily outside thr1 (relative to zero)
+						thr1    = the value that the data needs to be outside.  This is relative to zero, so negative thr means that data needs to be more negative than thr and positive need to be greater than thr.
+						ck1rej  = logical, whether spikes that reach a value should be rejected.  If ck1rej == 0 disregard rej1
+						rej1    = if any datapoint is outside this value then spike is excluded
+						ck2     = logical, whether the second threshold is used
+						dur2    = duration (ms) of the second threshold (see dur1)
+						thr2    = the value for second threshold (see thr1)
+						ck2rej  = logical, whether spikes ouside a value is to be rejected.
+						rej2    = value of the second rejection threshold (see rej1)
+						gapdur  = the gap between the first and second threshold.  
+						gpdvdur = the gap between the first threshold and the baseline.  only if ckdv ==1
+						ra      = rearming, this is the minimum duration between the occurance of a spike and the previous spike.  This prevents double counting a single spike.
+rn      = (depr) the index of the radular nerve
+btype   = (depr) the type of BMP patterns
+axbmp.YLim = (temp) y limit of the BMP axis  
+
+
+
+
 

@@ -4962,9 +4962,12 @@ function resetim(hObject,eventdata)
 aprops = guidata(hObject);
 intan = findobj('Tag',aprops.intan_tag);
 props = guidata(intan);
-
 if strcmp(hObject.Tag,'resetim')
-    props.imadj.params = props.imadj.params_back;
+    if isfield(props.imadj,'params_back')
+        props.imadj.params = props.imadj.params_back;
+    else
+        props.imadj.params = [0 1;0 1;0 1];
+    end
     props.im = props.imadj.imback;
 else
     props.imadj.params = props.imadj.params_temp;
