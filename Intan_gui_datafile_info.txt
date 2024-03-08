@@ -5,8 +5,8 @@ This list is likely in the same order as they appear in the data file.
 (depr) means it is depricated, may be present in some files but is no longer used for anything.
 [ dim1, dim2] this labels what the deminsons are of the array.
 ==========================================
-show (depr)
-hide (depr)
+show         = (temp) curretly selected channels in the show listbox.
+hide         = (temp) currently selected channels in the hidden listbox
 appfile      = location of the text file listing the recently opened files.
 scstyle      = appearance properties of the scatter to represent the spike occurance
 intan_tag    = object identification tag of the figure.  
