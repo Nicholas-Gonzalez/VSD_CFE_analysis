@@ -2795,9 +2795,9 @@ uicontrol(cpanel,'Units','normalized','Position',[0.05 0.60 0.05 0.05],'Style','
 uicontrol(cpanel,'Units','normalized','Position',[0.1 0.58 0.1 0.05],'Style','text',...
     'String','Spline reg','HorizontalAlignment','left','Enable','off','Tag','Spline_reg','tooltip',"Determine a spline by regular intervals.");
 uicontrol(cpanel,'Units','normalized','Position',[0.25 0.58 0.1 0.05],'Style','text',...
-    'String','Coefficients','HorizontalAlignment','right','Enable','on','Tag','Fit');
+    'String','Coefficients','HorizontalAlignment','right','Enable','on','Tag','Spline_reg');
 uicontrol(cpanel,'Units','normalized','Position',[0.41 0.6 0.1 0.05],'Style','edit',...
-    'String','10','Callback',@fitequation,'Enable','on','TooltipString','Number of points','Tag','Fit');
+    'String','10','Callback',@fitequation,'Enable','on','TooltipString','Number of points','Tag','Spline_reg');
 uicontrol(cpanel,'Units','normalized','Position',[0.52 0.625  0.05 0.025],'Style','pushbutton','Tag','UP','String',char(708),'Callback',@chval,'Enable','on');
 uicontrol(cpanel,'Units','normalized','Position',[0.52 0.6 0.05 0.025],'Style','pushbutton','Tag','DN','String',char(709),'Callback',@chval,'Enable','on');
 
