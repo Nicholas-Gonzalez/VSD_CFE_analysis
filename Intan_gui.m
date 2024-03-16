@@ -2778,8 +2778,8 @@ uicontrol(cpanel,'Units','normalized','Position',[0.25 0.78 0.1 0.05],'Style','t
     'String','Coefficients','HorizontalAlignment','right','Enable','on','Tag','Fit');
 uicontrol(cpanel,'Units','normalized','Position',[0.41 0.8 0.1 0.05],'Style','edit',...
     'String','2','Callback',@fitequation,'Enable','on','TooltipString','Number of coefficients','Tag','Fit');
-uicontrol(cpanel,'Units','normalized','Position',[0.52 0.825  0.05 0.025],'Style','pushbutton','Tag','UP','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol(cpanel,'Units','normalized','Position',[0.52 0.8 0.05 0.025],'Style','pushbutton','Tag','DN','String',char(709),'Callback',@chval,'Enable','on');
+uicontrol(cpanel,'Units','normalized','Position',[0.52 0.825  0.05 0.025],'Style','pushbutton','Tag','Fit','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(cpanel,'Units','normalized','Position',[0.52 0.8 0.05 0.025],'Style','pushbutton','Tag','Fit','String',char(709),'Callback',@chval,'Enable','on');
 
 uicontrol(cpanel,'Units','normalized','Position',[0.05 0.70 0.05 0.05],'Style','radiobutton',...
     'Callback',@radio,'Tag','Spline_','Value',0);
@@ -2791,15 +2791,15 @@ uicontrol(cpanel,'Units','normalized','Position',[0.41 0.7 0.1 0.05],'Style','pu
     'String','redo','Callback',@addpoints,'Enable','off','TooltipString','start over adding points for spline','Tag','Spline');
 
 uicontrol(cpanel,'Units','normalized','Position',[0.05 0.60 0.05 0.05],'Style','radiobutton',...
-    'Callback',@radio,'Tag','Spline_reg','Value',0);
+    'Callback',@radio,'Tag','Spline_reg_','Value',0);
 uicontrol(cpanel,'Units','normalized','Position',[0.1 0.58 0.1 0.05],'Style','text',...
-    'String','Spline reg','HorizontalAlignment','left','Enable','off','Tag','Spline_reg','tooltip',"Determine a spline by regular intervals.");
+    'String','Spline','HorizontalAlignment','left','Enable','off','Tag','Spline_reg','tooltip',"Determine a spline by regular intervals.");
 uicontrol(cpanel,'Units','normalized','Position',[0.25 0.58 0.1 0.05],'Style','text',...
-    'String','Coefficients','HorizontalAlignment','right','Enable','on','Tag','Spline_reg');
+    'String','Points','HorizontalAlignment','right','Enable','off','Tag','Spline_reg');
 uicontrol(cpanel,'Units','normalized','Position',[0.41 0.6 0.1 0.05],'Style','edit',...
-    'String','10','Callback',@fitequation,'Enable','on','TooltipString','Number of points','Tag','Spline_reg');
-uicontrol(cpanel,'Units','normalized','Position',[0.52 0.625  0.05 0.025],'Style','pushbutton','Tag','UP','String',char(708),'Callback',@chval,'Enable','on');
-uicontrol(cpanel,'Units','normalized','Position',[0.52 0.6 0.05 0.025],'Style','pushbutton','Tag','DN','String',char(709),'Callback',@chval,'Enable','on');
+    'String','10','Callback',@splinefit,'Enable','off','TooltipString','Number of points','Tag','Spline_reg');
+uicontrol(cpanel,'Units','normalized','Position',[0.52 0.625  0.05 0.025],'Style','pushbutton','Tag','Spline_reg','String',char(708),'Callback',@chval,'Enable','on');
+uicontrol(cpanel,'Units','normalized','Position',[0.52 0.6 0.05 0.025],'Style','pushbutton','Tag','Spline_reg','String',char(709),'Callback',@chval,'Enable','on');
 
 
 uicontrol(cpanel,'Units','normalized','Position',[0.60 0.9 0.3 0.05],'Style','text','String','Select channel');
@@ -2827,7 +2827,7 @@ fparam = lsqcurvefit(fun,p0,tm(1:ds:end),data(1:ds:end),-flimits,flimits,opts);
 
 fplt = plot(props.tm,fun(fparam,props.tm));
 
-scplt = scatter([],[]);
+scplt = scatter([],[],'filled','d','MarkerEdgeColor',[1 0.5 0],'MarkerFaceColor',[1 0.5 0]);
 
 ax.YLim = [min(data) max(data)];
 
@@ -2838,14 +2838,19 @@ props.blapp = struct('apptag',apptag,     'ax',ax,            'plt',plt,...
 guidata(hObject,props)
 
 function chval(hObject,eventdata)
-obj = findobj(hObject.Parent,'Tag','Fit','Style','edit');
+obj = findobj(hObject.Parent,'Tag',hObject.Tag,'Style','edit');
 coef = str2double(get(obj,'String'));
-if strcmp(hObject.Tag,'UP')
+if strcmp(hObject.String,char(708))
     set(obj,'String',num2str(coef+1))
 else
     set(obj,'String',num2str(coef-1))
 end
-fitequation(obj)
+
+if strcmp(hObject.Tag,'Fit')
+    fitequation(obj)
+else
+    splinefit(hObject)
+end
 
 function addpoints(hObject,eventdata)
 intan_tag = guidata(hObject);
@@ -2875,15 +2880,46 @@ while 1==1
 end
 guidata(intan_fig,props)
 
+function splinefit(hObject,eventdata)
+intan_tag = guidata(hObject);
+intan_fig = findobj('Tag',intan_tag);
+fig = hObject.Parent.Parent;
+idx = get(findobj(fig,'Tag','channels'),'Value');
+props = guidata(intan_fig);
+if strcmp(hObject.String,'redo')
+    set(props.blapp.scplt,'XData',[],'YData',[])
+end
+
+npoints = str2double(get(findobj('Tag','Spline_reg','Style','edit'),'String'));
+zerop = find(props.tm>0,1);
+x = round(logspace(log10(zerop),log10(length(props.tm)),npoints));
+% x = round(linspace(zerop,length(props.tm),npoints));
+y = props.data(idx,x);
+
+set(props.blapp.scplt,'XData',props.tm(x),'YData',y)
+if length(x)>1
+    yy = spline(x,y,1:length(props.tm));
+    set(props.blapp.fplt,'YData',yy)
+    sdata = props.data(idx,:) - yy;
+    sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
+    set(props.blapp.splt,'YData',sdata)
+end
+guidata(intan_fig,props)
+
 function radio(hObject,eventdata)
 panel = hObject.Parent;
-tags = ["Fit","Spline"];
-tagidx = contains(tags,hObject.Tag(1:end-1));
-set(findobj(panel,'Tag',tags{tagidx}),'Enable','on')
-set(findobj(panel,'Tag',tags{~tagidx}),'Enable','off')
-set(findobj(panel,'Tag',[tags{~tagidx} '_']),'Value',0)
-if find(tagidx)==1
+tags = ["Fit","Spline","Spline_reg"];
+cmds = ["off","on"];
+for t=1:length(tags)
+    turnon = strcmp(tags{t},hObject.Tag(1:end-1));
+    set(findobj(panel,'Tag',tags{t}),'Enable',cmds(turnon+1))
+    set(findobj(panel,'Tag',[tags{t} '_']),'Value',turnon)
+end
+
+if strcmp(hObject.Tag,'Fit_')
     fitequation(hObject.Parent)
+elseif strcmp(hObject.Tag,'Spline_reg_')
+    splinefit(findobj(panel,'Tag','Spline_reg','Style','edit'))
 end
 
 function chchannel(hObject,eventdata)
@@ -2891,7 +2927,11 @@ intan_tag = guidata(hObject);
 props = guidata(findobj('Tag',intan_tag));
 idx = get(findobj(hObject,'Tag','channels'),'Value');
 set(props.blapp.plt,'YData',props.data(idx,:))
-fitequation(hObject)
+if get(findobj(hObject.Parent,'Tag','Fit_'),'Value')
+    fitequation(hObject)
+elseif get(findobj(hObject.Parent,'Tag','Spline_reg_'),'Value')
+    splinefit(hObject)
+end
 
 function [fun] = makefun(coef)
 estr = 'fun = @(p,x) 0 ';
@@ -2968,43 +3008,62 @@ hObject.String = 'Applying...';
 hObject.BackgroundColor = [0.6 1 0.6];
 pause(0.1)
 idx = get(findobj(panel,'Tag','chapply'),'Value');
-coef = str2double(get(findobj(panel,'Tag','Fit','Style','edit'),'String'));
-fun = makefun(coef);
-
-flimits = props.blapp.flimits;
-p0 = props.blapp.p0;
-
-props.blapp.applyparam = nan(length(idx),50);
-props.blapp.applyidx = idx;
-props.blapp.fun = fun;
-props.blapp.coef = coef;
-opts = optimset('Display','off','Algorithm','levenberg-marquardt');
-ds = 20000;%downsample
 
 props.bmin = min(props.data,[],2);
 props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
 props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16');
 props.log = [props.log; 'updated backup of data'];
 
-for i=1:length(idx)
-    hObject.String = ['Applying..' num2str(i)];
-    pause(0.1)
+if get(findobj(hObject.Parent,'Tag','Fit_'),'Value')
+    coef = str2double(get(findobj(panel,'Tag','Fit','Style','edit'),'String'));
+    fun = makefun(coef);
+    
+    flimits = props.blapp.flimits;
+    p0 = props.blapp.p0;
+    
+    props.blapp.applyparam = nan(length(idx),50);
+    props.blapp.applyidx = idx;
+    props.blapp.fun = fun;
+    props.blapp.coef = coef;
+    opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+    ds = 20000;%downsample
+    
+    for i=1:length(idx)
+        hObject.String = ['Applying..' num2str(i)];
+        pause(0.1)
+    
+        tm = props.tm;
+        data = props.data(idx(i),:);
+        data(isnan(data)) = 0;
+        tm(data(:)==data(1)) = [];
+        data(:,data(end,:)==data(end,1)) = [];
+    
+        fparam = lsqcurvefit(fun, p0, tm(1:ds:end), data(1:ds:end), -flimits, flimits, opts);
+        props.blapp.applyparam(i,:) = fparam;
+        sdata = props.data(idx(i),:) - fun(fparam,props.tm);
+        sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
+        props.data(idx(i),:) = sdata;
+    end
+    
+    props.log = [props.log; 'Removed baseline using ' num2str(props.blapp.coef),...
+        ' coefficients, downsample = ' num2str(ds) ',  idx = ' char(join(string(idx),','))];
+elseif get(findobj(hObject.Parent,'Tag','Spline_reg_'),'Value')
+    npoints = str2double(get(findobj('Tag','Spline_reg','Style','edit'),'String'));
+    zerop = find(props.tm>0,1);
+    x = round(logspace(log10(zerop),log10(length(props.tm)),npoints));
+    for i=1:length(idx)
+        hObject.String = ['Applying..' num2str(i)];
+        pause(0.1)
 
-    tm = props.tm;
-    data = props.data(idx(i),:);
-    data(isnan(data)) = 0;
-    tm(data(:)==data(1)) = [];
-    data(:,data(end,:)==data(end,1)) = [];
-
-    fparam = lsqcurvefit(fun, p0, tm(1:ds:end), data(1:ds:end), -flimits, flimits, opts);
-    props.blapp.applyparam(i,:) = fparam;
-    sdata = props.data(idx(i),:) - fun(fparam,props.tm);
-    sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
-    props.data(idx(i),:) = sdata;
+        y = props.data(idx(i),x);
+        yy = spline(x,y,1:length(props.tm));
+        sdata = props.data(idx(i),:) - yy;
+        sdata(props.tm<1) = sdata(find(props.tm>=1,1)); 
+        props.data(idx(i),:) = sdata;
+    end
+    props.log = [props.log; 'Removed baseline using Spline with ' num2str(npoints),...
+        ' points logrithmically spaced,  idx = ' char(join(string(idx),','))];
 end
-
-props.log = [props.log; 'Removed baseline using ' num2str(props.blapp.coef),...
-    ' coefficients, downsample = ' num2str(ds) ',  idx = ' char(join(string(idx),','))];
 
 guidata(findobj('Tag',intan_tag),props)
 close(panel.Parent)
