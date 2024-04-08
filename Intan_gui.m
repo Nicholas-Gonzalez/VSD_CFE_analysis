@@ -142,6 +142,7 @@ uicontrol(cmpanel,'Units','normalized','Position',[0.33 0.4 0.33 0.1],'Style','p
               'Callback',@remove_artifact,'String','Remove artifact','Enable','off',...
               'Tag','filter','Tooltip','Removes stimulation artifact of data','BackgroundColor',bcolor,'ForegroundColor',tcolor);
 
+
 % column 3
 uicontrol(cmpanel,'Units','normalized','Position',[0.66 0.9 0.33 0.1],'Style','pushbutton','Tag','adjust',...
               'Callback',@spiked,'String','spike detection','Enable','off',...
@@ -1882,23 +1883,34 @@ if tf
     plotdata(hObject)
 end
 
-function remove_artifact(hObject,eventdata)
+function remove_artifact_fun(hObject,eventdata)
 props = guidata(hObject);
-str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
-str(props.hideidx,2) = "gray";
-str(:,4) = string(props.ch);
-str = join(str,'');
-[idx,tf] = listdlg('liststring',str,'SelectionMode','single');
-if tf
-    [~,y] = ginput(1);
-    if y>mean(props.data(idx,:))
-        yidx = find(props.data(idx,:)>y);
-    else
-        yidx = find(props.data(idx,:)<y);
-    end
-    ra = 5;
-    yidx = yidx([true diff(yidx)>ra]);
-    deltax = floor(mean(diff(yidx)));
+intan = findobj('Tag',props.intan_tag);
+fig = hObject.Parent;
+idx = get(findobj(fig,'Tag','rmv_channels'),'Value');
+mck = get(findobj(fig,'Tag','rmv_mean'),'Value');
+pre = str2double(get(findobj(fig,'Tag','prezero'),'String'));
+post = str2double(get(findobj(fig,'Tag','postzero'),'String'));
+pre = round(pre/diff(props.tm(1:2))/1000);
+post = round(post/diff(props.tm(1:2))/1000);
+close(fig)
+
+[~,y] = ginput(1);
+if y>mean(props.data(idx,:))
+    yidx = find(props.data(idx,:)>y);
+else
+    yidx = find(props.data(idx,:)<y);
+end
+ra = 20;
+yidx = yidx([true diff(yidx)>ra]);
+deltax = floor(mean(diff(yidx)));
+
+props.bmin = min(props.data,[],2);
+props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
+props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
+props.log = [props.log; 'updated backup of data'];
+
+if mck
     prew = 5;
     trim = 20;
     avg = zeros(1,deltax - trim);
@@ -1909,23 +1921,7 @@ if tf
         avg = avg + props.data(idx,yidx(x) - prew:yidx(x) + length(avg) - prew - 1);
     end
     avg = avg/length(yidx);
-    
-%     start = find(abs(diff(avg))>0.04,1,'first');
-%     last = find(abs(diff(avg))>0.04,1,'last');
-%     val = avg(start);   
-%     awin = win(start:last);
-% 
-%     startd = diff(avg(start-1:start));
-%     lastd = diff(avg(last-1:last));
-        
-    props.bmin = min(props.data,[],2);
-    props.bd2uint = repelem(2^16,size(props.data,1),1)./range(props.data,2);
-    props.databackup = convert_uint(props.data, props.bd2uint, props.bmin, 'uint16'); 
-    props.log = [props.log; 'updated backup of data'];
 
-%     for w=1:length(awin)
-%         props.data(idx,yidx+awin(w)) = val;
-%     end
     tic
     for x=1:length(yidx)
         widx = yidx(x) - prew:yidx(x) + length(avg) - prew - 1;
@@ -1935,11 +1931,62 @@ if tf
         props.data(idx,widx(1:ridx + 5)) = 0;
     end
     toc
-    props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').']];
+    props.log = [props.log; ['Removed artifact by mean trace from channel ' num2str(idx) ' (' props.ch{idx} ').']];
+else
+    meand = mean(props.data(idx,:));
+    dur = size(props.data,2);
+    nidx = yidx(1):mode(diff(yidx)):dur;
+    for i=1:length(nidx)
+        widx = nidx(i)-pre:nidx(i)+post;
+        if max(widx)<=dur && min(widx)>1
+            props.data(idx,widx) = meand;
+        end
+    end
+    props.log = [props.log; ['Removed artifact by mean scalar from channel ' num2str(idx) ' (' props.ch{idx} ').']];
+end
 
-%     props.log = [props.log; ['Removed artifact from channel ' num2str(idx) ' (' props.ch{idx} ').  Replaced with value of ' num2str(val)]];
-    guidata(hObject,props)
-    plotdata(hObject)
+guidata(intan,props)
+plotdata(intan)
+
+function remove_artifact(hObject,eventdata)
+props = guidata(hObject);
+str = repmat(["<HTML><FONT color=""", "black", """>", "", "</FONT></HTML>"],length(props.ch),1);
+str(props.hideidx,2) = "gray";
+str(:,4) = string(props.ch);
+str = join(str,'');
+mfpos = get(findobj('Tag',props.intan_tag),'Position');
+f2 = figure("Name",'Select channel','NumberTitle','off','MenuBar','none');
+f2.Position = [mfpos(1:2)+100 160 400];
+
+uicontrol('Position',[30 565 100 20],'Style','text','String','Select channel');
+uicontrol('Position',[30 100 100 290],'Style','listbox','Max',length(props.ch),...
+    'Min',1,'String',str','Tag','rmv_channels');
+uicontrol('Position',[0 5 80 30],'Style','pushbutton','String','Remove','Callback',@remove_artifact_fun); 
+uicontrol('Position',[80 5 80 30],'Style','pushbutton','String','Cancel','Callback',@closefig); 
+
+uicontrol('Position',[60 35 40 20],'Style','edit','String','3','Tag','prezero','Enable','off');
+uicontrol('Position',[100 35 40 20],'Style','edit','String','25','Tag','postzero','Enable','off');
+uicontrol('Position',[10 35 40 18],'Style','text','String','Region','Tag','zerotxt','Enable','off')
+uicontrol('Position',[140 35 20 18],'Style','text','String','ms','Tag','zerotxt','Enable','off')
+
+bg = uibuttongroup('Units','Pixels','Position',[30 58 100 39]);%,'SelectionChangedFcn',@bpass,'Tag','fband');
+
+uicontrol(bg,'Position',[10 15 40 20],'Style','text','String','Mean')
+uicontrol(bg,'Position',[50 15 40 20],'Style','text','String','Zero')
+uicontrol(bg,'Position',[20 5 40 15],'Style','radiobutton','Value',1,'Tag','rmv_mean','Callback',@rmv_artifact_radio)
+uicontrol(bg,'Position',[60 5 40 15],'Style','radiobutton','Value',0,'Callback',@rmv_artifact_radio)
+guidata(f2,props)
+
+function closefig(hObject,eventdata)
+close(hObject.Parent)
+
+function rmv_artifact_radio(hObject,eventdata)
+fig = hObject.Parent.Parent;
+obj = findobj(fig,'-regexp','Tag','zero');
+if strcmp(obj(1).Enable,'on')
+    set(obj,'Enable','off')
+else
+    set(obj,'Enable','on')
 end
 
 function sortlist(hObject,eventdata)
@@ -2797,7 +2844,7 @@ uicontrol(cpanel,'Units','normalized','Position',[0.1 0.58 0.1 0.05],'Style','te
 uicontrol(cpanel,'Units','normalized','Position',[0.25 0.58 0.1 0.05],'Style','text',...
     'String','Points','HorizontalAlignment','right','Enable','off','Tag','Spline_reg');
 uicontrol(cpanel,'Units','normalized','Position',[0.41 0.6 0.1 0.05],'Style','edit',...
-    'String','10','Callback',@splinefit,'Enable','off','TooltipString','Number of points','Tag','Spline_reg');
+    'String','15','Callback',@splinefit,'Enable','off','TooltipString','Number of points','Tag','Spline_reg');
 uicontrol(cpanel,'Units','normalized','Position',[0.52 0.625  0.05 0.025],'Style','pushbutton','Tag','Spline_reg','String',char(708),'Callback',@chval,'Enable','on');
 uicontrol(cpanel,'Units','normalized','Position',[0.52 0.6 0.05 0.025],'Style','pushbutton','Tag','Spline_reg','String',char(709),'Callback',@chval,'Enable','on');
 
@@ -2892,7 +2939,12 @@ end
 
 npoints = str2double(get(findobj('Tag','Spline_reg','Style','edit'),'String'));
 zerop = find(props.tm>0,1);
-x = round(logspace(log10(zerop),log10(length(props.tm)),npoints));
+nonan = find(~isnan(props.data(end,:)),1,'last');
+x = round(logspace(log10(zerop),log10(nonan),npoints));
+x = [x , nonan-1500];
+if diff(x(end-1:end))<length(props.tm)/50
+    x(end) = [];
+end
 % x = round(linspace(zerop,length(props.tm),npoints));
 y = props.data(idx,x);
 
@@ -3050,7 +3102,12 @@ if get(findobj(hObject.Parent,'Tag','Fit_'),'Value')
 elseif get(findobj(hObject.Parent,'Tag','Spline_reg_'),'Value')
     npoints = str2double(get(findobj('Tag','Spline_reg','Style','edit'),'String'));
     zerop = find(props.tm>0,1);
-    x = round(logspace(log10(zerop),log10(length(props.tm)),npoints));
+    nonan = find(~isnan(props.data(end,:)),1,'last');
+    x = round(logspace(log10(zerop),log10(nonan),npoints));
+    x = [x , nonan-1500];
+    if diff(x(end-1:end))<length(props.tm)/50
+        x(end) = [];
+    end
     for i=1:length(idx)
         hObject.String = ['Applying..' num2str(i)];
         pause(0.1)
