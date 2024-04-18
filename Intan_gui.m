@@ -5164,7 +5164,7 @@ if isequal(file,0) || isequal(path,0)
     disp('Canceled')
 else
     s = dir(fullfile(path,file));
-    if ~isempty(s) && s.bytes>2e6
+    if ~isempty(s) && s.bytes>1e7
         answer = questdlg('The file you are overwriting seems too big for a BMP_analysis file.  Are you sure this is the correct file?','WARNING!','Proceed','Cancel','Cancel');
         if strcmp(answer,'Cancel')
             return
