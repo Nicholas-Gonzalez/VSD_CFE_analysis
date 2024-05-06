@@ -1271,7 +1271,11 @@ end
 
 if isfield(props,'matfile')
     str(contains(str,props.matfile)) = [];
-    str = [props.matfile;str];
+    if ~isempty(str)
+        str = [props.matfile;str];
+    else
+        str = string(props.matfile);
+    end
 end
 
 writematrix(str,props.appfile)
