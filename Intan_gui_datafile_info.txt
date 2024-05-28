@@ -80,6 +80,7 @@ intan_tag        = Intan_gui object identifier (temp)
 newim        = logical, whether the user has loaded an image to be added as one of the RGB channels.
 color        = color pallete of the the intan_gui
 spikedetection        = all of the info and data pertaining to spike detection
+spikedetection.spikes = the index of all the spikes detected by the spike detection algorithm. Cell array where each cell contains the spike indices for the channel in data (each row of the data).
 spikedetection.params = the parameters used to detect the spikes.  Structure array.  Each row is a channel in props.data. 
                         ckdv    = logical, whether the threshold is relative to the difference
 						ck1     = logical, whether the first threshold is used. If ck1 == 0 disregard all params ending in 1 (i.e., dur1 and thr1).
