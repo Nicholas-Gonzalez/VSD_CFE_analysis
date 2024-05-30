@@ -1088,6 +1088,14 @@ plotdata(hObject)
 set(allbut,'Enable','on')
 
 function [spikes, aspike, aspike2,logic] = detection_algorithm(params,W,data,data2,sf,tplt)
+% params = parameters for the spike detection (single channel)
+% W      = window for capturing the spike waveform
+% data   = the VSD trace (single channel)
+% data2  = the VSD trace for a comparative channel (to see if another
+%          neuron or nerve has coincident spike activity.
+% sf     = sample frequency
+% tplt   = threshold plot graphic object
+
 dur1 = round(params.dur1/1000/sf);% convert from time to # indices
 dur2 = round(params.dur2/1000/sf);% convert from time to # indices
 gapdur = round(params.gapdur/1000/sf);% convert from time to # indices
