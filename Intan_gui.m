@@ -2989,12 +2989,13 @@ elseif get(findobj(hObject.Parent,'Tag','Spline_reg_'),'Value')
     splinefit(hObject)
 end
 
-function [fun] = makefun(coef)
+function [fun,params] = makefun(coef)
 estr = 'fun = @(p,x) 0 ';
 for c=1:2:coef*2
     str = sprintf('+ p(%i).*(1 - exp((x - p(1))./-p(%i)))',c+1,c+2);
     estr = [estr, str];
 end
+params = c+2;
 estr = [estr, ';'];
 eval(estr);
 
@@ -3489,11 +3490,239 @@ end
 if strcmp(answ,'Yes')
     video(hObject, diff(props.video.tm(1:2))*1000,false)
 elseif strcmp(answ,'No')
-    answ2 = inputdlg('Frame rate (ms)','Input',[1 35],{'20'});
-    if ~isempty(answ2) && ~isempty(answ2{1})
-        video(hObject,str2double(answ2),true)
-    end
+	fig = figure('MenuBar','none');
+	fig.Position(3:4) = [200 150];
+	guidata(fig,props)
+	dfr = 20;
+	uicontrol('Units','pixels','Position',[0 107 50 20],'Style','text','String',[num2str(diff(props.vsd.tm(1:2))*dfr*1000) ' ms'],...
+		'HorizontalAlignment','right','Tag','vfr')
+	uicontrol('Units','pixels','Position',[120 107 100 20],'Style','text','String','Frame Interval',...
+		'HorizontalAlignment','left')
+	uicontrol('Units','pixels','Position',[60 110 50 20],'Style','edit','String',num2str(dfr),'Callback',@checkfr,'Tag','svfr')
+
+	uicontrol('Units','pixels','Position',[120 87 100 20],'Style','text','String','Exponential',...
+		'HorizontalAlignment','left')
+	uicontrol('Units','pixels','Position',[80 87 30 20],'Style','text','String','3',...
+		'HorizontalAlignment','center','Tag','Ecoeff')
+	uicontrol('Units','pixels','Position',[60 90 20 20],'Style','radiobutton',...
+		'Callback',@radioP,'Tag','radE','Value',0);
+
+	uicontrol('Units','pixels','Position',[120 67 100 20],'Style','text','String','Spline',...
+		'HorizontalAlignment','left')
+	uicontrol('Units','pixels','Position',[80 67 30 20],'Style','text','String','15',...
+		'HorizontalAlignment','center','Tag','Scoeff')
+	uicontrol('Units','pixels','Position',[60 70 20 20],'Style','radiobutton',...
+		'Callback',@radioP,'Tag','radS','Value',1);
+
+	uicontrol('Units','pixels','Position',[5 5 98 20],'Style','pushbutton','String','Test','Callback',@tests)
+	uicontrol('Units','pixels','Position',[102 5 100 20],'Style','pushbutton','String','Run','Callback',@runVideo)
+%     answ2 = inputdlg('Frame rate (ms)','Input',[1 35],{'20'});
+%     if ~isempty(answ2) && ~isempty(answ2{1})
+% %         video(hObject,str2double(answ2),true)
+%     end
 end
+
+function tests(hObject,eventdata)
+props = guidata(hObject);
+fr = str2double(get(findobj('Tag','svfr'),'String'));
+[data,pidx,iframe] = readim(props,fr,20);
+props.vid.pidx = pidx;
+props.vid.data = data;
+props.vid.idx = 1;
+pidx = pidx(1);
+
+out = data(:,1);
+out = (out - out(1))/out(1);
+[py,px] = ind2sub([256,256],pidx);
+
+fig = figure('Position',[100 200 1100 300]);
+
+
+iax = axes('Units','normalized','Position',[0.05 0.1 0.20 0.8],'Tag','imax');
+imagesc(reshape(iframe,256,256));hold on
+colormap('gray')
+scatter(px,py,'w+','Tag','pxloc')
+
+pax(1) = axes('Units','normalized','Position',[0.30 0.1 0.20 0.8]);
+plot(out,'Tag','plto'); hold on
+
+Ecoeff = str2double(get(findobj('Tag','Ecoeff'),'String'));
+[edata,param,fun,este] = expsub(out,Ecoeff);
+plot(edata,'Tag','eplts');hold on
+x = 1:length(edata);
+plot(x,fun(param,x),'Tag','efit')
+este = este*256^2;
+uicontrol('Units','normalized','Position',[ 0.30 0.9 0.2 0.1 ],'Style','text','String',num2str(este),'Tag','estm')
+
+pax(2) = axes('Units','normalized','Position',[0.55 0.1 0.20 0.8]);
+Scoeff = str2double(get(findobj('Tag','Scoeff'),'String'));
+[sdata,sfit,ests] = Splinesub(out,Scoeff);
+plot(out,'Tag','plto'); hold on
+plot(sdata,'Tag','splts'); hold on
+plot(sfit,'Tag','sfit'); hold on
+ests = ests*256^2;
+uicontrol('Units','normalized','Position',[ 0.55 0.9 0.2 0.1 ],'Style','text','String',num2str(ests),'Tag','sstm')
+
+uicontrol('Units','normalized','Position',[ 0.80 0.1 0.1 0.1 ],'Style','pushbutton','String','Next','Callback',@nextpixel)
+
+uicontrol('Units','normalized','Position',[ 0.8 0.8 0.05 0.1 ],'Style','edit','String',num2str(Scoeff),'Tag','npts','Callback',@refit)
+uicontrol('Units','normalized','Position',[ 0.86 0.78 0.1 0.1 ],'Style','text','String','#Points','HorizontalAlignment','left')
+
+
+guidata(fig,props)
+
+function refit(hObject,eventdata)
+props = guidata(hObject);
+idx = props.vid.idx;
+out = props.vid.data(:,idx);
+out = (out - out(1))/out(1);
+
+Scoeff = str2double(get(findobj('Tag','npts'),'String'));
+[sdata,sfit,ests] = Splinesub(out,Scoeff);
+ests = ests*256^2;
+set(findobj('Tag','splts'),'XData',1:length(sdata),'YData',sdata)
+set(findobj('Tag','sfit'),'XData',1:length(sdata),'YData',sfit)
+set(findobj('Tag','sstm'),'String',num2str(ests))
+
+function nextpixel(hObject,eventdata)
+disp('next')
+props = guidata(hObject);
+props.vid.idx = props.vid.idx + 1;
+fr = str2double(get(findobj('Tag','svfr'),'String'));
+if props.vid.idx > size(props.vid.data,2) 
+	[data,pidx] = readim(props,fr);
+	props.vid.pidx = pidx;
+	props.vid.data = data;
+	props.vid.idx = 1;
+end
+guidata(hObject,props)
+idx = props.vid.idx;
+pidx = props.vid.pidx(idx);
+out = props.vid.data(:,idx);
+out = (out - out(1))/out(1);
+[py,px] = ind2sub([256,256],pidx);
+set(findobj('Tag','pxloc'),'XData',px,'YData',py);
+
+Ecoeff = str2double(get(findobj('Tag','Ecoeff'),'String'));
+[edata,param,fun,este] = expsub(out,Ecoeff);
+este = este*256^2;
+set(findobj('Tag','plto'),'XData',1:length(out),'YData',out)
+set(findobj('Tag','eplts'),'XData',1:length(edata),'YData',edata)
+set(findobj('Tag','efit'),'XData',1:length(edata),'YData',fun(param,1:length(edata)))
+set(findobj('Tag','estm'),'String',num2str(este))
+
+Scoeff = str2double(get(findobj('Tag','npts'),'String'));
+[sdata,sfit,ests] = Splinesub(out,Scoeff);
+ests = ests*256^2;
+set(findobj('Tag','splts'),'XData',1:length(edata),'YData',sdata)
+set(findobj('Tag','sfit'),'XData',1:length(edata),'YData',sfit)
+set(findobj('Tag','sstm'),'String',num2str(ests))
+
+function [odata,param,fun,est] = expsub(data,coef)
+[fun,np] = makefun(coef);
+p0 = ones(1,np);
+flimits = inf([1,np]);
+opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+
+ds = 1;
+
+data = data(:);
+tm = 1:length(data);
+tm = tm(:);
+tic
+param = lsqcurvefit(fun,p0,tm(1:ds:end),data(1:ds:end),-flimits,flimits,opts);
+est = toc;
+odata = data - fun(param,tm);
+
+function [sdata,yy,est] = Splinesub(data,coef)
+data = data(:);
+x = round(logspace(log10(1),log10(length(data)),coef));
+tic
+yy = spline(x,data(x),1:length(data));
+est = toc;
+sdata = data - yy(:);
+
+function [imdata,pidx,iframe] = readim(props,fr,np,pidx)
+warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
+info = fitsinfo(props.vsd.info.Filename);
+warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
+
+xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
+ysize = info.PrimaryData.Size(1);
+zsize = info.PrimaryData.Size(3); % Length of recording
+
+if nargin==1
+	fr = 20;
+end
+
+frameLength = xsize*ysize*fr; % Frame length is the product of X and Y axis lengths;
+hoffset = info.PrimaryData.Offset;
+
+sidx = 6:fr:zsize;
+
+imdata = zeros(length(sidx),np);
+
+if nargin<3
+	np = 1;
+end
+
+if nargin<4
+	det = props.det;
+	det(det==0) = [];
+	pidx = det(randi(length(det),[np 1]));
+end
+
+pfig = figure('Name','Progress','NumberTitle','off','MenuBar','none');
+pfig.Position(3:4) = [300 50];
+pax = axes('Units','normalized','Position',[0 0 1 1],'XTick',[],'YTick',[],'Box','on','Tag','progax');
+progress = rectangle('Position',[0 0 0 1],'FaceColor','b','Tag','progress');
+pax.XLim = [0 1];
+pause(0.01)
+
+
+fid = fopen(info.Filename,'r');
+for s=1:length(sidx)
+    offset = hoffset + ... Header information takes 2880 bytes.
+                (sidx(s)-1)*xsize*ysize*2; % Because each integer takes two bytes.
+    
+    fseek(fid,offset,'bof');% Find target position on file.
+    
+    % Read data.
+    fdata = fread(fid,frameLength,'int16=>single');%'int16=>double');% single saves about 25% processing time and requires half of memory 
+   
+	if s==100
+		iframe = reshape(fdata(1:256*256),256,256);
+	end
+
+    if length(fdata)<frameLength
+        break
+	end
+	assignin('base','fdata',fdata)
+
+    fdata = reshape(fdata,[xsize*ysize fr]);
+
+
+    imdata(s,:) = mean(fdata(pidx,:),2);
+
+	if mod(s,200)==0
+        set(progress,'Position',[0 0 s/(length(sidx)-1) 1]);pause(0.05)
+	end
+end
+imdata(end,:) = [];
+close(pfig)
+fclose(fid);
+
+function radioP(hObject,eventdata)
+panel = hObject.Parent;
+tag = ["radE","radS"];
+idx = contains(tag,hObject.Tag);
+set(findobj('Tag',tag(~idx)),'Value',0)
+
+function checkfr(hObject,eventdata)
+props = guidata(hObject);
+svfr = get(findobj('Tag','svfr'),'String');
+svfr = sscanf(svfr,'%i');
+set(findobj('Tag','vfr'),'String',[num2str(diff(props.vsd.tm(1:2))*svfr*1000) ' ms'])
 
 function video(hObject,fr,redo)
 props = guidata(hObject);
