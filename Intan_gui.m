@@ -3500,32 +3500,55 @@ elseif strcmp(answ,'No')
 		'HorizontalAlignment','left')
 	uicontrol('Units','pixels','Position',[60 110 50 20],'Style','edit','String',num2str(dfr),'Callback',@checkfr,'Tag','svfr')
 
-	uicontrol('Units','pixels','Position',[120 87 100 20],'Style','text','String','Exponential',...
+
+	uicontrol('Units','pixels','Position',[50 87 30 20],'Style','text','String','Coef',...
+		'HorizontalAlignment','center')
+	uicontrol('Units','pixels','Position',[80 87 35 20],'Style','text','String','Points',...
+		'HorizontalAlignment','center')
+
+	uicontrol('Units','pixels','Position',[120 67 100 20],'Style','text','String','Exponential',...
 		'HorizontalAlignment','left')
-	uicontrol('Units','pixels','Position',[80 87 30 20],'Style','text','String','3',...
+	uicontrol('Units','pixels','Position',[50 67 30 20],'Style','text','String','3',...
 		'HorizontalAlignment','center','Tag','Ecoeff')
-	uicontrol('Units','pixels','Position',[60 90 20 20],'Style','radiobutton',...
+	uicontrol('Units','pixels','Position',[80 67 30 20],'Style','text','String','30',...
+		'HorizontalAlignment','center','Tag','Enpts')
+	uicontrol('Units','pixels','Position',[20 70 20 20],'Style','radiobutton',...
 		'Callback',@radioP,'Tag','radE','Value',0);
 
-	uicontrol('Units','pixels','Position',[120 67 100 20],'Style','text','String','Spline',...
+	uicontrol('Units','pixels','Position',[120 47 100 20],'Style','text','String','Spline',...
 		'HorizontalAlignment','left')
-	uicontrol('Units','pixels','Position',[80 67 30 20],'Style','text','String','15',...
-		'HorizontalAlignment','center','Tag','Scoeff')
-	uicontrol('Units','pixels','Position',[60 70 20 20],'Style','radiobutton',...
+	uicontrol('Units','pixels','Position',[80 47 30 20],'Style','text','String','30',...
+		'HorizontalAlignment','center','Tag','Snpts')
+	uicontrol('Units','pixels','Position',[20 50 20 20],'Style','radiobutton',...
 		'Callback',@radioP,'Tag','radS','Value',1);
 
 	uicontrol('Units','pixels','Position',[5 5 98 20],'Style','pushbutton','String','Test','Callback',@tests)
 	uicontrol('Units','pixels','Position',[102 5 100 20],'Style','pushbutton','String','Run','Callback',@runVideo)
-%     answ2 = inputdlg('Frame rate (ms)','Input',[1 35],{'20'});
-%     if ~isempty(answ2) && ~isempty(answ2{1})
-% %         video(hObject,str2double(answ2),true)
-%     end
 end
+
+function runVideo(hObject,eventdata)
+props = guidata(hObject);
+if get(findobj('Tag','radE'),'Value')
+	props.video.baseline_params.style = 'Exponential';
+	ecoeff = get(findobj('Tag','Ecoeff'),'String');
+	props.video.baseline_params.ncoeff = str2double(ecoeff);
+	fun = makefun(coef);
+	props.video.baseline_params.fun = fun;
+	npts = get(findobj('Tag','Enpts'),'String');
+else
+	props.video.baseline_params.style = 'Spline';
+	npts = get(findobj('Tag','Snpts'),'String');
+end
+props.video.baseline_params.npts = str2double(npts);
+fr = get(findobj('Tag','svfr'),'String');
+props.video.fr = str2double(fr);
+guidata(findobj('Tag',props.intan_tag),props)
+video(props.intan_tag,true)
 
 function tests(hObject,eventdata)
 props = guidata(hObject);
 fr = str2double(get(findobj('Tag','svfr'),'String'));
-[data,pidx,iframe] = readim(props,fr,20);
+[data,pidx,iframe] = readim(props,fr,40);
 props.vid.pidx = pidx;
 props.vid.data = data;
 props.vid.idx = 1;
@@ -3535,41 +3558,59 @@ out = data(:,1);
 out = (out - out(1))/out(1);
 [py,px] = ind2sub([256,256],pidx);
 
-fig = figure('Position',[100 200 1100 300]);
+fig = figure('Position',[100 200 1100 350]);
 
 
-iax = axes('Units','normalized','Position',[0.05 0.1 0.20 0.8],'Tag','imax');
+iax = axes('Units','normalized','Position',[0.05 0.1 0.20 0.75],'Tag','imax');
 imagesc(reshape(iframe,256,256));hold on
 colormap('gray')
 scatter(px,py,'w+','Tag','pxloc')
 
-pax(1) = axes('Units','normalized','Position',[0.30 0.1 0.20 0.8]);
+pax(1) = axes('Units','normalized','Position',[0.30 0.1 0.20 0.75]);
+pax(1).Title.String = 'Exponential';
 plot(out,'Tag','plto'); hold on
 
+nptse = str2double(get(findobj('Tag','Enpts'),'String'));
 Ecoeff = str2double(get(findobj('Tag','Ecoeff'),'String'));
-[edata,param,fun,este] = expsub(out,Ecoeff);
+[edata,param,fun,este] = expsub(out,Ecoeff,nptse);
 plot(edata,'Tag','eplts');hold on
 x = 1:length(edata);
 plot(x,fun(param,x),'Tag','efit')
 este = este*256^2;
 uicontrol('Units','normalized','Position',[ 0.30 0.9 0.2 0.1 ],'Style','text','String',num2str(este),'Tag','estm')
 
-pax(2) = axes('Units','normalized','Position',[0.55 0.1 0.20 0.8]);
-Scoeff = str2double(get(findobj('Tag','Scoeff'),'String'));
-[sdata,sfit,ests] = Splinesub(out,Scoeff);
+nptss = str2double(get(findobj('Tag','Snpts'),'String'));
+pax(2) = axes('Units','normalized','Position',[0.55 0.1 0.20 0.75]);
+pax(2).Title.String = 'Spline';
+[sdata,sfit,ests] = Splinesub(out,nptss);
 plot(out,'Tag','plto'); hold on
 plot(sdata,'Tag','splts'); hold on
 plot(sfit,'Tag','sfit'); hold on
 ests = ests*256^2;
 uicontrol('Units','normalized','Position',[ 0.55 0.9 0.2 0.1 ],'Style','text','String',num2str(ests),'Tag','sstm')
 
-uicontrol('Units','normalized','Position',[ 0.80 0.1 0.1 0.1 ],'Style','pushbutton','String','Next','Callback',@nextpixel)
+uicontrol('Units','normalized','Position',[ 0.80 0.88 0.10 0.1 ],'Style','text','String','Exponential','HorizontalAlignment','left')
+uicontrol('Units','normalized','Position',[ 0.80 0.80 0.05 0.1 ],'Style','edit','String',num2str(nptse),'Tag','nptse','Callback',@refit)
+uicontrol('Units','normalized','Position',[ 0.86 0.78 0.10 0.1 ],'Style','text','String','#Points','HorizontalAlignment','left')
+uicontrol('Units','normalized','Position',[ 0.80 0.70 0.05 0.1 ],'Style','edit','String',num2str(Ecoeff),'Tag','Ecoefftest','Callback',@refit)
+uicontrol('Units','normalized','Position',[ 0.86 0.68 0.10 0.1 ],'Style','text','String','#Coefficients','HorizontalAlignment','left')
 
-uicontrol('Units','normalized','Position',[ 0.8 0.8 0.05 0.1 ],'Style','edit','String',num2str(Scoeff),'Tag','npts','Callback',@refit)
-uicontrol('Units','normalized','Position',[ 0.86 0.78 0.1 0.1 ],'Style','text','String','#Points','HorizontalAlignment','left')
+uicontrol('Units','normalized','Position',[ 0.80 0.58 0.10 0.1 ],'Style','text','String','Spline','HorizontalAlignment','left')
+uicontrol('Units','normalized','Position',[ 0.80 0.50 0.05 0.1 ],'Style','edit','String',num2str(nptss),'Tag','nptss','Callback',@refit)
+uicontrol('Units','normalized','Position',[ 0.86 0.48 0.10 0.1 ],'Style','text','String','#Points','HorizontalAlignment','left')
 
+uicontrol('Units','normalized','Position',[ 0.80 0.10 0.10 0.1 ],'Style','pushbutton','String','Next','Callback',@nextpixel)
+uicontrol('Units','normalized','Position',[ 0.90 0.10 0.10 0.1 ],'Style','pushbutton','String','Apply','Callback',@applyp)
 
 guidata(fig,props)
+
+function applyp(hObject,eventdata)
+Ecoeff = str2double(get(findobj('Tag','Ecoefftest'),'String'));
+set(findobj('Tag','Ecoeff'),'String',num2str(Ecoeff))
+nptse = str2double(get(findobj('Tag','nptse'),'String'));
+set(findobj('Tag','Enpts'),'String',num2str(nptse))
+nptss = str2double(get(findobj('Tag','nptss'),'String'));
+set(findobj('Tag','Snpts'),'String',num2str(nptss))
 
 function refit(hObject,eventdata)
 props = guidata(hObject);
@@ -3577,11 +3618,20 @@ idx = props.vid.idx;
 out = props.vid.data(:,idx);
 out = (out - out(1))/out(1);
 
-Scoeff = str2double(get(findobj('Tag','npts'),'String'));
-[sdata,sfit,ests] = Splinesub(out,Scoeff);
+Ecoeff = str2double(get(findobj('Tag','Ecoefftest'),'String'));
+nptse = str2double(get(findobj('Tag','nptse'),'String'));
+[edata,param,fun,este] = expsub(out,Ecoeff,nptse);
+este = este*256^2;
+set(findobj('Tag','plto'),'XData',1:length(out),'YData',out)
+set(findobj('Tag','eplts'),'XData',1:length(edata),'YData',edata)
+set(findobj('Tag','efit'),'XData',1:length(edata),'YData',fun(param,1:length(edata)))
+set(findobj('Tag','estm'),'String',num2str(este))
+
+nptss = str2double(get(findobj('Tag','nptss'),'String'));
+[sdata,sfit,ests] = Splinesub(out,nptss);
 ests = ests*256^2;
-set(findobj('Tag','splts'),'XData',1:length(sdata),'YData',sdata)
-set(findobj('Tag','sfit'),'XData',1:length(sdata),'YData',sfit)
+set(findobj('Tag','splts'),'XData',1:length(edata),'YData',sdata)
+set(findobj('Tag','sfit'),'XData',1:length(edata),'YData',sfit)
 set(findobj('Tag','sstm'),'String',num2str(ests))
 
 function nextpixel(hObject,eventdata)
@@ -3602,41 +3652,29 @@ out = props.vid.data(:,idx);
 out = (out - out(1))/out(1);
 [py,px] = ind2sub([256,256],pidx);
 set(findobj('Tag','pxloc'),'XData',px,'YData',py);
+refit(hObject);
 
-Ecoeff = str2double(get(findobj('Tag','Ecoeff'),'String'));
-[edata,param,fun,este] = expsub(out,Ecoeff);
-este = este*256^2;
-set(findobj('Tag','plto'),'XData',1:length(out),'YData',out)
-set(findobj('Tag','eplts'),'XData',1:length(edata),'YData',edata)
-set(findobj('Tag','efit'),'XData',1:length(edata),'YData',fun(param,1:length(edata)))
-set(findobj('Tag','estm'),'String',num2str(este))
-
-Scoeff = str2double(get(findobj('Tag','npts'),'String'));
-[sdata,sfit,ests] = Splinesub(out,Scoeff);
-ests = ests*256^2;
-set(findobj('Tag','splts'),'XData',1:length(edata),'YData',sdata)
-set(findobj('Tag','sfit'),'XData',1:length(edata),'YData',sfit)
-set(findobj('Tag','sstm'),'String',num2str(ests))
-
-function [odata,param,fun,est] = expsub(data,coef)
+function [odata,param,fun,est] = expsub(data,coef,npts)
 [fun,np] = makefun(coef);
 p0 = ones(1,np);
 flimits = inf([1,np]);
 opts = optimset('Display','off','Algorithm','levenberg-marquardt');
 
-ds = 1;
+x = round(logspace(log10(1),log10(length(data)),npts));
+x = unique(x);
 
 data = data(:);
 tm = 1:length(data);
 tm = tm(:);
 tic
-param = lsqcurvefit(fun,p0,tm(1:ds:end),data(1:ds:end),-flimits,flimits,opts);
+param = lsqcurvefit(fun,p0,tm(x),data(x),-flimits,flimits,opts);
 est = toc;
 odata = data - fun(param,tm);
 
-function [sdata,yy,est] = Splinesub(data,coef)
+function [sdata,yy,est] = Splinesub(data,npts)
 data = data(:);
-x = round(logspace(log10(1),log10(length(data)),coef));
+x = round(logspace(log10(1),log10(length(data)),npts));
+x = unique(x);
 tic
 yy = spline(x,data(x),1:length(data));
 est = toc;
@@ -3724,8 +3762,9 @@ svfr = get(findobj('Tag','svfr'),'String');
 svfr = sscanf(svfr,'%i');
 set(findobj('Tag','vfr'),'String',[num2str(diff(props.vsd.tm(1:2))*svfr*1000) ' ms'])
 
-function video(hObject,fr,redo)
-props = guidata(hObject);
+function video(intan_tag,redo)
+intan = findobj('Tag',intan_tag);
+props = guidata(intan);
 ofigsize = props.figsize;
 
 apptag = ['apptag' num2str(randi(1e4,1))];
@@ -3735,7 +3774,7 @@ vfig = figure('Position',[ofigsize(1) ofigsize(4)*0.06+ofigsize(2) ofigsize(3)*0
 m = uimenu('Text','Video');
 mi(1) = uimenu(m,'Text','Save Image Frame','Callback',@saveframe);
 
-guidata(vfig,props.intan_tag)
+guidata(vfig,intan_tag)
 
 pax = axes('Units','normalized','Position',[10 0.05 0.25 0.05],'XTick',[],'YTick',[],'Box','on','Tag','progax');
 prog = rectangle('Position',[0 0 0 1],'FaceColor','b','Tag','progress');
@@ -3746,12 +3785,8 @@ uicontrol('Units','normalized','Position',[5.72 0.12 0.25 0.04],...
 
 pause(0.1)
 
-vsd = props.files(contains(props.files(:,2),'tsm'),2);
-
-
-
 if redo
-    [imdatas,fparam,fun,imdata,tm,imdataroi,kerndata] = getimdata(vsd,1,vfig,fr);
+    [imdatas,fparam,fun,imdata,tm,imdataroi,kerndata] = getimdata(props,1,vfig,props.video.fr);%getimdata(vsd,1,vfig,fr)
     props.video.imdata = permute(imdatas,[2,1,3]);
     props.video.imdatar = permute(imdata,[2,1,3]);
     props.video.imdataroi = permute(imdataroi,[2,1,3]);
@@ -4065,7 +4100,7 @@ uicontrol('Units','normalized','Position',[0.29 0.31 0.07 0.03],'Style','text',.
     'String','Frame interval (ms)','HorizontalAlignment','right','Enable','on');
 
 uicontrol('Units','normalized','Position',[0.37 0.32 0.06 0.03],'Style','edit',...
-    'Tag','framerate','String',num2str(fr),'HorizontalAlignment','center',...
+    'Tag','framerate','String',num2str(props.video.fr),'HorizontalAlignment','center',...
     'Callback',@framerate,'Enable','on');
 end
 
@@ -4229,7 +4264,7 @@ uicontrol('Units','normalized','Position',[0.28 0.00 0.08 0.04],'Style','pushbut
     'String','Make Audio','Callback',@exportav,'Enable','on','Tag','audioonly');
 end
 
-guidata(hObject,props)
+guidata(intan,props)
 chframe(findobj(vfig,'Tag','imslider'))
 
 function update_notes(hObject,eventdata)
@@ -4743,13 +4778,12 @@ imgax = findobj(hObject.Parent,'Tag','imgax');
 caxis(imgax,props.video.climv)
 guidata(intan,props)
 
-function [imdatas,fparam,fun,imdata,tm,imdatarois,kerndata] = getimdata(vsd,ref,vfig,ifi)
+function [imdatas,fparam,fun,imdata,tm,imdatarois,kerndata] = getimdata(props,ref,vfig,ifi)
+%getimdata(vsd,ref,vfig,ifi)
+vsd = props.vsd.info.Filename;
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
-
-intan = findobj('Tag',guidata(vfig));
-props = guidata(intan);
 
 xsize = info.PrimaryData.Size(2); % Note that xsize is second value, not first.
 ysize = info.PrimaryData.Size(1);
@@ -4758,14 +4792,14 @@ sr = info.PrimaryData.Keywords{cellfun(@(x) strcmp(x,'EXPOSURE'),info.PrimaryDat
 
 if nargin<4
     ifi = str2double(get(findobj(vfig,'Tag','framerate'),'String'));
+	ifi = round(ifi/sr/1000);
 end
 
-interval = round(ifi/sr/1000);disp(interval)
-
-frameLength = xsize*ysize*interval; % Frame length is the product of X and Y axis lengths;
+frameLength = xsize*ysize*ifi; % Frame length is the product of X and Y axis lengths;
 hoffset = info.PrimaryData.Offset;
 
-sidx = 6:interval:zsize;
+sidx = 6:ifi:zsize;%<--- this is where I finished. I didn't fully propagate changes of props 
+% and i didn't change the fitting
 
 imdata = zeros(length(sidx),ysize*xsize,'single');
 imdataroi = imdata;
@@ -4773,7 +4807,7 @@ imdataroi = imdata;
 outp = round(size(imdata,1)/52);
 
 progress = findobj(vfig,'Tag','progress');
-set(findobj(vfig,'Tag','progtxt'),'String',['reading image file ' vsd{1}],'Position',[0.72 0.12 0.25 0.04]);
+set(findobj(vfig,'Tag','progtxt'),'String',['reading image file ' vsd],'Position',[0.72 0.12 0.25 0.04]);
 set(findobj(vfig,'Tag','progax'),'Position',[0.72 0.05 0.25 0.05]);
 pause(0.01)
 
@@ -4798,7 +4832,7 @@ for s=1:length(sidx)
         break
     end
 
-    fdata = reshape(fdata,[xsize*ysize interval]);
+    fdata = reshape(fdata,[xsize*ysize ifi]);
 
     imdata(s,:) = mean(fdata,2)';% Format data.
     
@@ -4832,44 +4866,70 @@ imdataroi = (imdataroi - f0)./f0;
 f0 = repmat(kerndata(ref,:),size(kerndata,1),1);
 kerndata = (kerndata - f0)./f0;
 
-fun = @(p,x) p(1).*(1 - exp(x./-p(2))) + p(3).*(1 - exp(x./-p(4))) + p(5).*(1 - exp(x./-p(6)));
-% [fun] = makefun(3);
-p0 = ones(1,6);
-flimits = inf([1,6]);
-opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+style = props.video.baseline_params.style;
+if strcmp(style,'Exponential')
+	ncoeff = props.video.baseline_params.ncoeff;
+	fun = props.video.baseline_params.fun;
+	p0 = ones(1,ncoeff*2);
+	flimits = inf([1,ncoeff*2]);
+	opts = optimset('Display','off','Algorithm','levenberg-marquardt');
+else
+	fun = [];
+	fparam = [];
+end
+
+npts = props.video.baseline_params.npts;
+
+x = round(logspace(log10(1),log10(size(imdata,1)),npts));
+x = unique(x);
 
 tm = ((sidx+5)*sr)';% for some reason I need to add five frames of time
 
-set(findobj(vfig,'Tag','progtxt'),'String',['calculate pixel bleaching ' vsd{1}]);
-
-fparam = nan(xsize*ysize,length(p0));
-
-ds = round(800/interval);
+set(findobj(vfig,'Tag','progtxt'),'String',['calculate pixel bleaching ' vsd]);
 
 % pixel bleaching
 tic
-for p=1:size(imdatas,2)
-    pixd = double(imdatas(1:ds:end,p));
-    fparam(p,:) = lsqcurvefit(fun,p0,tm(1:ds:end),pixd,-flimits,flimits,opts);
-    imdatas(:,p) = imdatas(:,p) - fun(fparam(p,:),tm);
-    if mod(p,500)==0%round(size(imdata,2)/52))==0
-         set(progress,'Position',[0 0 p/size(imdatas,2) 1]);pause(0.01)
-    end
+if strcmp(style,'Exponential')
+	fparam = nan(xsize*ysize,length(p0));
+	for p=1:size(imdatas,2)
+    	pixd = double(imdatas(x,p));
+    	fparam(p,:) = lsqcurvefit(fun,p0,tm(x),pixd,-flimits,flimits,opts);
+    	imdatas(:,p) = imdatas(:,p) - fun(fparam(p,:),tm);
+    	if mod(p,500)==0
+         	set(progress,'Position',[0 0 p/size(imdatas,2) 1]);pause(0.01)
+    	end
+	end
+else
+	nsamp = size(imdatas,1);
+	for p=1:size(imdatas,2)
+    	pixd = double(imdatas(:,p));
+    	yy = spline(x,pixd(x),1:nsamp);
+    	imdatas(:,p) = pixd - yy';
+    	if mod(p,500)==0
+         	set(progress,'Position',[0 0 p/size(imdatas,2) 1]);pause(0.01)
+    	end
+	end
 end
 toc
 
-
-set(findobj(vfig,'Tag','progtxt'),'String',['calculate ROI bleaching ' vsd{1}]);
+set(findobj(vfig,'Tag','progtxt'),'String',['calculate ROI bleaching ' vsd]);
 
 imdatarois = imdataroi;
-fparamr = nan(length(kernpos),length(p0));
+if strcmp(style,'Exponential')
+	fparamr = nan(length(kernpos),length(p0));
+end
 
 %ROI bleaching
 tic
 for k=1:length(kernpos)
     kIdx = det(kernpos(k)+1:kernpos(k)+kernel_size(k));
-    fparamr(k,:) = lsqcurvefit(fun,p0,tm(1:ds:end),kerndata(1:ds:end,k),-flimits,flimits,opts);
-    kerndata(:,k) =  kerndata(:,k)  - fun(fparamr(k,:),tm);
+	if strcmp(style,'Exponential')
+    	fparamr(k,:) = lsqcurvefit(fun,p0,tm(x),kerndata(x,k),-flimits,flimits,opts);
+		kerndata(:,k) =  kerndata(:,k)  - fun(fparamr(k,:),tm);
+	else
+		yy = spline(x,kerndata(x,k),1:nsamp);
+    	kerndata(:,k) = kerndata(:,k) - yy';
+	end
     imdatarois(:,kIdx) = repmat( kerndata(:,k), 1, length(kIdx));
     set(progress,'Position',[0 0 k/length(kernpos) 1]);pause(0.01)
 end
