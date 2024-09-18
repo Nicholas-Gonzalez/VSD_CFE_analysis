@@ -342,7 +342,13 @@ uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4
 uicontrol('Units','normalized','Position',[iax.Position(1)+bw sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Unfiltered','Tag','raw2','Callback',@rawimage)
 uicontrol('Units','normalized','Position',[iax.Position(1)+bw*2 sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Filtered','Tag','raw3','Callback',@rawimage)
 uicontrol('Units','normalized','Position',[iax.Position(1)+bw*3 sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Filt - BL','Tag','raw4','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw*4 sum(iax.Position([2 4])) bw 0.05],'Style','pushbutton','String','Invert','Tag','raw5','Callback',@rawimage)
 uicontrol('Units','normalized','Position',[iax.Position(1) sum(iax.Position([2 4]))+0.05 bw 0.05],'Style','pushbutton','String','montage','Tag','montage','Callback',@montagef)
+
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw*5 sum(iax.Position([2 4]))+0.025 bw 0.025],'Style','edit','Tag','iscale2','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw*6 sum(iax.Position([2 4]))+0.025 bw 0.025],'Style','text','String','Upper limit')
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw*5 sum(iax.Position([2 4]))      bw 0.025],'Style','edit','Tag','iscale1','Callback',@rawimage)
+uicontrol('Units','normalized','Position',[iax.Position(1)+bw*6 sum(iax.Position([2 4]))      bw 0.025],'Style','text','String','Lower limit')
 
 helps = ["To detect spikes the data value has to be above this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
          "To detect spikes the data value has to be below this threshold consecutively for as long as the minimum duration.  If active, the reject will remove spikes whose data goes above the reject threshold during the duration.",...
@@ -673,16 +679,33 @@ guidata(hObject,props)
 
 function rawimage(hObject,eventdata)
 props = guidata(hObject);
-set(findobj(hObject.Parent,'-regexp','Tag','raw(1|2|3|4)'),'BackgroundColor',[0.94 0.94 0.94]);
-set(hObject,'BackgroundColor',[0.7 0.7 0.7])
-idx = double(string(regexp(hObject.Tag,'\d','match')));
-props.rawim = idx;
-frame = get(findobj('Tag','imslider','Parent',hObject.Parent) ,'Value')+1;
-if idx==1
-    set(props.img,'CData',props.origim(:,:,1))
-else
-    set(props.img,'CData',props.imdata(:,:,frame,idx-1))
+if contains(hObject.Tag,'raw') && ~contains(hObject.Tag,'5')
+	set(findobj(hObject.Parent,'-regexp','Tag','raw(1|2|3|4|5)'),'BackgroundColor',[0.94 0.94 0.94]);
+	set(hObject,'BackgroundColor',[0.7 0.7 0.7])
+	idx = double(string(regexp(hObject.Tag,'\d','match')));
+	props.rawim = idx;
+	frame = get(findobj('Tag','imslider','Parent',hObject.Parent) ,'Value')+1;
+	if idx==1
+    	set(props.img,'CData',props.origim(:,:,1))
+	else
+    	set(props.img,'CData',props.imdata(:,:,frame,idx-1))
+	end
+elseif contains(hObject.Tag,'5')
+	if hObject.BackgroundColor(1)==0.94
+		set(hObject,'BackgroundColor',[0.7 0.7 0.7])
+	else
+		set(hObject,'BackgroundColor',[0.94 0.94 0.94])
+	end
+	set(props.img,'CData',-props.img.CData);
 end
+iscale(1) = str2double(string(get(findobj('Tag','iscale1'),'String')));
+iscale(2) = str2double(string(get(findobj('Tag','iscale2'),'String')));
+for i=1:length(iscale)
+	if ~isnan(iscale(i))
+		props.img.Parent.CLim(i) = iscale(i);
+	end
+end
+
 guidata(hObject,props)
 
 function montagef(hObject,eventdata)
@@ -762,7 +785,19 @@ props = guidata(hObject);
 frame = round(hObject.Value);
 set(hObject,'Value',frame)
 if props.rawim>1
-    set(props.img,'CData',props.imdata(:,:,frame,props.rawim-1))
+	invback = get(findobj('Tag','raw5'),'Background');
+	if invback(1)==0.7
+		set(props.img,'CData',-props.imdata(:,:,frame,props.rawim-1))
+	else
+		set(props.img,'CData',props.imdata(:,:,frame,props.rawim-1))
+	end
+end
+iscale(1) = str2double(string(get(findobj('Tag','iscale1'),'String')));
+iscale(2) = str2double(string(get(findobj('Tag','iscale2'),'String')));
+for i=1:length(iscale)
+	if ~isnan(iscale(i))
+		props.img.Parent.CLim(i) = iscale(i);
+	end
 end
 idur = get(hObject,'Max');
 sf = diff(props.tm(1:2));
