@@ -1628,8 +1628,8 @@ uicontrol('Units','normalized','Position',[0.65 0.90 0.15 0.05],'Style','edit',.
 uicontrol('Units','normalized','Position',[0.8 0.90 0.15 0.05],'Style','pushbutton','String','Apply','Callback',@setlim);
 
 
-uicontrol('Units','normalized','Position',[0.5 0.7  0.2 0.06],'Style','pushbutton','String','Auto (ind)','Callback',@autolimind);
-uicontrol('Units','normalized','Position',[0.5 0.64 0.2 0.06],'Style','pushbutton','String','Auto (comb)','Callback',@autolimcomb);
+uicontrol('Units','normalized','Position',[0.5 0.7  0.2 0.06],'Style','pushbutton','String','Auto (ind)','Callback',@autolimind,'Tooltip','Autoscale y-axis independently for selected channels');
+uicontrol('Units','normalized','Position',[0.5 0.64 0.2 0.06],'Style','pushbutton','String','Auto (comb)','Callback',@autolimcomb,'Tooltip','Make the same scale for all selected channels and recenter trace');
 
 uicontrol('Units','normalized','Position',[0.50 0.05 0.15 0.07],'Style','pushbutton','String','Reset','Callback',@resetval,'Tooltip','Reset values back to original');
 uicontrol('Units','normalized','Position',[0.65 0.05 0.15 0.07],'Style','pushbutton','String','Keep','Callback',@closeit);
