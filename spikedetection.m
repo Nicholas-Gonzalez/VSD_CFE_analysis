@@ -138,6 +138,9 @@ mi(4) = uimenu(m,'Text','Send to workspace','Callback',@toworkspace,'Enable','on
 mi(5) = uimenu(m,'Text','Send to Intan_Gui','Callback',@tointan,'Enable','on','Tag','savem');
 mi(6) = uimenu(m,'Text','Set Default','Callback',@setdefault,'Enable','on','Tag','savem');
 mi(7) = uimenu(m,'Text','Restore Default','Callback',@restoredefault,'Enable','on','Tag','savem');
+mi(7) = uimenu(m,'Text','Image to Clipboard','Enable','on','Tag','savem');
+rm(1) = uimenu(mi(7),'Text','Montage','Callback',@saveim);
+rm(2) = uimenu(mi(7),'Text','Frame','Callback',@saveim);
 mi(8) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
 
 
@@ -710,12 +713,25 @@ guidata(hObject,props)
 
 function montagef(hObject,eventdata)
 props = guidata(hObject);
+rec = drawrectangle(props.iax);
+y = round(rec.Position(2):sum(rec.Position([2 4])));
+x = round(rec.Position(1):sum(rec.Position([1 3])));
+delete(rec)
 figure
-im = props.imdata(:,:,:,props.rawim);
-im = im - min(im(:));
-im = im/max(im(:));
-montage(im)
-colormap(parula)
+im = props.imdata(y,x,:,props.rawim);
+invback = get(findobj('Tag','raw5'),'Background');
+if invback(1)==0.7
+	im = -im;
+end
+% im = im - min(im(:));
+% im = im/max(im(:));
+mon = montage(im);
+climit = props.img.Parent.CLim;
+colorm = props.img.Parent.Colormap;
+caxis(climit)
+colormap(colorm)
+colorbar
+
 
 function [pixels, vdata] = roidata(pos,imdata)
 pixels = zeros(0,2,'uint16');
@@ -884,6 +900,39 @@ set(findobj(props.panel,'-regexp','Tag','^gpdv'),'Enable',enable(params.ckdv+1))
 
 
 detsp(hObject)
+
+function saveim(hObject,eventdata)
+props = guidata(hObject);
+copygraphics(props.iax,'BackgroundColor','none')
+% fig = findobj('Tag',props.apptag);
+% idx = get(findobj('Tag','channels','Parent',fig),'Value');
+% climit = props.img.Parent.CLim;
+% colorm = props.img.Parent.Colormap;
+% txt = findobj(props.img.Parent,'Type','Text');
+% imf = figure;
+% imagesc(props.img.CData);hold on
+% axis square
+% text('Position',txt(1).Position,'String',txt(1).String,'FontSize',txt(1).FontSize,'Color','w');hold on
+% text('Position',txt(2).Position,'String',txt(2).String,'FontSize',txt(2).FontSize,'Color','w');hold on
+% plot([20 44], [20 20],'Color','w','LineWidth',3);hold on
+% text('Position',[32 30],'String',['100 ' char(956) 'm'],'FontSize',txt(2).FontSize,'HorizontalAlignment','center','Color','w');hold on
+% ax = gca;
+% ax.XTick = [];
+% ax.YTick = [];
+% ax.Color = 'none';
+% caxis(climit)
+% colormap(colorm)
+% colorbar
+% frame = num2str(get(findobj('Tag','imslider'),'Value'));
+% [fn, path] = uiputfile(replace(props.vsd,'.tsm',['_ch_' props.ch{idx} '_fr_' frame '.pdf']));
+% disp('Saved to:')
+% disp(fullfile(path,fn))
+% if ~isempty(fn)
+% % 	saveas(imf,fullfile(path,fn))
+% % 	exportgraphics(ax,fullfile(path,fn))
+% 	copygraphics(ax)
+% end
+msgbox('Copied to clipboard')
 
 function helpf(hObject,eventdata)
 props = guidata(hObject);
