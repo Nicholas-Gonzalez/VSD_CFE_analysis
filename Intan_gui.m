@@ -467,7 +467,7 @@ end
 if isfield(matprops.props.vsdprops,'vsd')% this tempfix for some improperly saved files
     vsdprops.matprops.vsd = matprops.props.vsdprops.vsd;
     vsdprops.matprops.vsd.tm = matprops.props.vsdprops.vsd.tm;
-else
+elseif isfield(matprops.props,'vsd')
     vsdprops.matprops.vsd = matprops.props.vsd;
 end
 vsdprops.matprops.data = matprops.props.data;
@@ -480,7 +480,9 @@ vsdprops.matprops.hideidx = matprops.props.hideidx;
 vsdprops.matprops.notes = matprops.props.notes;
 vsdprops.matprops.finfo = matprops.props.finfo;
 
-fields = ["BMP_analysis","BMP","btype","rn","video","spikedetection","log","filter","databackup","bmin","bd2uint","imadj","note"];
+fields = ["BMP_analysis","BMP","btype","rn","video","spikedetection",...
+	"log","filter","databackup","bmin","bd2uint","imadj","note","Max","det",...
+	"kern_center","kernpos","im","tm","ch"];
 for f=1:length(fields)
     if isfield(matprops.props,fields{f})
         if strcmp(fields{f},"BMP") || strcmp(fields{f},"btype") || strcmp(fields{f},"rn")
@@ -504,15 +506,6 @@ for f=1:length(fields)
     end
 end
 
-
-vsdprops.matprops.Max = matprops.props.Max;
-vsdprops.matprops.tm = matprops.props.tm;
-vsdprops.matprops.ch = matprops.props.ch;
-
-vsdprops.matprops.im = matprops.props.im;
-vsdprops.matprops.det = matprops.props.det;
-vsdprops.matprops.kern_center = matprops.props.kern_center;
-vsdprops.matprops.kernpos = matprops.props.kernpos;
 vsdprops.matprops.curdir = path;
 vsdprops.files = matprops.props.files;
 
@@ -1028,71 +1021,90 @@ elseif vsdch % loaded only vsd data (raw)
     props.curdir = fileparts(filename);
     end
 else % loaded only intan data (raw)
-    for x=1 % add data and BMP
-	assignin("base",'vsdprops',vsdprops)
-    if isfield(vsdprops,'note')
-        for c=1:length(vsdprops.intan.ch)
-            nstr = replace(vsdprops.intan.ch(c),'A-','A');
-            idx = contains(vsdprops.note(:,1),nstr);
-			if any(idx) && ~ismissing(vsdprops.note(idx,2))           
-                nsp = replace(vsdprops.intan.ch(c),'-0','');
-                nsp = replace(nsp,'ALOG-IN','');
-                vsdprops.intan.ch(c) = join([nsp vsdprops.note(idx,2)],'-');
-			else
-				nsp = replace(vsdprops.intan.ch(c),'-0','');
-                nsp = replace(nsp,'ALOG-IN','');
-				nsp = replace(nsp,'-IN','-');
-				vsdprops.intan.ch(c) = nsp;
-			end
-        end
-    end
-    intan = convert_uint(vsdprops.intan.data(:,1:dwnsp:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
-    if logics.tsmo
-        if abs(max(props.tm)-max(vsdprops.intan.tm))>0.001
-            errordlg('Intan file must have same recording duration as current file.  Please select another rhs file.')
-            return
-        end
-        idx = startsWith(props.ch,'V-');
-        props.data = [intan; props.data(idx,:)];
-        props.ch = [vsdprops.intan.ch; props.ch(idx)];
+	for x=1 % add data and BMP
+    fieldsr = ["spikedetection","BMP_analysis"];
+    for f=1:length(fieldsr)
+        try props = rmfield(props,fieldsr{f});end
+	end
+	if isfield(vsdprops,'matprops')
+		disp('hello')
+    	fields = fieldnames(vsdprops.matprops);
+    	fields(ismember(fields,{'video','data'})) = [];% set all fields
+		for f=1:length(fields)
+        	props.(fields{f}) = vsdprops.matprops.(fields{f});
+		end
+		props.data = convert_uint(vsdprops.matprops.data, props.d2uint, props.min,'double');
+		if isfield(vsdprops.matprops,'log')
+            props.log = [vsdprops.matprops.log; string(['loaded data on ' char(datetime)])];
+		else
+            props.log = string(['loaded data  ',char(datetime)]);
+		end
 	else
-        props.data = intan;
-        props.intan = vsdprops.intan.data;
-        props.ch = vsdprops.intan.ch;
-        props.showlist = vsdprops.intan.ch;
-        props.tm = vsdprops.intan.tm(:,1:dwnsp:end);
-        props.im = ones(512,512,3);
-    end
-    showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
-    props.showlist = props.ch(showidx);
-    props.showidx = showidx;
-    hideidx = find(cellfun(@(x) contains(x,'stim'),props.ch));
-    props.hidelist = props.ch(hideidx);
-    props.hideidx = hideidx;
-    if ~logics.bmpo
-        props.BMP_analysis.BMP = zeros(0,3);
-    end
-    if logics.spdo 
-        if ~isfield(props,'spikedetection')
-            warndlg('File did not contain spike detection data.  Proceeding anyway.')
-        else
-            idx = find(~startsWith(props.ch,'V-'));
-            for i=idx'
-                props.spikedetection.spikes{i} = [];
-            end
-        end
-    else
-        if isfield(props,'spikedetection')
-            props = rmfield(props,'spikedetection');
-        end
-    end
-    props.finfo = vsdprops.intan.finfo;
-    props.finfo.files = vsdprops.files;
-    props.notes = vsdprops.intan.notes;
-    props.finfo.duration = max(props.tm);
-    props.log = string(['loaded data on ',char(datetime)]);
-    props.curdir = fileparts(vsdprops.files{1,2});
-    end
+		if isfield(vsdprops,'note')
+        	for c=1:length(vsdprops.intan.ch)
+            	nstr = replace(vsdprops.intan.ch(c),'A-','A');
+            	idx = contains(vsdprops.note(:,1),nstr);
+				if any(idx) && ~ismissing(vsdprops.note(idx,2))           
+                	nsp = replace(vsdprops.intan.ch(c),'-0','');
+                	nsp = replace(nsp,'ALOG-IN','');
+                	vsdprops.intan.ch(c) = join([nsp vsdprops.note(idx,2)],'-');
+				else
+					nsp = replace(vsdprops.intan.ch(c),'-0','');
+                	nsp = replace(nsp,'ALOG-IN','');
+					nsp = replace(nsp,'-IN','-');
+					vsdprops.intan.ch(c) = nsp;
+				end
+        	end
+		end
+		intan = convert_uint(vsdprops.intan.data(:,1:dwnsp:end), vsdprops.intan.d2uint, vsdprops.intan.min,'double');
+		
+		if logics.tsmo
+        	if abs(max(props.tm)-max(vsdprops.intan.tm))>0.001
+            	errordlg('Intan file must have same recording duration as current file.  Please select another rhs file.')
+            	return
+        	end
+        	idx = startsWith(props.ch,'V-');
+        	props.data = [intan; props.data(idx,:)];
+        	props.ch = [vsdprops.intan.ch; props.ch(idx)];
+		else
+        	props.data = intan;
+        	props.intan = vsdprops.intan.data;
+        	props.ch = vsdprops.intan.ch;
+        	props.showlist = vsdprops.intan.ch;
+        	props.tm = vsdprops.intan.tm(:,1:dwnsp:end);
+        	props.im = ones(512,512,3);
+		end
+    	showidx = find(cellfun(@(x) ~contains(x,'stim'),props.ch));
+    	props.showlist = props.ch(showidx);
+    	props.showidx = showidx;
+    	hideidx = find(cellfun(@(x) contains(x,'stim'),props.ch));
+    	props.hidelist = props.ch(hideidx);
+    	props.hideidx = hideidx;
+    	if ~logics.bmpo
+        	props.BMP_analysis.BMP = zeros(0,3);
+    	end
+    	if logics.spdo 
+        	if ~isfield(props,'spikedetection')
+            	warndlg('File did not contain spike detection data.  Proceeding anyway.')
+        	else
+            	idx = find(~startsWith(props.ch,'V-'));
+            	for i=idx'
+                	props.spikedetection.spikes{i} = [];
+            	end
+        	end
+    	else
+        	if isfield(props,'spikedetection')
+            	props = rmfield(props,'spikedetection');
+        	end
+    	end
+    	props.finfo = vsdprops.intan.finfo;
+    	props.finfo.files = vsdprops.files;
+    	props.notes = vsdprops.intan.notes;
+    	props.finfo.duration = max(props.tm);
+    	props.log = string(['loaded data on ',char(datetime)]);
+    	props.curdir = fileparts(vsdprops.files{1,2});
+	end
+	end
 end
 props.files = vsdprops.files;
 try vsdprops = rmfield(vsdprops,'matprops'); end %#ok<TRYNC>
