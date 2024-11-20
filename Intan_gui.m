@@ -395,6 +395,7 @@ load_tag = ['load_tag' num2str(randi(1e4,1))];
 vsdprops.files = strings(5,2);
 vsdprops.files(:,1) = ["tiffns";"detfns";"tsmfns";"rhsfns";"xlsxfns"];
 vsdprops.load_tag = load_tag;
+f2.Tag = load_tag;
 % vsdprops.intan_tag = hintan.Tag;
 vsdprops.intan_tag = props.intan_tag;
 
@@ -813,18 +814,51 @@ else
     loadplotwidgets(iObject,eventdata)
 end
 
-function [data,vsdpre,vtmo] = stitchdata(intan,vsd,itm,vtm)
+function [data,vsdpre,vtmo,itmo] = stitchdata(intan,vsd,itm,vtm,trigger)
 sr = diff(vtm(1:2));
-vtmo = min(itm):sr:max(itm);
-prsz = length(min(itm):sr:min(vtm)-sr);
-posz = length(max(vtm)+sr:sr:max(itm));
-vsdpre = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
-if length(vtmo)>size(vsdpre,2)
-    vtmo = vtmo(1:size(vsdpre,2));
+if nargin<5
+	vtmo = min(itm):sr:max(itm);
+	prsz = length(min(itm):sr:min(vtm)-sr);
+	posz = length(max(vtm)+sr:sr:max(itm));
+	vsdpre = [repmat(vsd(:,1),1,prsz),  vsd, repmat(vsd(:,end),1,posz)];
+	if length(vtmo)>size(vsdpre,2)
+    	vtmo = vtmo(1:size(vsdpre,2));
+	end
+	vsd = interp1(vtmo, vsdpre', itm);
+	vsd = vsd';
+	data = [intan ; vsd];
+	itmo = itm;
+else
+	trigch = intan(trigger,:);
+	trigd = find(trigch);
+	shutteron = trigd([1 find(diff(trigd)>10)+1]);
+	dur = zeros(size(shutteron));
+	for d=1:length(dur)
+		durp = find(~trigch(shutteron(d):end),1);
+		if ~isempty(durp)
+			dur(d) = durp;
+		else
+			dur(d) = length(trigch) - shutteron(d);
+		end
+	end
+	durt = dur * diff(itm(1:2));
+	dtm = abs(durt - max(vtm));
+	[~,sidx] = min(dtm);
+	vidx = find(vtm>durt(sidx),1);
+	vsdpre = vsd(:,1:vidx);
+	vtmo = vtm(1:vidx);
+	intano = intan(:,shutteron(sidx):shutteron(sidx)+dur(sidx)-1);
+	itmo = itm(1:dur(sidx));
+	vsdpre = interp1(vtmo,vsdpre',itmo);
+	vsdpre = vsdpre';
+	data = [intano; vsdpre];
 end
-vsd = interp1(vtmo, vsdpre', itm);
-vsd = vsd';
-data = [intan ; vsd];
+
+function closethefig(hObject,eventdata)
+vsdprops = guidata(hObject);
+vsdprops.trigger = get(findobj('Tag','trigger'),'Value');
+guidata(findobj('Tag',vsdprops.load_tag),vsdprops)
+close(hObject.Parent)
 
 function transfer_data(hObject)
 % combines the vsd and the intan data.  Function used by loadall.
@@ -914,9 +948,24 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
             props.tm = vsdprops.intan.tm(1:dwnsp:end);
 
             if isfield(vsdprops,'vsd')
-                [props.data,vsd,vtmo] = stitchdata(intan,vsd,props.tm,vtm);
+				if (max(props.tm) - max(vtm)) > 10
+					fig = figure('menuBar','none','Name','','NumberTitle','off');
+					guidata(fig,vsdprops)
+					fig.Position(3:4) = [200 150];
+					uicontrol('Position',[20 50 150 80],'Style','text','String','RHS file is much longer than vsd recording. Select triggering channel.')
+					uicontrol('Position',[20 50 150 20],'Style','popupmenu','String',vsdprops.intan.ch,...
+						'Value',1,'Tag','trigger')
+					uicontrol('Position',[70 10 50 20],'Style','pushbutton','String','Apply','Callback',@closethefig)
+					uiwait(fig)
+					vsdprops = guidata(findobj('Tag',vsdprops.load_tag));
+					disp('Applying trigger selection')
+					[props.data,vsd,vtmo,itmo] = stitchdata(intan,vsd,props.tm,vtm,vsdprops.trigger);
+				else
+					[props.data,vsd,vtmo,itmo] = stitchdata(intan,vsd,props.tm,vtm);
+				end
                 props.vsd.data = convert_uint(vsd,props.vsd.d2uint,props.vsd.min,'uint16');
                 props.vsd.tm = vtmo;
+				props.tm = itmo;
             else
                 props.data = intan;
             end
