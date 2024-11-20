@@ -816,6 +816,9 @@ end
 
 function [data,vsdpre,vtmo,itmo] = stitchdata(intan,vsd,itm,vtm,trigger)
 sr = diff(vtm(1:2));
+if itm(1)>10
+	itm = itm - itm(1);% chunked recordings start time base when previous recording ended. This zeros that.
+end
 if nargin<5
 	vtmo = min(itm):sr:max(itm);
 	prsz = length(min(itm):sr:min(vtm)-sr);
