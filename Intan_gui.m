@@ -4892,7 +4892,9 @@ guidata(intan,props)
 
 function [imdatas,fparam,fun,imdata,tm,imdatarois,kerndata] = getimdata(props,ref,vfig,ifi)
 %getimdata(vsd,ref,vfig,ifi)
-vsd = props.vsd.info.Filename;
+
+% vsd = props.vsd.info.Filename;
+vsd = props.files(contains(props.files(:,1),'tsmfns'),2);
 warning('off','MATLAB:imagesci:fitsinfo:unknownFormat'); %<-----suppressed warning
 info = fitsinfo(vsd);
 warning('on','MATLAB:imagesci:fitsinfo:unknownFormat')
