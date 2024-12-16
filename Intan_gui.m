@@ -847,11 +847,15 @@ else
 	durt = dur * diff(itm(1:2));
 	dtm = abs(durt - max(vtm));
 	[~,sidx] = min(dtm);
-	vidx = find(vtm>durt(sidx),1);
+	if durt(sidx) > max(vtm)
+		dur(sidx) = dur - (durt - max(vtm))/diff(itm(1:2));
+		durt(sidx) = max(vtm);
+	end
+	vidx = find(vtm>=durt(sidx),1);
 	vsdpre = vsd(:,1:vidx);
 	vtmo = vtm(1:vidx);
 	intano = intan(:,shutteron(sidx):shutteron(sidx)+dur(sidx)-1);
-	itmo = itm(1:dur(sidx));
+	itmo = itm(1:size(intano,2));
 	vsdpre = interp1(vtmo,vsdpre',itmo);
 	vsdpre = vsdpre';
 	data = [intano; vsdpre];
