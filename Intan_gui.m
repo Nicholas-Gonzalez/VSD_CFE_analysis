@@ -848,7 +848,7 @@ else
 	dtm = abs(durt - max(vtm));
 	[~,sidx] = min(dtm);
 	if durt(sidx) > max(vtm)
-		dur(sidx) = dur - (durt - max(vtm))/diff(itm(1:2));
+		dur(sidx) = dur(sidx) - (durt(sidx) - max(vtm))/diff(itm(1:2));
 		durt(sidx) = max(vtm);
 	end
 	vidx = find(vtm>=durt(sidx),1);
