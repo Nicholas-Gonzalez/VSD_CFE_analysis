@@ -1011,6 +1011,7 @@ if intch && vsdch % loaded both intan and vsd data (matlab file or raw)
         props.finfo.files = vsdprops.files;
         props.log = string(['loaded data on ',char(datetime)]);
         props.curdir = fileparts(vsdprops.files{1,2});
+		props.matfile = '';
         if isfield(props,'spikedetection')
             props = rmfield(props,'spikedetection');
         end
@@ -5660,6 +5661,21 @@ fidx = find(props.files(:,2)~="",1,'first');
 nn = regexprep(props.files{fidx,2},'.(tif|mat|det|rhs|tsm|xlsx)','.mat');
 
 [file,path,indx] = uiputfile(nn);
+
+if ~isempty(props.files{1,2})
+	[~,fnm] = fileparts(props.files{1,2});
+	fnmidx = regexp(fnm,'\d{3}(?=_)','match');
+	nfnmidx = regexp(file,'\d{3}(?=_)','match');
+	if ~strcmp(fnmidx{1},nfnmidx{1})
+		answ = questdlg(['The recording identifier (' nfnmidx{1} ') doesn''t match the identifier in the file being saved (' fnmidx{1} '). Are you sure you want to continue?'],...
+			'Warning!','Save anyway','Cancel','Cancel');
+		if strcmp(answ,'Cancel')
+			disp('Cancelled')
+			return
+		end
+	end
+end
+
 
 props.matfile = fullfile(path,file);
 writerecent(props)

@@ -1,4 +1,4 @@
-function [frame,frame_pic]=find_kframe(fpath,fig_visible)
+function [frame,frame_pic]=find_kframe(fpath,fig_visible,avgf)
 %This fuction finds the best frame to draw the kernels.  It saves the frame
 %as (eg.  101_frame.tif).  It also saves the frame number and a matrix of
 % the frame in a matlab document (eg.  101pre_date.mat).
@@ -126,6 +126,25 @@ idx=I+sum(dist_mean(1:I-1)==0);
 frame=real_frm(idx)*round(all_frm / numfrm);
 frame_pic=pic(:,:,idx);
 frame_pic_raw = rpic(:,:,idx);
+
+if nargin>2 && avgf
+	pret_nf = [1,200,500,1000];
+	afrmd = nan(xsize,ysize,length(pret_nf));
+	for f=1:length(pret_nf)
+		fseek(fid, xsize*ysize*round(all_frm / numfrm)*2*idx + headerLength, 'bof');
+		frmd = double(fread(fid, xsize*ysize*pret_nf(f), 'int16'));% captures frame
+		frmd = reshape(frmd,xsize,ysize,pret_nf(f));
+		frmd = mean(frmd,3)';
+		frmd = frmd / max(frmd,[],'all');
+		afrmd(:,:,f) = frmd;
+		if f==1
+			imwrite(frmd,fullfile(folder,[fname  '_averages.tif']))
+		else
+			imwrite(frmd,fullfile(folder,[fname  '_averages.tif']),'WriteMode','append')
+		end
+	end
+	assignin('base','afrmd',afrmd)
+end
 
 imwrite(pic(:,:,1),fullfile(folder,[fname  '_imstack.tif']))
 for i=2:size(pic,3)
