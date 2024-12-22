@@ -144,7 +144,8 @@ mi(7) = uimenu(m,'Text','Restore Default','Callback',@restoredefault,'Enable','o
 mi(7) = uimenu(m,'Text','Image to Clipboard','Enable','on','Tag','savem');
 rm(1) = uimenu(mi(7),'Text','Montage','Callback',@saveim);
 rm(2) = uimenu(mi(7),'Text','Frame','Callback',@saveim);
-mi(8) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
+mi(8) = uimenu(m,'Text','Amplitude histogram','Callback',@spikehistogram,'Enable','on','Tag','savem');
+mi(9) = uimenu(m,'Text','Help','Callback',@threshold,'Enable','off','Tag','help');
 
 
 oppos = [120 327 40 20];
@@ -385,6 +386,47 @@ guidata(fig,struct('apptag',apptag,     'ax',ax,            'plt',plt,...
 
 chchannel(fig)
 detsp(fig)
+
+function spikehistogram(hObject,eventdata)
+props = guidata(hObject);
+fig = findobj('Tag',props.apptag);
+idx = get(findobj('Tag','channels','Parent',fig),'Value');
+params = props.params(idx);
+spikes = props.spikes{idx};
+stdev = std(props.data(idx,:));
+zdata = props.data(idx,:)/stdev;
+if params.ckdv
+	dur1 = round(params.dur1/diff(props.tm(1:2))/1000);
+	dur2 = round(params.dur2/diff(props.tm(1:2))/1000);
+	amp1 = zdata(spikes) - zdata(spikes - dur1);
+	amp2 = zdata(spikes + dur2) - zdata(spikes);
+else
+	dur2 = round(params.dur2/diff(props.tm(1:2))/1000);
+	amp1 = zdata(spikes);
+	amp2 = zdata(spikes + dur2) - zdata(spikes);
+end
+
+figure('Name',props.ch(idx))
+nedges = 30;
+[N,xedg,yedg] = histcounts2(amp1,amp2,nedges);
+axm = axes('Position',[0.15 0.15 0.65 0.65]);
+imagesc(N)
+axm.YDir = 'normal';
+axm.XLabel.String = 'Amplitude Thr1';
+axm.YLabel.String = 'Amplitude Thr2';
+axm.XTick = 1:nedges;
+axm.XTickLabel = round(xedg(1:end-1),2);
+axm.YTick = 1:nedges;
+axm.YTickLabel = round(yedg(1:end-1),2);
+ax1 = axes('Position',[0.15 0.8 0.65 0.15]);
+N1 = histogram(amp2,yedg);
+ax1.XTick = [];
+ax1.XLim = [yedg(1), yedg(end)];
+ax2 = axes('Position',[0.80 0.15 0.15 0.65]);
+N2 = histogram(amp1,xedg,'Orientation','horizontal');
+ax2.YTick = [];
+ax2.YLim = [xedg(1), xedg(end)];
+
 
 function plotthr(props,idx)
 params = props.params(idx);
@@ -716,10 +758,13 @@ guidata(hObject,props)
 
 function montagef(hObject,eventdata)
 props = guidata(hObject);
+disp('Draw a region to show as montage')
 rec = drawrectangle(props.iax);
 y = round(rec.Position(2):sum(rec.Position([2 4])));
 x = round(rec.Position(1):sum(rec.Position([1 3])));
 delete(rec)
+disp('Region accepted')
+
 figure
 im = props.imdata(y,x,:,props.rawim);
 invback = get(findobj('Tag','raw5'),'Background');
@@ -734,7 +779,6 @@ colorm = props.img.Parent.Colormap;
 caxis(climit)
 colormap(colorm)
 colorbar
-
 
 function [pixels, vdata] = roidata(pos,imdata)
 pixels = zeros(0,2,'uint16');
