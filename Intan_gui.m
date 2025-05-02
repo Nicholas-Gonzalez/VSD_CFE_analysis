@@ -196,6 +196,8 @@ uicontrol(ropanel,'Units','pixels','Position',[170 0 60 20],'Style','pushbutton'
             'Callback',@loadim,'String','Load Image','Enable','off','Visible','off')
 uicontrol(ropanel,'Units','pixels','Position',[230 0 80 20],'Style','pushbutton','Tag','adjcont',...
             'Callback',@adjcontrast,'String','Contrast','Enable','off','Visible','off')
+uicontrol(ropanel,'Units','pixels','Position',[310 0 100 20],'Style','pushbutton','Tag','copyim',...
+            'Callback',@copyim,'String','Copy to Clipboard','Enable','off','Visible','off')
 
 scstyle.value = 'threshold';
 scstyle.marker = 'diamond';
@@ -1457,7 +1459,8 @@ if props.newim
     else
         props.im = repmat(props.im,1,1,3);
         props.imsh = image(props.im);
-    end
+	end
+	line([20 43.97738],size(props.im,2) - [20 20],'Color','w','LineWidth',3);
     sz = size(props.im);  
     panelsz = props.ropanel.Position;
     set(props.imsh.Parent,'Units','pixels','Position', [0   panelsz(4)-panelsz(3)*sz(1)/sz(2)   panelsz(3)   panelsz(3)*sz(1)/sz(2)],...
@@ -1468,12 +1471,13 @@ end
 
 
 if isfield(props,'im')
-    set(findobj(props.ropanel,'Tag','fillroi'),'Enable','on','Visible','on')
-    set(findobj(props.ropanel,'Tag','red'),'Enable','on','Visible','on')
-    set(findobj(props.ropanel,'Tag','green'),'Enable','on','Visible','on')
-    set(findobj(props.ropanel,'Tag','blue'),'Enable','on','Visible','on')
-    set(findobj(props.ropanel,'Tag','newim'),'Enable','on','Visible','on')
-    set(findobj(props.ropanel,'Tag','adjcont'),'Enable','on','Visible','on')
+	set(findobj(props.ropanel.Children,'Type','UIControl'),'Enable','on','Visible','on')
+%     set(findobj(props.ropanel,'Tag','fillroi'),'Enable','on','Visible','on')
+%     set(findobj(props.ropanel,'Tag','red'),'Enable','on','Visible','on')
+%     set(findobj(props.ropanel,'Tag','green'),'Enable','on','Visible','on')
+%     set(findobj(props.ropanel,'Tag','blue'),'Enable','on','Visible','on')
+%     set(findobj(props.ropanel,'Tag','newim'),'Enable','on','Visible','on')
+%     set(findobj(props.ropanel,'Tag','adjcont'),'Enable','on','Visible','on')
 end
 set(findobj(hObject.Parent,'Tag','savem'),'Enable','on');
 set(findobj(props.chpanel,'Tag','showgraph'),'Enable','on');
@@ -5550,6 +5554,10 @@ aprops.rec(ch).Position([1 3]) = [lw,  diff([lw up])];
 guidata(intan,props)
 updateroi(intan)
 
+function copyim(hObject,eventdata)
+roiax = findobj('Tag','roiax');
+copygraphics(roiax)
+disp('ROI image copied')
 %% misc methods
 function saveBMP(hObject,eventdata)
 props = guidata(hObject);
